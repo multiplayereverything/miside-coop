@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace MiSideTogether
@@ -69,6 +69,7 @@ namespace MiSideTogether
         //  4 InputKeyboard_Main.ButtonUpper()
         //  5 Trigger_DistanceCamera.Enter(bool)    camera-distance triggers (whoever gets close fires it)
         //  6 Trigger_DistanceCamera.Exit(bool)
+        //  7 ObjectAnimationPlayer started on the host's player (0 AnimationPlay, 1 Fast, 2 OnPlayer): catch-up, Interactions.cs
         public static void Call(int entry, Component source, int arg)
         {
             if (source == null) return;
@@ -91,6 +92,7 @@ namespace MiSideTogether
                     if (entry == 1) keys.AddKey(((char)arg).ToString()); else if (entry == 2) keys.RemoveKey(); else if (entry == 3) keys.ButtonEnter(); else keys.ButtonUpper();
                     break;
                 }
+                case 7: QueueAnimationCatchUp(target, arg); break;
                 case 5: case 6:
                 {
                     Trigger_DistanceCamera t = SceneKeys.Find<Trigger_DistanceCamera>(target);

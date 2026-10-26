@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
@@ -12,6 +12,7 @@ namespace MiSideTogether
     //                                      so the method bodies can be decompiled (REA, Ghidra) for designing a hook
     //   MT-TRACE Type.Method(args) #n      every call of their methods while playing (per-frame methods left out,
     //                                      the first 40 calls of each), which shows what a player's input really calls
+    // Patching some types freezes the game (ObjectDoor did, 2026-10-26): trace few types at a time and drop one that hangs.
     static class Trace
     {
         static readonly HashSet<string> Skip = new HashSet<string> { "Update", "FixedUpdate", "LateUpdate", "OnGUI", "Awake", "OnEnable", "OnDisable" };

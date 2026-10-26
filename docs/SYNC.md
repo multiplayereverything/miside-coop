@@ -1,4 +1,4 @@
-# What MiSide Together syncs, and how
+﻿# What MiSide Together syncs, and how
 
 This is the master list. The per-chapter detail (every game script type in every chapter, with its sync status) is generated into [SYNC-INVENTORY.md](SYNC-INVENTORY.md) by the `inventory` tour plus `tools/inventory_report.py`. Every dialogue line is in `artifacts/generated/DIALOGUES.md` (local only, since it contains game text). Per-cutscene tuning lives in [../CUTSCENES.md](../CUTSCENES.md).
 
@@ -63,7 +63,7 @@ This is the master list. The per-chapter detail (every game script type in every
 
 1. **Interactions on every chapter:** `scripts/interactions-all.ps1` presses every interaction in every chapter with two players and checks that both played it at the same spot and ended free. Cases that misbehave get a line in CUTSCENES.md.
 2. **Scripted cutscenes:** compare Mita's animation start times per chapter (`MT-ANIM`, reported as `npc_anim_start_s_p90`).
-2b. **Open from the every-chapter run:** Scene 12 `DoorPhysic Exit` plays differently per side of the door (4 m apart, the host left in a loop); Scene 13: a presser-only action (cartridge) leaves the other player in the mirrored PC seat; the Scene 1 phone is never armed in the lab, so its pickup is unproven.
+2b. **Open from the every-chapter run (0.3.2: 17 of 18 pass):** Scene 13: a presser-only action (cartridge) leaves the other player in the mirrored PC seat until they stand up (expected with presser-only; the check flags it); the Scene 1 phone is never armed in the lab, so its pickup is unproven. Fixed in 0.3.2: the Scene 12 `DoorPhysic Exit` (cutscene start retried, and the host's story-started player animations caught up on clients, `Op.Call` 7).
 3. **Trigger and puzzle relays** (look, distance, camera-distance, safe keypad, keyboard): tours in the chapters that use them (Scene 6/15 safe, Scene 14 keyboard).
 4. **Scene 14 quest game** (the point-and-click game on the PC, `Location14_GameQuestPlayer`) and the **Scene 13/15 core computer** (`GamesCore_InputField` keys, `GamesCore_Main.OpenFolder`): player input with no relay.
    - Decompiled (GameAssembly.dll, addresses from `-mt-trace`): `ClickMouse` raycasts the mouse 100 m from the camera and walks the quest character (`Location14_PlayerQuest.Move(pos, event)`) to the point or to a `Location14_QuestInteractive` (its event fires on arrival).

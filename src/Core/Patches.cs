@@ -29,8 +29,8 @@ namespace MiSideTogether
             Patch(typeof(PlayerPerson), "EventKey", null, "AnimEventPostfix", typeof(int));
             Patch(typeof(PlayerMove), "AnimationHandPlay", "PlayerHandAnimationPrefix", null);
             Patch(typeof(ObjectAnimationPlayer), "AnimationPlay", null, "ObjectAnimationPostfix");
-            Patch(typeof(ObjectAnimationPlayer), "AnimationPlayFast", null, "ObjectAnimationPostfix");
-            Patch(typeof(ObjectAnimationPlayer), "AnimationPlayOnPlayer", null, "ObjectAnimationPostfix");
+            Patch(typeof(ObjectAnimationPlayer), "AnimationPlayFast", null, "ObjectAnimationFastPostfix");
+            Patch(typeof(ObjectAnimationPlayer), "AnimationPlayOnPlayer", null, "ObjectAnimationOnPlayerPostfix");
             Patch(typeof(GameController), "AddKeyItem", "KeyItemPrefix", "KeyAddPostfix", typeof(GameObject));
             Patch(typeof(GameController), "RemoveKeyItem", "KeyItemPrefix", "KeyRemovePostfix", typeof(GameObject));
             Patch(typeof(PlayerMove), "TakeItem", "TakeItemPrefix", "TakeItemPostfix", typeof(GameObject));
@@ -170,6 +170,7 @@ namespace MiSideTogether
         static void CutscenePlayPostfix(Playable_Animation __instance)
         {
             if (__instance != null && __instance.Pointer == heldCutscene) { heldCutscene = IntPtr.Zero; return; }
+            Safe("CutsceneStarted", () => TogetherRuntime.CutsceneStartedHere(__instance));
             Safe("Cutscene", () => TogetherRuntime.Story(Op.CutscenePlay, __instance, 0));
         }
 
@@ -235,7 +236,9 @@ namespace MiSideTogether
             catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook PlayerHandAnimation: " + ex.Message); return false; }
         }
         static void AnimEventPostfix(int __0) { Safe("AnimEvent", () => TogetherRuntime.AfterAnimEvent(__0)); }
-        static void ObjectAnimationPostfix(ObjectAnimationPlayer __instance) { Safe("ObjectAnimation", () => TogetherRuntime.AfterObjectAnimation(__instance)); }
+        static void ObjectAnimationPostfix(ObjectAnimationPlayer __instance) { Safe("ObjectAnimation", () => TogetherRuntime.AfterObjectAnimation(__instance, 0)); }
+        static void ObjectAnimationFastPostfix(ObjectAnimationPlayer __instance) { Safe("ObjectAnimation", () => TogetherRuntime.AfterObjectAnimation(__instance, 1)); }
+        static void ObjectAnimationOnPlayerPostfix(ObjectAnimationPlayer __instance) { Safe("ObjectAnimation", () => TogetherRuntime.AfterObjectAnimation(__instance, 2)); }
 
         // Opening the pause menu must not freeze the world under the other players' feet.
         static void PausePostfix(bool __0, bool __1)

@@ -1,4 +1,4 @@
-# MiSide Together — MODLOG
+﻿# MiSide Together — MODLOG
 
 Journal for the MiSide co-op mod. Anything not written here is lost at the next context reset.
 
@@ -249,3 +249,13 @@ Ideas cross-checked against QuestionBlock64's MiSide-Multiplayer (it has no lice
 - `ModVersion` 0.3.1 (protocol still 4). Published as pre-release **v0.3.1** on https://github.com/multiplayereverything/miside-coop/releases with `MiSideTogether.dll` (SHA256 320A5944…) and `MiSideTogether-0.3.1.zip` (unzips into the MiSide folder).
 - Smoke test on the release build: connect, story, mirror pass.
 - From now on every version is a GitHub release (test builds as pre-release); the Multiplayer Everything Discord bot announces it.
+
+## 0.3.2 (2026-10-26): Scene 12 door, avatar shading
+- `ModVersion` 0.3.2 (protocol still 4; `Op.Call` 7 is new and only sent between same-version players).
+- **Scene 12 exit door:** the host's cutscene reached the client before the client's story had switched it on, and the client's own timeline played on awake without `Playable_Animation.Play`. Cutscene starts are now retried for 5 s like other story events, and start when only the timeline is playing (`NeedsStart`). The host also reports every `ObjectAnimationPlayer` animation that starts on its own player (`Op.Call` 7); a client that has not started the same one within 1 s plays it (not for presser-only). Its "started here" check uses the client's own key (Scene 17 orders siblings differently) and counts every call, not only those already animating.
+- **Avatar shading:** the copy of the first-person body received no shadows, so it stayed fully lit in shade (user report: flat and over-bright). Mita's toon materials are the same; she receives shadows. The copy now does too. Lab `MT-LOOK` dump (`src/Lab/LookDump.cs`) lists the materials, probes and lights of the local body, the copy and every other character once per chapter.
+- **Interactions tour:** the host's spot is its last animating frame, like the client's (Scene 8's door ended in the state it had at the press).
+- **Tests:** suite 21/21 pass; every-chapter interactions 17 of 18 (Scene 13 seat, expected).
+- **Held items and the phone (user request):** interactions that put an item in the hand are detected from the game's own wiring (`HeldItems.cs`) and done by the presser only, with the item in their hand; the Scene 1 phone too (the others see the pickup and can't take another). Cutscenes in a running chapter are run by the host.
+- **Release suite (DLL SHA256 D4896EBF…):** 22 of 23 tours pass, including chapters. `phone` fails only because Scene 1's opening never arms the phone in hidden lab windows (known; its rule check passes).
+- Published as a full release **v0.3.2** (not pre-release), at the user's request.

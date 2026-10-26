@@ -41,6 +41,13 @@ namespace MiSideTogether
 
         static bool Playing(PlayableDirector d) { return d != null && d.isActiveAndEnabled && d.state == PlayState.Playing; }
 
+        // Cutscenes whose Playable_Animation.Play really ran here (it puts the player into the cutscene). A timeline can be
+        // playing without it: the game switches the cutscene object on and the director plays on awake, while this
+        // client's own Play became a request to the host. The host's command must still start it then.
+        public static readonly HashSet<string> cutscenesStartedHere = new HashSet<string>();
+        public static void CutsceneStartedHere(Playable_Animation p) { if (p != null) cutscenesStartedHere.Add(SceneKeys.Key(p)); }
+        static bool NeedsStart(Playable_Animation p) { return p != null && (!Playing(Director(p)) || !cutscenesStartedHere.Contains(SceneKeys.Key(p))); }
+
         // True only during a real cutscene: the game's cutscene mode or a timeline that drives the camera. Ordinary
         // interaction animations (picking up the toy plane, sitting, opening things) do not count: players stay visible
         // there, and their arms and hands follow the bone sync.
@@ -82,13 +89,15 @@ namespace MiSideTogether
                 if (scene != LocalSceneHash || !ClientStoryLive || replayQueue.Count > 0) continue;
                 PlayableDirector d = SceneKeys.Find<PlayableDirector>(key);
                 if (d == null || !d.gameObject.activeInHierarchy) continue;
-                if (!Playing(d))
+                Playable_Animation p = d.GetComponent<Playable_Animation>();
+                if (p != null && p.scrpd != d) p = null;
+                if (!Playing(d) || (p != null && NeedsStart(p)))
                 {
-                    // The host is in a cutscene this machine did not start (a trigger only the host hit): start it here,
-                    // through Playable_Animation when there is one so its camera and events run as in the game.
-                    Playable_Animation p = d.GetComponent<Playable_Animation>();
+                    // The host is in a cutscene this machine did not start (a trigger only the host hit, or a timeline
+                    // that plays on awake while this machine's start went to the host): start it here, through
+                    // Playable_Animation when there is one so its camera, player and events run as in the game.
                     Replaying = true;
-                    try { if (p != null && p.scrpd == d) p.Play(); else d.Play(); } finally { Replaying = false; }
+                    try { if (p != null) p.Play(); else d.Play(); } finally { Replaying = false; }
                     Log("Cutscene started from the host's: " + key);
                 }
                 // Half the round trip is unknown here; 0.25 s of drift is invisible, larger drift is corrected.

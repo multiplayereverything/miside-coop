@@ -81,6 +81,9 @@ namespace MiSideTogether
                     r.enabled = isBody;
                     r.forceRenderingOff = false;
                     r.shadowCastingMode = ShadowCastingMode.On;
+                    // The first-person body receives no shadows; Mita, with the same toon materials, does. Without them
+                    // the copy stays fully lit in shade and looks flat and over-bright next to her (2026-10-26).
+                    r.receiveShadows = true;
                     r.gameObject.SetActive(true);
                     if (body != null) body.updateWhenOffscreen = true;
                 }

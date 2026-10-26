@@ -27,9 +27,10 @@ namespace MiSideTogether
             if (!tourStarted && scene == "SceneMenu" && now - tourSceneAt > 6) { tourStarted = true; Log("Lab: host loading " + TourChapter); LoadThroughGame(TourChapter); }
             PlayerMove player = LocalPlayer;
             if (scene != TourChapter || player == null || now - tourSceneAt < 25) return;
-            // The spot is where the character is when its animation ends (the game walks or teleports it into place first).
+            // The spot is where the character is when its animation ends (the game walks or teleports it into place first),
+            // its last animating frame as on the client, even when it ends in the state it had at the press.
             int state = AnimState(player);
-            if (player.animationRun && (!labAnimatingAtPress || state != labStateAtPress)) { labPressAnimated = true; labPressSpot = player.transform.position; }
+            if (player.animationRun && (labPressAnimated || !labAnimatingAtPress || state != labStateAtPress)) { labPressAnimated = true; labPressSpot = player.transform.position; }
             if (labPresses == null)
             {
                 labPresses = new List<ObjectInteractive>();

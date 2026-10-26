@@ -52,6 +52,58 @@ namespace MiSideTogether
 
         readonly Dictionary<string, ObjectAnimationPlayer> pendingWatch = new Dictionary<string, ObjectAnimationPlayer>();
 
+        // --- Story-started player animations ------------------------------------------------------------------
+        // The story starts some player animations by itself (a door's animation event puts the player into a cutscene
+        // pose). Each machine usually starts them from the same relayed events, but not always (Scene 12's exit door: the
+        // event that starts it on the host never fires on the client). The host reports every animation that starts on
+        // its own player (Op.Call 7, not in the history); a client that has not started the same one itself within a
+        // second plays it, unless its press is presser-only. Mirrored presses start it here anyway, so nothing doubles.
+        sealed class AnimationCatchUp { public string Key; public int Variant; public float At; }
+        readonly Dictionary<string, float> animationStartedAt = new Dictionary<string, float>();
+        readonly List<AnimationCatchUp> animationCatchUps = new List<AnimationCatchUp>();
+        public int playerAnimationsCaughtUp;
+
+        // Every call counts as started here (the player can still be walking into place when it returns); only the host's
+        // own, with its player already animating, are reported.
+        void NoteAnimationStarted(ObjectAnimationPlayer scr, int variant, bool playerAnimating)
+        {
+            string key = SceneKeys.Key(scr);
+            animationStartedAt[key] = Time.realtimeSinceStartup;
+            if (!playerAnimating || !Hosting || Replaying || ReplayingInteraction) return;
+            Broadcast(Wire.Packet(Op.Call, w => { Wire.Text(w, "7:" + key); w.Write(variant); }));
+        }
+
+        void QueueAnimationCatchUp(string key, int variant)
+        {
+            if (!IsClient) return;
+            animationCatchUps.Add(new AnimationCatchUp { Key = key, Variant = variant, At = Time.realtimeSinceStartup });
+        }
+
+        void AnimationCatchUpTick(float now)
+        {
+            for (int i = animationCatchUps.Count - 1; i >= 0; i--)
+            {
+                AnimationCatchUp c = animationCatchUps[i];
+                if (now - c.At < 1f) continue;
+                animationCatchUps.RemoveAt(i);
+                ObjectAnimationPlayer scr = SceneKeys.Find<ObjectAnimationPlayer>(c.Key);
+                if (scr == null || !scr.gameObject.activeInHierarchy) { Log("Player animation not caught up (missing or switched off here): " + c.Key); continue; }
+                // By this machine's own key: the host's can differ where siblings are ordered differently (Scene 17).
+                if (animationStartedAt.TryGetValue(SceneKeys.Key(scr), out float at) && at > c.At - 2f) continue;   // started here by itself
+                string click = Time.realtimeSinceStartup - lastReplayedClickAt < 5 ? lastReplayedClick : null;
+                if (CutsceneRules.ForInteraction(click, c.Key).Who == CutsceneRules.Who.Actor) continue;   // the presser's own
+                Replaying = true;
+                try
+                {
+                    if (c.Variant == 1) scr.AnimationPlayFast(); else if (c.Variant == 2) scr.AnimationPlayOnPlayer(); else scr.AnimationPlay();
+                    playerAnimationsCaughtUp++;
+                    Log("MT-STORY caught up player animation " + c.Key + " (the host's story started it)");
+                }
+                catch (Exception ex) { Log("Player animation catch-up threw: " + ex.Message); }
+                finally { Replaying = false; }
+            }
+        }
+
         // --- Actor: track the interaction animation and what it carries -----------------------------------------
         string actorAnimation;
         float actorAnimationAt, nextCarry;
@@ -59,10 +111,12 @@ namespace MiSideTogether
         List<Transform_Magnet> magnetList;
         float magnetListAt;
 
-        public static void AfterObjectAnimation(ObjectAnimationPlayer scr)
+        public static void AfterObjectAnimation(ObjectAnimationPlayer scr, int variant)
         {
             TogetherRuntime rt = Instance;
-            if (rt == null || !rt.Connected || Replaying || ReplayingInteraction || scr == null) return;
+            if (rt == null || !rt.Connected || scr == null) return;
+            rt.NoteAnimationStarted(scr, variant, rt.LocalPlayer != null && rt.LocalPlayer.animationRun);
+            if (Replaying || ReplayingInteraction) return;
             // Skipped as someone else's (BeforePlayerAnimation): this player is not the actor.
             if (rt.LocalPlayer != null && !rt.LocalPlayer.animationRun) return;
             rt.actorAnimation = SceneKeys.Key(scr);

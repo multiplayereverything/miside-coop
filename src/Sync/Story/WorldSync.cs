@@ -48,7 +48,7 @@ namespace MiSideTogether
             seededCalls.Clear();
             SceneKeys.Invalidate();
             HeldItems.Clear();
-            firedEnter.Clear(); firedExit.Clear(); missingLogged.Clear(); storyRetries.Clear();
+            firedEnter.Clear(); firedExit.Clear(); missingLogged.Clear(); storyRetries.Clear(); cutscenesStartedHere.Clear(); animationStartedAt.Clear(); animationCatchUps.Clear();
             mitaTargets.Clear(); mitaAnim.Clear(); doorLast.Clear(); doorAppliedAt.Clear(); npcResolved.Clear();
             cutsceneList = null; npcList = null; propList = null; propAppliedAt.Clear(); mitaList = null; doorList = null;
         }
@@ -71,6 +71,7 @@ namespace MiSideTogether
             Step("w.novella", () => NovellaTick(now));
             Step("w.room", () => WorldStateTick(now));
             if (IsClient) Step("w.anim", () => AnimatorCatchUpTick(now));
+            if (animationCatchUps.Count > 0) Step("w.playeranim", () => AnimationCatchUpTick(now));
         }
 
         // The host switched to the preloaded chapter: do the same here once this machine's preload can switch.
@@ -228,7 +229,9 @@ namespace MiSideTogether
                     case Op.CutscenePlay:
                         Playable_Animation cutscene = SceneKeys.Find<Playable_Animation>(key);
                         if (Hosting) lastClientCut = SceneKeys.Key(cutscene);
-                        if (Missing(cutscene, key) || !cutscene.gameObject.activeInHierarchy || Playing(Director(cutscene))) return;
+                        // Switched off here yet (the event that switches it on comes a moment later): retried. Already
+                        // playing only counts when its Play ran here (a timeline can play on awake without it).
+                        if (Missing(cutscene, key) || Inactive(cutscene, key) || !NeedsStart(cutscene)) return;
                         cutscene.Play();
                         break;
                     case Op.DialogueChoice:

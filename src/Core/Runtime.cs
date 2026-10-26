@@ -34,7 +34,7 @@ namespace MiSideTogether
     // C# class avoids Il2CppInterop trying to expose every helper method to the native side.
     public sealed partial class TogetherRuntime
     {
-        public const string ModVersion = "0.3.1";
+        public const string ModVersion = "0.3.2";
         public static TogetherRuntime Instance;
         public static Action<string> Log = delegate { };
         public ITransport Network;
@@ -289,6 +289,7 @@ namespace MiSideTogether
                 Step("lab", LabTick);
                 Step("lab-state", () => StateTick(Time.realtimeSinceStartup));
                 Step("lab-anim", AnimEventTick);
+                Step("lab-look", LookTick);
                 labWatch.Start();
             }
         }
