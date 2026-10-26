@@ -51,4 +51,6 @@ When the user reports a cutscene that needs different handling, add the rule to 
 
 - 2026-10: the phone and plane switched from eyes POV and actor-only to mirror, at the user's request ("playing the same animation and putting them there").
 - 2026-10: held items are detected from the game's wiring, so the plane and anything else handed to the player is presser-only with the item in their hand. Cutscenes are run by the host.
+- 2026-10-26: hand animations (`PlayerMove.AnimationHandPlay`) follow the same rule as body ones; they used to be blocked for every replayed click, mirrored ones included.
+- 2026-10-26: the cartridge (Scenes 6, 10, 13) and the Scene 14 smartphone are presser-only by the held-item detection (the item goes into the hand); the every-chapter tour confirms it.
 - 2026-10: the Scene 1 phone is presser-only too, at the user's request. Whoever picks it up holds and uses it; the others see them pick it up and cannot take another (the replayed click disables theirs).

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -74,6 +74,7 @@ namespace MiSideTogether
         sealed class MinigameRun { public string Key; public int Kind, Owner; }
         readonly Dictionary<string, MinigameRun> minigames = new Dictionary<string, MinigameRun>();
         public int minigameStartsBlocked;
+        public static float lastMinigameStartAt = -100;
 
         static bool MinigameStartPrefix(Component __instance, MethodBase __originalMethod)
         {
@@ -99,6 +100,7 @@ namespace MiSideTogether
                 if (kind < 0) return;
                 string key = SceneKeys.Key(__instance);
                 Log("Minigame " + __originalMethod.DeclaringType.Name + " started here: " + key);
+                lastMinigameStartAt = Time.realtimeSinceStartup;
                 rt.SendMinigame(1, key, kind, rt.SelfId);
             }
             catch (Exception ex) { Log("MT-MODERROR minigame start: " + ex.Message); }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -17,10 +17,17 @@ namespace MiSideTogether
         readonly HashSet<string> firedEnter = new HashSet<string>(), firedExit = new HashSet<string>();
         readonly HashSet<string> missingLogged = new HashSet<string>();
 
+        // A story event whose object is missing or switched off here (this machine is a moment behind, or the object
+        // is spawned later) is retried for a few seconds instead of being lost.
+        sealed class StoryRetry { public Op Op; public string Key; public int Arg; public float Until, Next; }
+        readonly List<StoryRetry> storyRetries = new List<StoryRetry>();
+        const float StoryRetrySeconds = 5;
+        bool storyMissing, retryingStory;
+
         void ResetWorldSync()
         {
             ClearHeld();
-            firedEnter.Clear(); firedExit.Clear(); missingLogged.Clear();
+            firedEnter.Clear(); firedExit.Clear(); missingLogged.Clear(); storyRetries.Clear();
             mitaTargets.Clear(); mitaAnim.Clear();
             doorLast.Clear(); doorAppliedAt.Clear();
             Replaying = false;
@@ -41,7 +48,7 @@ namespace MiSideTogether
             seededCalls.Clear();
             SceneKeys.Invalidate();
             HeldItems.Clear();
-            firedEnter.Clear(); firedExit.Clear(); missingLogged.Clear();
+            firedEnter.Clear(); firedExit.Clear(); missingLogged.Clear(); storyRetries.Clear();
             mitaTargets.Clear(); mitaAnim.Clear(); doorLast.Clear(); doorAppliedAt.Clear(); npcResolved.Clear();
             cutsceneList = null; npcList = null; propList = null; propAppliedAt.Clear(); mitaList = null; doorList = null;
         }
@@ -53,6 +60,7 @@ namespace MiSideTogether
             if (!itemsRegistered && LocalPlayer != null) { itemsRegistered = true; SceneKeys.RegisterItems(); }
             // Each feature is its own step: timed separately in the lab (steps=), and one failing does not stop the rest.
             if (IsClient) Step("w.replay", ReplayTick);
+            if (storyRetries.Count > 0) Step("w.retry", () => StoryRetryTick(now));
             if (pendingGo != null) Step("w.go", () => GoTick(now));
             if (Hosting && now >= nextMita) { nextMita = now + 1f / 15f; Step("w.mita", SendMitas); }
             if (Hosting) Step("w.cutscene", () => HostCutsceneTick(now));
@@ -143,6 +151,26 @@ namespace MiSideTogether
         {
             string key = Wire.Text(reader, 1024);
             int arg = reader.ReadInt32();
+            ApplyStory(op, key, arg);
+        }
+
+        void StoryRetryTick(float now)
+        {
+            for (int i = storyRetries.Count - 1; i >= 0; i--)
+            {
+                StoryRetry r = storyRetries[i];
+                if (now < r.Next) continue;
+                r.Next = now + 0.5f;
+                retryingStory = true;
+                try { ApplyStory(r.Op, r.Key, r.Arg); } finally { retryingStory = false; }
+                if (!storyMissing) { storyRetries.RemoveAt(i); Log("MT-STORY retried " + r.Op + " " + r.Key + " (applied " + (now - (r.Until - StoryRetrySeconds)).ToString("0.0") + " s late)"); }
+                else if (now >= r.Until) { storyRetries.RemoveAt(i); Log("MT-STORY dropped " + r.Op + " " + r.Key + ": missing or switched off here for " + StoryRetrySeconds + " s"); }
+            }
+        }
+
+        void ApplyStory(Op op, string key, int arg)
+        {
+            storyMissing = false;
             Replaying = true;
             try
             {
@@ -150,16 +178,15 @@ namespace MiSideTogether
                 {
                     case Op.Interact:
                         ObjectInteractive interactive = SceneKeys.Find<ObjectInteractive>(key);
-                        if (Missing(interactive, key)) return;
-                        if (!interactive.gameObject.activeInHierarchy) return;
+                        // Not armed here yet (ObjectInteractive.active): Click would do nothing, so wait for the story to arm it.
+                        if (Missing(interactive, key) || Inactive(interactive, key, interactive.active)) return;
                         // Someone else's interaction: its animation is theirs (Interactions.cs).
                         ReplayingInteraction = true; ReplayingInteractionKey = key; NoteReplayedClick(key);
                         try { interactive.Click(); } finally { ReplayingInteraction = false; ReplayingInteractionKey = null; }
                         break;
                     case Op.MouseClick:
                         Trigger_MouseClick click = SceneKeys.Find<Trigger_MouseClick>(key);
-                        if (Missing(click, key)) return;
-                        if (!click.gameObject.activeInHierarchy) return;
+                        if (Missing(click, key) || Inactive(click, key)) return;
                         ReplayingInteraction = true;
                         try { click.Click(); } finally { ReplayingInteraction = false; }
                         break;
@@ -213,13 +240,30 @@ namespace MiSideTogether
                 Log("MT-STORY applied " + op + " " + key);
                 LastAppliedStory = op + " " + key;
             }
-            finally { Replaying = false; }
+            finally
+            {
+                Replaying = false;
+                if (storyMissing && !retryingStory && !storyRetries.Exists(r => r.Op == op && r.Key == key && r.Arg == arg))
+                {
+                    float now = Time.realtimeSinceStartup;
+                    storyRetries.Add(new StoryRetry { Op = op, Key = key, Arg = arg, Until = now + StoryRetrySeconds, Next = now + 0.5f });
+                }
+            }
         }
 
         bool Missing(Object found, string key)
         {
             if (found != null) return false;
-            if (missingLogged.Add(key)) Log("Story object not found here: " + key);
+            storyMissing = true;
+            if (missingLogged.Add(key)) Log("Story object not found here (retrying): " + key);
+            return true;
+        }
+
+        bool Inactive(Component found, string key, bool armed = true)
+        {
+            if (found.gameObject.activeInHierarchy && armed) return false;
+            storyMissing = true;
+            if (missingLogged.Add(key)) Log("Story object switched off here (retrying): " + key);
             return true;
         }
 
@@ -526,7 +570,7 @@ namespace MiSideTogether
             if (byType.TryGetValue(typeof(T), out map) && map.TryGetValue(key, out found) && found != null) return found.Cast<T>();
             float last;
             // Objects spawned later (or re-parented) are picked up by a rescan, at most once a second per type.
-            if (map != null && scannedAt.TryGetValue(typeof(T), out last) && Time.realtimeSinceStartup - last < 1f) return null;
+            if (map != null && scannedAt.TryGetValue(typeof(T), out last) && Time.realtimeSinceStartup - last < 1f) return ByName<T>(map, key);
             scannedAt[typeof(T)] = Time.realtimeSinceStartup;
             map = new Dictionary<string, Object>();
             foreach (T item in Object.FindObjectsOfType<T>(true))
@@ -535,7 +579,26 @@ namespace MiSideTogether
                 map[Key(item)] = item;
             }
             byType[typeof(T)] = map;
-            return map.TryGetValue(key, out found) && found != null ? found.Cast<T>() : null;
+            return map.TryGetValue(key, out found) && found != null ? found.Cast<T>() : ByName<T>(map, key);
+        }
+
+        // Sibling order can differ between machines (an object spawned or destroyed under the same parent): the same
+        // path without the sibling indices, when exactly one object has it, is the same object.
+        static readonly System.Text.RegularExpressions.Regex SiblingIndex = new System.Text.RegularExpressions.Regex(@"#\d+");
+        static readonly HashSet<string> namedLogged = new HashSet<string>();
+
+        static T ByName<T>(Dictionary<string, Object> map, string key) where T : Component
+        {
+            string wanted = SiblingIndex.Replace(key, "");
+            Object match = null;
+            foreach (KeyValuePair<string, Object> pair in map)
+            {
+                if (pair.Value == null || SiblingIndex.Replace(pair.Key, "") != wanted) continue;
+                if (match != null) return null;   // ambiguous
+                match = pair.Value;
+            }
+            if (match != null && namedLogged.Add(key)) TogetherRuntime.Log("Scene key matched by name (sibling order differs here): " + key);
+            return match != null ? match.Cast<T>() : null;
         }
     }
 }

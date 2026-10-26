@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Playables;
@@ -42,7 +42,7 @@ namespace MiSideTogether
             get
             {
                 if (!string.IsNullOrEmpty(tourChapter)) return tourChapter;
-                return labTour == "mita" ? "Scene 4 - StartSecret" : labTour == "death" ? "Scene 11 - Backrooms" : labTour == "props" ? "Scene 5 - StartHorror" : labTour == "world" ? "Scene 2 - InGame" : labTour == "carry" ? "Scene 2 - InGame" : labTour == "dialogue" ? "Scene 4 - StartSecret" : labTour == "gather" ? "Scene 2 - InGame" : labTour == "room" ? "Scene 1 - RealRoom" : labTour == "mirror" ? "Scene 2 - InGame" : labTour == "minigame" ? "Scene 4 - StartSecret" : labTour == "novella" ? "Scene 18 - 2D" : labTour == "interactions" ? "Scene 2 - InGame" : labTour == "triggers" ? "Scene 11 - Backrooms" : labTour == "hostcut" ? "Scene 1 - RealRoom" : "Scene 1 - RealRoom";
+                return labTour == "mita" ? "Scene 4 - StartSecret" : labTour == "death" ? "Scene 11 - Backrooms" : labTour == "props" ? "Scene 5 - StartHorror" : labTour == "world" ? "Scene 2 - InGame" : labTour == "carry" ? "Scene 2 - InGame" : labTour == "dialogue" ? "Scene 4 - StartSecret" : labTour == "gather" ? "Scene 2 - InGame" : labTour == "room" ? "Scene 1 - RealRoom" : labTour == "mirror" ? "Scene 2 - InGame" : labTour == "minigame" ? "Scene 4 - StartSecret" : labTour == "novella" ? "Scene 18 - 2D" : labTour == "interactions" ? "Scene 2 - InGame" : labTour == "triggers" ? "Scene 11 - Backrooms" : labTour == "hostcut" ? "Scene 1 - RealRoom" : labTour == "story" ? "Scene 2 - InGame" : "Scene 1 - RealRoom";
             }
         }
 
@@ -517,12 +517,14 @@ namespace MiSideTogether
         // C3 joins while the others are in Scene 1: it must wait in the menu, then come along to Scene 2 with everyone.
         const string LobbyNext = "Scene 2 - InGame";
         bool labLobbyMoved;
+        float labLobbyHeldAt = -1;
 
         bool LobbyHost(float now, string scene)
         {
             bool held = false; foreach (Peer p in peers.Values) if (p.Waiting) held = true;
-            if (held) CheckOnce("lobby.held", scene == TourChapter, "a player joining in " + scene + " waits for the next chapter");
-            if (!labLobbyMoved && held && scene == TourChapter && now - tourSceneAt > 15)
+            if (held && CheckOnce("lobby.held", scene == TourChapter, "a player joining in " + scene + " waits for the next chapter")) labLobbyHeldAt = now;
+            // The waiting player gets 8 s in the menu before the next chapter, so its own check sees the wait.
+            if (!labLobbyMoved && held && scene == TourChapter && now - tourSceneAt > 15 && labLobbyHeldAt > 0 && now - labLobbyHeldAt > 8)
             {
                 labLobbyMoved = true;
                 Log("Lab: host starts the next chapter");
@@ -774,7 +776,7 @@ namespace MiSideTogether
         {
             List<ObjectInteractive> list = new List<ObjectInteractive>();
             foreach (ObjectInteractive o in Object.FindObjectsOfType<ObjectInteractive>())
-                if (o != null && o.isActiveAndEnabled && (LastAppliedStory == null || !LastAppliedStory.EndsWith(SceneKeys.Key(o), StringComparison.Ordinal))) list.Add(o);
+                if (o != null && o.isActiveAndEnabled && o.active && (LastAppliedStory == null || !LastAppliedStory.EndsWith(SceneKeys.Key(o), StringComparison.Ordinal))) list.Add(o);
             list.Sort((a, b) => string.CompareOrdinal(SceneKeys.Key(a), SceneKeys.Key(b)));
             Log("Lab: " + list.Count + " candidate interactives");
             // Host and client pick different objects so both directions are tested.

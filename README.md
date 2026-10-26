@@ -91,7 +91,7 @@ Uninstall: delete `BepInEx\plugins\MiSideTogether`. To remove BepInEx itself, de
 | --- | --- | --- |
 | `connect` | 2 | Handshake, roster, F5 panel, native MULTIPLAYER menu, Steam ready. |
 | `avatars` | 2 | Body model, props, all bones within a few degrees, animation, a step followed. |
-| `story` | 2 | Interactions replayed both ways. |
+| `story` | 2 | Interactions replayed both ways (Scene 2, armed objects only). |
 | `mita` | 2 | Mita position, animation, face and gaze at the nearer player; safe teleport. |
 | `cutscene` | 2 | A host timeline starts on the client within 0.3 s; players hidden during it. |
 | `world` | 2 | Shared key inventory, shared randomness. |

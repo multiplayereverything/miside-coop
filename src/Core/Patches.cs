@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
@@ -15,7 +15,7 @@ namespace MiSideTogether
         {
             if (harmony != null) return;
             harmony = new HarmonyLib.Harmony("local.misidetogether.multiplayer");
-            Patch(typeof(ObjectInteractive), "Click", null, "InteractPostfix");
+            Patch(typeof(ObjectInteractive), "Click", "InteractPrefix", "InteractPostfix");
             Patch(typeof(Trigger_MouseClick), "Click", null, "MouseClickPostfix");
             Patch(typeof(Trigger_Event), "TargetEnter", "TriggerEnterPrefix", "TriggerEnterPostfix");
             Patch(typeof(Trigger_Event), "TargetExit", "TriggerExitPrefix", "TriggerExitPostfix");
@@ -101,7 +101,10 @@ namespace MiSideTogether
             catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook " + where + ": " + ex.Message); }
         }
 
-        static void InteractPostfix(ObjectInteractive __instance) { Safe("Interact", () => TogetherRuntime.Story(Op.Interact, __instance, 0)); }
+        // Click only fires its event when the object is armed (ObjectInteractive.active, read before Click disarms it):
+        // an unarmed click did nothing here, so there is nothing to relay.
+        static void InteractPrefix(ObjectInteractive __instance, out bool __state) { __state = __instance != null && __instance.active; }
+        static void InteractPostfix(ObjectInteractive __instance, bool __state) { if (__state) Safe("Interact", () => TogetherRuntime.Story(Op.Interact, __instance, 0)); }
 
         static void MouseClickPostfix(Trigger_MouseClick __instance) { Safe("MouseClick", () => TogetherRuntime.Story(Op.MouseClick, __instance, 0)); }
 
@@ -221,7 +224,16 @@ namespace MiSideTogether
             try { return TogetherRuntime.BeforePlayerAnimation(__7); }
             catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook PlayerAnimation: " + ex.Message); return true; }
         }
-        static bool PlayerHandAnimationPrefix() { return !TogetherRuntime.ReplayingInteraction; }
+        // Hand animations follow the same rule as body ones: mirrored clicks play them here too, presser-only ones do not.
+        static bool PlayerHandAnimationPrefix()
+        {
+            try
+            {
+                if (!TogetherRuntime.ReplayingInteraction) return true;
+                return CutsceneRules.ForInteraction(TogetherRuntime.ReplayingInteractionKey, null).Who == CutsceneRules.Who.Everyone;
+            }
+            catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook PlayerHandAnimation: " + ex.Message); return false; }
+        }
         static void AnimEventPostfix(int __0) { Safe("AnimEvent", () => TogetherRuntime.AfterAnimEvent(__0)); }
         static void ObjectAnimationPostfix(ObjectAnimationPlayer __instance) { Safe("ObjectAnimation", () => TogetherRuntime.AfterObjectAnimation(__instance)); }
 

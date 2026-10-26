@@ -1,6 +1,6 @@
 ﻿# Runs one scripted lab tour with hidden windows and judges it. Results go to artifacts/tests/<tour>-results.json.
 # Usage: run-tour.ps1 -Tour avatars [-Players 2] [-Seconds 180] [-Chapter "Scene 3 - WeTogether"]
-param([Parameter(Mandatory)][string]$Tour, [int]$Players = 2, [int]$Seconds = 0, [string]$Chapter = '', [switch]$Visible, [string]$ExtraHostArgs = '', [int]$Lag = 0, [int]$Jitter = 0, [string]$JoinAddress = '127.0.0.1')
+param([Parameter(Mandatory)][string]$Tour, [int]$Players = 2, [int]$Seconds = 0, [string]$Chapter = '', [switch]$Visible, [string]$ExtraHostArgs = '', [string]$ExtraClientArgs = '', [int]$Lag = 0, [int]$Jitter = 0, [string]$JoinAddress = '127.0.0.1')
 $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path $PSScriptRoot -Parent
 $tours = @{
@@ -72,7 +72,7 @@ if ((Test-Path $saveDir) -and (Get-ChildItem $saveDir -File -ErrorAction Silentl
 }
 if ($spec.Players) { $Players = $spec.Players }
 $lagArgs = if ($Lag -gt 0) { "-mt-lag $Lag $Jitter" } else { '' }
-& (Join-Path $PSScriptRoot 'launch-lab.ps1') -Players $Players -HostArgs "$hostArgs $lagArgs" -ClientArgs $lagArgs -JoinAddress $JoinAddress -Tour $Tour -Visible:$Visible
+& (Join-Path $PSScriptRoot 'launch-lab.ps1') -Players $Players -HostArgs "$hostArgs $lagArgs" -ClientArgs "$lagArgs $ExtraClientArgs" -JoinAddress $JoinAddress -Tour $Tour -Visible:$Visible
 
 # Every tour stops as soon as all its expected checks have passed (or one failed), or at its time limit.
 $deadline = (Get-Date).AddSeconds($Seconds)
@@ -103,6 +103,9 @@ $out = Join-Path $modRoot "artifacts/tests/$name-results.json"
 New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
 $verify = @((Join-Path $modRoot 'tests/verify-lab.py'), $modRoot, '--out', $out)
 if ($spec.AllowGameErrors) { $verify += '--allow-game-errors' }
+# Other games running beside the lab (another mod's lab copies) slow every copy down: frame cost is then not the mod's.
+$busyGames = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.WorkingSet64 -gt 300MB -and $_.Path -and $_.Path -notlike "$labRoot*" -and ($_.Path -like '*steamapps*' -or $_.ProcessName -match 'Unity|BALDI') })
+if ($busyGames.Count -gt 0) { $verify += @('--busy', (($busyGames | ForEach-Object ProcessName | Sort-Object -Unique) -join ',')) }
 foreach ($e in $spec.Expect) { $verify += @('--expect', $e) }
 python -I @verify | Out-Null
 # Keep each tour's per-instance evidence; the next tour reuses the lab folders.

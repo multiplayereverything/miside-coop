@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -36,10 +36,13 @@ namespace MiSideTogether
             if (scene != "Scene 1 - RealRoom" || LocalPlayer == null || now - tourSceneAt < 25) return;
             if (labPhoneAt < 0)
             {
-                labPhoneAt = now;
                 ObjectInteractive phone = null;
                 foreach (ObjectInteractive o in Object.FindObjectsOfType<ObjectInteractive>()) if (o != null && o.name == "Interactive Mobile") phone = o;
-                if (phone == null) { CheckOnce("phone.taken", false, "no phone to pick up"); return; }
+                if (phone == null) { if (now - tourSceneAt > 240) CheckOnce("phone.taken", false, "no phone to pick up"); return; }
+                // The game arms the phone (ObjectInteractive.active) when the opening ends; a click before that does nothing.
+                if (!phone.active) { if (now - tourSceneAt > 240) CheckOnce("phone.taken", false, "the phone was never armed"); return; }
+                labPhoneAt = now;
+                Log("Lab: the phone is armed " + (now - tourSceneAt).ToString("0") + " s into the chapter");
                 DumpEvents("click", phone.eventClick, 0);
                 DumpMagnets("before");
                 Log("Lab: host picks up the phone");

@@ -63,8 +63,12 @@ This is the master list. The per-chapter detail (every game script type in every
 
 1. **Interactions on every chapter:** `scripts/interactions-all.ps1` presses every interaction in every chapter with two players and checks that both played it at the same spot and ended free. Cases that misbehave get a line in CUTSCENES.md.
 2. **Scripted cutscenes:** compare Mita's animation start times per chapter (`MT-ANIM`, reported as `npc_anim_start_s_p90`).
+2b. **Open from the every-chapter run:** Scene 12 `DoorPhysic Exit` plays differently per side of the door (4 m apart, the host left in a loop); Scene 13: a presser-only action (cartridge) leaves the other player in the mirrored PC seat; the Scene 1 phone is never armed in the lab, so its pickup is unproven.
 3. **Trigger and puzzle relays** (look, distance, camera-distance, safe keypad, keyboard): tours in the chapters that use them (Scene 6/15 safe, Scene 14 keyboard).
-4. **Scene 13/15 core computer** (`GamesCore_InputField` keys, `GamesCore_Main.OpenFolder`) and **Scene 14 phone chat and PC** (`Location14_GameQuestPlayer` reading on and left/right choices, `Location14_PCFileIcon.Click`): player input with no relay, so a choice stays on one machine. Trace and decompile (`-mt-trace`), then a host-led sync like the Scene 18 novella.
+4. **Scene 14 quest game** (the point-and-click game on the PC, `Location14_GameQuestPlayer`) and the **Scene 13/15 core computer** (`GamesCore_InputField` keys, `GamesCore_Main.OpenFolder`): player input with no relay.
+   - Decompiled (GameAssembly.dll, addresses from `-mt-trace`): `ClickMouse` raycasts the mouse 100 m from the camera and walks the quest character (`Location14_PlayerQuest.Move(pos, event)`) to the point or to a `Location14_QuestInteractive` (its event fires on arrival).
+   - The reply choice is `Location14_ButtonChangeDialogue.OnPointerDown`, which inlines `ChangeDialogue(side)`: buttons off, the dialogue's `eventFinish`, then `eventRight` (side) or `eventLeft`. A hook on `ChangeDialogue` never sees a click; `EnterDialogueChange` is only the hover sound.
+   - Plan: the player at the PC drives the quest game (minigame style, others watch); relay `PlayerQuest.Move` targets and the `OnPointerDown` side through the host so every machine's quest game walks and chooses the same. Needs mouse input in the lab (not possible in hidden windows yet).
 5. **Look trigger hold timer** (`Trigger_MouseEvent.eventTimeEnd`): relayed and proven by the `triggers` tour.
 6. **Echo windows:** deaths (6 s) and doors (0.5 s) should become sender-plus-sequence ids.
 7. **Steam transport:** measure loss and latency on a real Steam pair.

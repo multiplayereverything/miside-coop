@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -39,10 +39,16 @@ namespace MiSideTogether
             // CutsceneRules decide per case: "everyone" (mirror) lets this player perform it too.
             string key = scr != null ? SceneKeys.Key(scr) : null;
             string click = ReplayingInteractionKey ?? (Time.realtimeSinceStartup - lastReplayedClickAt < 3 ? lastReplayedClick : null);
-            if (CutsceneRules.ForInteraction(click, key).Who == CutsceneRules.Who.Everyone) return true;
+            CutsceneRules.Rule rule = CutsceneRules.ForInteraction(click, key);
+            if (rule.Who == CutsceneRules.Who.Everyone) return true;
             if (Instance != null && key != null) Instance.pendingWatch[key] = scr;
+            lastHeldBackAt = Time.realtimeSinceStartup;
+            if (LabMode) Log("MT-HOLD " + key + " (click " + click + "): another player's, rule " + rule.Note);
             return false;
         }
+
+        // When this machine last held back an animation as another player's (the lab tour tells presser-only cases apart).
+        public static float lastHeldBackAt = -100;
 
         readonly Dictionary<string, ObjectAnimationPlayer> pendingWatch = new Dictionary<string, ObjectAnimationPlayer>();
 

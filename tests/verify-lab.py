@@ -140,12 +140,15 @@ def main():
     args = sys.argv[2:]
     expects, out = [], None
     allow_game_errors = False   # a tour that reproduces a known game-side failure (scene19)
+    busy = None                 # other games were running beside the lab: frame cost is reported, not judged
     i = 0
     while i < len(args):
         if args[i] == "--expect":
             expects.append(args[i + 1]); i += 2
         elif args[i] == "--allow-game-errors":
             allow_game_errors = True; i += 1
+        elif args[i] == "--busy":
+            busy = args[i + 1]; i += 2
         elif args[i] == "--out":
             out = args[i + 1]; i += 2
         else:
@@ -208,7 +211,9 @@ def main():
             if mod:
                 info["modms_median"] = mod[len(mod) // 2]
                 info["modms_max"] = mod[-1]
-                if mod[len(mod) // 2] > 2.0:
+                if mod[len(mod) // 2] > 2.0 and busy:
+                    info["budget_note"] = f"{mod[len(mod) // 2]:.2f} ms median over the 2 ms budget, not judged: {busy} running beside the lab"
+                elif mod[len(mod) // 2] > 2.0:
                     failures.append(f"{role}: mod costs {mod[len(mod) // 2]:.2f} ms per frame (median), budget 2 ms")
             spikes = [float(m["modmax"]) for m in metrics if "modmax" in m and m.get("phase") == "chapter"]
             if spikes:
