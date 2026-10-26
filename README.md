@@ -65,7 +65,8 @@ The full list (how each thing syncs, who is in charge and which test proves it) 
 ## Install
 1. Install **BepInEx 6 (Unity.IL2CPP, win-x64)**, build be.790, from https://builds.bepinex.dev/projects/bepinex_be, into the MiSide folder.
    - Start the game once and wait for the main menu. The first start takes about a minute.
-2. Copy `MiSideTogether.dll` to `MiSide\BepInEx\plugins\MiSideTogether\`.
+2. Download the latest release from https://github.com/multiplayereverything/miside-coop/releases and unzip it into the MiSide folder
+   (or copy `MiSideTogether.dll` to `MiSide\BepInEx\plugins\MiSideTogether\`).
 3. Settings are saved in `BepInEx\config\MiSideTogether.ini`.
 
 Uninstall: delete `BepInEx\plugins\MiSideTogether`. To remove BepInEx itself, delete `BepInEx\`, `dotnet\`, `winhttp.dll`,

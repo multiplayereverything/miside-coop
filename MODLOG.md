@@ -244,3 +244,8 @@ Ideas cross-checked against QuestionBlock64's MiSide-Multiplayer (it has no lice
 - **interactions-all:** 16 of 18 chapters pass (Scenes 1-11, 14-17, 20).
   - Scene 12 `DoorPhysic Exit`: the players stood on different sides of the door, the game sent them to different spots (4 m apart) and played different animations; the host stayed in a loop (state 1467812248), the client's ended and it returned to where it stood. Open: find out whether the door's side picks the animation and whether the host's loop waits for input.
   - Scene 13: the host's presser-only cartridge takes them out of the PC seat; the client stays seated in its own (mirrored) PC animation until it gets up. Expected with presser-only, but it leaves the two in different places.
+
+## 0.3.1 (2026-10-26): first GitHub release
+- `ModVersion` 0.3.1 (protocol still 4). Published as pre-release **v0.3.1** on https://github.com/multiplayereverything/miside-coop/releases with `MiSideTogether.dll` (SHA256 320A5944…) and `MiSideTogether-0.3.1.zip` (unzips into the MiSide folder).
+- Smoke test on the release build: connect, story, mirror pass.
+- From now on every version is a GitHub release (test builds as pre-release); the Multiplayer Everything Discord bot announces it.
