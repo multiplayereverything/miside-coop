@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -51,6 +51,8 @@ namespace MiSideTogether
         struct FriendGameInfo { public ulong GameId; public uint GameIp; public ushort GamePort, QueryPort; public ulong Lobby; }
 
         static IntPtr networking, friends, user;
+        // Lab only (-mt-steam-mock): every call below goes to the mock instead of steam_api64.
+        public static SteamMock Mock;
         static bool resolverSet;
         static float retryAt;
         public static string Problem = "";
@@ -59,7 +61,7 @@ namespace MiSideTogether
         {
             get
             {
-                if (networking != IntPtr.Zero && friends != IntPtr.Zero && user != IntPtr.Zero) return true;
+                if (Mock != null || (networking != IntPtr.Zero && friends != IntPtr.Zero && user != IntPtr.Zero)) return true;
                 // Steam may come up after the mod starts: try again every few seconds instead of giving up.
                 float now = SteamTransport.Clock();
                 if (now < retryAt) return false;
@@ -86,16 +88,16 @@ namespace MiSideTogether
             }
         }
 
-        public static ulong Self { get { return Ready ? SteamAPI_ISteamUser_GetSteamID(user) : 0; } }
-        public static string SelfName { get { return Ready ? Utf8(SteamAPI_ISteamFriends_GetPersonaName(friends)) : ""; } }
+        public static ulong Self { get { return Mock != null ? Mock.Self : Ready ? SteamAPI_ISteamUser_GetSteamID(user) : 0; } }
+        public static string SelfName { get { return Mock != null ? "Mock " + (Mock.Self - SteamMock.Base) : Ready ? Utf8(SteamAPI_ISteamFriends_GetPersonaName(friends)) : ""; } }
 
         static string Utf8(IntPtr p) { return p == IntPtr.Zero ? "" : Marshal.PtrToStringUTF8(p) ?? ""; }
         static byte[] Z(string s) { return Encoding.UTF8.GetBytes((s ?? "") + "\0"); }
 
-        public static void SetPresence(string key, string value) { if (Ready) SteamAPI_ISteamFriends_SetRichPresence(friends, Z(key), Z(value)); }
+        public static void SetPresence(string key, string value) { if (Mock != null) Mock.SetPresence(key, value); else if (Ready) SteamAPI_ISteamFriends_SetRichPresence(friends, Z(key), Z(value)); }
 
         // Steam's own "invite a friend" overlay; accepting starts MiSide with the connect string (+mt_join <host>).
-        public static void InviteOverlay(string connect) { if (Ready) SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialogConnectString(friends, Z(connect)); }
+        public static void InviteOverlay(string connect) { if (Mock == null && Ready) SteamAPI_ISteamFriends_ActivateGameOverlayInviteDialogConnectString(friends, Z(connect)); }
 
         public sealed class Friend { public ulong Id; public string Name, Hosting; }
 
@@ -103,6 +105,11 @@ namespace MiSideTogether
         public static List<Friend> FriendsInGame()
         {
             List<Friend> list = new List<Friend>();
+            if (Mock != null)
+            {
+                foreach (ulong id in Mock.Friends()) list.Add(new Friend { Id = id, Name = "Mock " + (id - SteamMock.Base), Hosting = Mock.FriendPresence(id, "mt_host") });
+                return list;
+            }
             if (!Ready) return list;
             int count = SteamAPI_ISteamFriends_GetFriendCount(friends, FriendFlagImmediate);
             for (int i = 0; i < count && i < 500; i++)
@@ -116,12 +123,12 @@ namespace MiSideTogether
             return list;
         }
 
-        public static string FriendPresence(ulong id, string key) { return Ready ? Utf8(SteamAPI_ISteamFriends_GetFriendRichPresence(friends, id, Z(key))) : ""; }
-        public static bool Send(ulong to, byte[] data, bool reliable) { return Ready && SteamAPI_ISteamNetworking_SendP2PPacket(networking, to, data, (uint)data.Length, reliable ? 2 : 1, 0); }
-        public static bool Available(out uint size) { size = 0; return Ready && SteamAPI_ISteamNetworking_IsP2PPacketAvailable(networking, out size, 0); }
-        public static bool Read(byte[] buffer, out uint size, out ulong from) { size = 0; from = 0; return Ready && SteamAPI_ISteamNetworking_ReadP2PPacket(networking, buffer, (uint)buffer.Length, out size, out from, 0); }
-        public static void Accept(ulong id) { if (Ready) SteamAPI_ISteamNetworking_AcceptP2PSessionWithUser(networking, id); }
-        public static void Close(ulong id) { if (Ready) SteamAPI_ISteamNetworking_CloseP2PSessionWithUser(networking, id); }
+        public static string FriendPresence(ulong id, string key) { return Mock != null ? Mock.FriendPresence(id, key) : Ready ? Utf8(SteamAPI_ISteamFriends_GetFriendRichPresence(friends, id, Z(key))) : ""; }
+        public static bool Send(ulong to, byte[] data, bool reliable) { if (Mock != null) return Mock.Send(to, data); return Ready && SteamAPI_ISteamNetworking_SendP2PPacket(networking, to, data, (uint)data.Length, reliable ? 2 : 1, 0); }
+        public static bool Available(out uint size) { size = 0; if (Mock != null) return Mock.Available(out size); return Ready && SteamAPI_ISteamNetworking_IsP2PPacketAvailable(networking, out size, 0); }
+        public static bool Read(byte[] buffer, out uint size, out ulong from) { size = 0; from = 0; if (Mock != null) return Mock.Read(buffer, out size, out from); return Ready && SteamAPI_ISteamNetworking_ReadP2PPacket(networking, buffer, (uint)buffer.Length, out size, out from, 0); }
+        public static void Accept(ulong id) { if (Mock != null) Mock.Accept(id); else if (Ready) SteamAPI_ISteamNetworking_AcceptP2PSessionWithUser(networking, id); }
+        public static void Close(ulong id) { if (Mock != null) Mock.Close(id); else if (Ready) SteamAPI_ISteamNetworking_CloseP2PSessionWithUser(networking, id); }
     }
 
     // Steam P2P with the same events and peer ids as the TCP transport (host = 0, clients 1..3). Polled on the main
@@ -132,6 +139,10 @@ namespace MiSideTogether
         readonly Dictionary<ulong, int> ids = new Dictionary<ulong, int>();
         readonly Dictionary<int, ulong> steamIds = new Dictionary<int, ulong>();
         readonly Dictionary<int, float> heardAt = new Dictionary<int, float>();
+        // A reliable send fails when Steam's send buffer is full: the packet waits here and goes out, in order, on the
+        // next poll (never dropped: every packet is a story event or state the other side needs).
+        readonly Dictionary<int, Queue<byte[]>> unsent = new Dictionary<int, Queue<byte[]>>();
+        public static int SendRetries;
         readonly byte[] buffer = new byte[Transport.MaxFrame];
         ulong hostId;
         float nextAccept;
@@ -167,6 +178,7 @@ namespace MiSideTogether
         void Pump()
         {
             float now = Clock();
+            if (unsent.Count > 0) FlushUnsent();
             if (Hosting && now >= nextAccept)
             {
                 // No callbacks from here: accept sessions from friends in MiSide who asked to join this host.
@@ -205,7 +217,21 @@ namespace MiSideTogether
         {
             ulong to;
             if (packet == null || packet.Length == 0 || packet.Length > Transport.MaxFrame) throw new ArgumentException("Invalid packet size.");
-            if (steamIds.TryGetValue(id, out to)) Steam.Send(to, packet, true);
+            if (!steamIds.TryGetValue(id, out to)) return;
+            if (unsent.TryGetValue(id, out Queue<byte[]> waiting) && waiting.Count > 0) { waiting.Enqueue(packet); return; }
+            if (Steam.Send(to, packet, true)) return;
+            SendRetries++;
+            if (waiting == null) unsent[id] = waiting = new Queue<byte[]>();
+            waiting.Enqueue(packet);
+        }
+
+        void FlushUnsent()
+        {
+            foreach (KeyValuePair<int, Queue<byte[]>> pair in unsent)
+            {
+                if (!steamIds.TryGetValue(pair.Key, out ulong to)) { pair.Value.Clear(); continue; }
+                while (pair.Value.Count > 0 && Steam.Send(to, pair.Value.Peek(), true)) pair.Value.Dequeue();
+            }
         }
 
         public void SendAndClose(int id, byte[] packet) { Send(id, packet); Drop(id); }
@@ -215,7 +241,7 @@ namespace MiSideTogether
         {
             ulong to;
             if (!steamIds.TryGetValue(id, out to)) return;
-            steamIds.Remove(id); ids.Remove(to); heardAt.Remove(id);
+            steamIds.Remove(id); ids.Remove(to); heardAt.Remove(id); unsent.Remove(id);
             Steam.Close(to);
             events.Enqueue(new NetworkEvent { Peer = id, Kind = "disconnected" });
         }

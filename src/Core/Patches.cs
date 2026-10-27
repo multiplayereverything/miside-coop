@@ -48,6 +48,9 @@ namespace MiSideTogether
             Patch(typeof(InputKeyboard_Main), "ButtonUpper", null, "KeyboardUpperPostfix");
             Patch(typeof(Trigger_DistanceCamera), "Enter", null, "CameraEnterPostfix");
             Patch(typeof(Trigger_DistanceCamera), "Exit", null, "CameraExitPostfix");
+            Patch(typeof(Location14_GameQuestPlayer), "ClickMouse", "QuestClickPrefix", "QuestClickPostfix");
+            Patch(typeof(Location14_PlayerQuest), "Move", null, "QuestMovePostfix");
+            Patch(typeof(Location14_ButtonChangeDialogue), "OnPointerDown", "QuestReplyPrefix", "QuestReplyPostfix");
             Patch(typeof(Location6_MitaKiller), "Kill", "DeathMitaKillerPostfix", null);
             Patch(typeof(Location10_ManekenChekpoint), "PlayerDeath", "DeathManekenCheckpointPostfix", null);
             Patch(typeof(Location11_Lift), "DeathPlayer", "DeathLiftPostfix", null);
@@ -197,6 +200,11 @@ namespace MiSideTogether
         static void KeyboardRemovePostfix(InputKeyboard_Main __instance) { Safe("KeyboardRemove", () => TogetherRuntime.Call(2, __instance, 0)); }
         static void KeyboardEnterPostfix(InputKeyboard_Main __instance) { Safe("KeyboardEnter", () => TogetherRuntime.Call(3, __instance, 0)); }
         static void KeyboardUpperPostfix(InputKeyboard_Main __instance) { Safe("KeyboardUpper", () => TogetherRuntime.Call(4, __instance, 0)); }
+        static void QuestClickPrefix() { TogetherRuntime.QuestClickPrefix(); }
+        static void QuestClickPostfix() { TogetherRuntime.QuestClickPostfix(); }
+        static void QuestMovePostfix(Location14_PlayerQuest __instance, Vector3 _pos, UnityEngine.Events.UnityEvent _event) { Safe("QuestMove", () => TogetherRuntime.QuestMoved(__instance, _pos, _event)); }
+        static void QuestReplyPrefix(Location14_ButtonChangeDialogue __instance, out bool __state) { __state = __instance != null && __instance.active; }
+        static void QuestReplyPostfix(Location14_ButtonChangeDialogue __instance, bool __state) { Safe("QuestReply", () => TogetherRuntime.QuestReplyPicked(__instance, __state)); }
         static void CameraEnterPostfix(Trigger_DistanceCamera __instance, bool _deactiveAfter) { Safe("CameraEnter", () => TogetherRuntime.Call(5, __instance, _deactiveAfter ? 1 : 0)); }
         static void CameraExitPostfix(Trigger_DistanceCamera __instance, bool _deactiveAfter) { Safe("CameraExit", () => TogetherRuntime.Call(6, __instance, _deactiveAfter ? 1 : 0)); }
         static void NovellaNextPostfix() { Safe("NovellaNext", TogetherRuntime.NovellaClicked); }

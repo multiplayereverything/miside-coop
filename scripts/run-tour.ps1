@@ -5,6 +5,8 @@ $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path $PSScriptRoot -Parent
 $tours = @{
     'connect'  = @{ Seconds = 60;   Expect = @('ui.panel', 'connect.handshake', 'connect.roster', 'steam.ready', 'ui.menu', 'ui.menu.open') }
+    'quest'    = @{ Seconds = 360;  Expect = @('chapter.loaded@host', 'quest.clicked@host', 'client.quest.moved') }
+    'steam'    = @{ Seconds = 80;   SteamMock = $true; Expect = @('connect.handshake', 'connect.roster', 'steam.ready', 'client.steam.joined', 'client.steam.order') }
     'avatars'  = @{ Seconds = 200;  Expect = @('ui.panel', 'chapter.loaded@host', 'client.follow.scene', 'client.follow.player', 'avatar.model', 'avatar.props', 'avatar.bones', 'avatar.near', 'avatar.anim', 'avatar.params', 'client.avatar.follows') }
     'story'    = @{ Seconds = 200;  Expect = @('chapter.loaded@host', 'story.sent@host', 'client.story.applied', 'story.received@host') }
     'mita'     = @{ Seconds = 240;  Expect = @('chapter.loaded@host', 'mita.sent@host', 'client.mita.synced', 'client.mita.face', 'mita.gaze@host', 'client.teleport.safe') }
@@ -72,7 +74,7 @@ if ((Test-Path $saveDir) -and (Get-ChildItem $saveDir -File -ErrorAction Silentl
 }
 if ($spec.Players) { $Players = $spec.Players }
 $lagArgs = if ($Lag -gt 0) { "-mt-lag $Lag $Jitter" } else { '' }
-& (Join-Path $PSScriptRoot 'launch-lab.ps1') -Players $Players -HostArgs "$hostArgs $lagArgs" -ClientArgs "$lagArgs $ExtraClientArgs" -JoinAddress $JoinAddress -Tour $Tour -Visible:$Visible
+& (Join-Path $PSScriptRoot 'launch-lab.ps1') -Players $Players -HostArgs "$hostArgs $lagArgs" -ClientArgs "$lagArgs $ExtraClientArgs" -JoinAddress $JoinAddress -Tour $Tour -Visible:$Visible -SteamMock:([bool]$spec.SteamMock)
 
 # Every tour stops as soon as all its expected checks have passed (or one failed), or at its time limit.
 $deadline = (Get-Date).AddSeconds($Seconds)

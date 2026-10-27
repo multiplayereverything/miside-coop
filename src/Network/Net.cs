@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
@@ -253,6 +253,8 @@ namespace MiSideTogether
                     if (notice == "lab-step") { labStepAt = Time.realtimeSinceStartup; break; }
                     if (notice == "lab-gaze") { labGazeAt = Time.realtimeSinceStartup; break; }
                     if (notice.StartsWith("lab-press", StringComparison.Ordinal)) { InteractionsNotice(notice); break; }
+                    if (notice.StartsWith("lab-seq:", StringComparison.Ordinal)) { SteamSeqNotice(notice); break; }
+                    if (notice.StartsWith("lab-quest:", StringComparison.Ordinal)) { QuestNotice(notice); break; }
                     if (notice.StartsWith("lab-drop:", StringComparison.Ordinal)) { string[] v = notice.Substring(9).Split(','); labDrop = new Vector3(float.Parse(v[0], System.Globalization.CultureInfo.InvariantCulture), float.Parse(v[1], System.Globalization.CultureInfo.InvariantCulture), float.Parse(v[2], System.Globalization.CultureInfo.InvariantCulture)); if (v.Length > 3) labDropKey = string.Join(",", v, 3, v.Length - 3); labDropKnown = true; break; }
                     if (notice.StartsWith("lab-room:", StringComparison.Ordinal)) { labRoomNotice = notice.Substring(9); labRoomNoticeAt = Time.realtimeSinceStartup; break; }
                     if (notice.StartsWith("lab-seed:", StringComparison.Ordinal)) { int.TryParse(notice.Substring(9), out labSeed); break; }

@@ -69,6 +69,8 @@ namespace MiSideTogether
             if (labTour == "inventory") { InventoryTour(now, scene); return; }
             TeleportSafeCheck(now);
             if (labTour == "connect") { MenuChecks(now, scene); return; }
+            if (labTour == "steam") { SteamTour(now, scene); return; }
+            if (labTour == "quest") { if (Hosting) QuestHost(now, scene); return; }
             if (Hosting) HostTour(now, scene); else if (Connected) ClientTour(now, scene);
         }
 

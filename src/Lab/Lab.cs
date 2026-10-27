@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -37,8 +37,13 @@ namespace MiSideTogether
                 if (args[i] == "-mt-chapter" && i + 1 < args.Length) tourChapter = args[++i].Replace('_', ' ');
                 if (args[i] == "-mt-dump" && i + 1 < args.Length) dumpScene = args[++i].Replace('_', ' ');
                 if (args[i] == "-mt-trace" && i + 1 < args.Length) traceTypes = args[++i];
+                if (args[i] == "-mt-fps" && i + 1 < args.Length) int.TryParse(args[++i], out labFps);
+                if (args[i] == "-mt-steam-mock" && i + 1 < args.Length) int.TryParse(args[++i], out steamMockSlot);
+                if (args[i] == "-mt-steam-fail" && i + 1 < args.Length) int.TryParse(args[++i], out steamMockFail);
             }
             if (!LabMode) return;
+            // The Steam mock shares private\steam-mock between the lab copies of one run (launch-lab clears it).
+            if (steamMockSlot > 0) Steam.Mock = new SteamMock(steamMockSlot, Path.Combine(Root, "..", "steam-mock"), steamMockFail);
             try
             {
                 labLog = new StreamWriter(Path.Combine(Root, "misidetogether-lab.log"), false) { AutoFlush = true };
@@ -107,10 +112,43 @@ namespace MiSideTogether
         // The lobby tour's fourth player joins late, while the others are already in a chapter.
         bool LateLabJoiner { get { return LabMode && labTour == "lobby" && Name == "C3"; } }
 
+        // A fresh install (no settings in the save folder) stops in SceneLoading on the game's LANGUAGE/VOICE picker
+        // (ChangeLanguageStart) until someone picks. Lab copies pick English text and voice, as a player would.
+        int labFps = 30, steamMockSlot, steamMockFail;
+        float firstRunSeenAt = -1;
+        bool firstRunPicked;
+
+        void FirstRunLanguageTick(float now)
+        {
+            if (firstRunPicked || ActiveSceneName != "SceneLoading") return;
+            ChangeLanguageStart picker = Object.FindObjectOfType<ChangeLanguageStart>();
+            if (picker == null || !picker.isActiveAndEnabled) return;
+            if (firstRunSeenAt < 0) { firstRunSeenAt = now; return; }
+            if (now - firstRunSeenAt < 2) return;
+            int language = -1, voice = -1;
+            foreach (ChangeLanguageStartButton button in Object.FindObjectsOfType<ChangeLanguageStartButton>())
+            {
+                if (button == null || button.text == null || button.text.text.Trim() != "English") continue;
+                bool isVoice = false;
+                for (Transform t = button.transform; t != null; t = t.parent) if (t.name == "Voice") { isVoice = true; break; }
+                if (isVoice) voice = button.index; else language = button.index;
+            }
+            firstRunPicked = true;
+            if (language < 0) { Log("Lab: first-run picker has no English language button"); return; }
+            picker.ChangeLanguage(language);
+            if (voice >= 0) picker.ChangeVoice(voice, true);
+            picker.Apply();
+            Log("Lab: first-run picker answered: English text (" + language + "), English voice (" + voice + ")");
+        }
+
         void LabTick()
         {
             if (!LabMode) return;
             float now = Time.realtimeSinceStartup;
+            FirstRunLanguageTick(now);
+            // Lab copies share the PC with the user and other mods' labs: 30 fps by default (-mt-fps), held against the
+            // game's own settings, which set the frame rate again when they load.
+            if (labFps > 0 && Application.targetFrameRate != labFps) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = labFps; }
             // Lab clients may start before the host listens; keep retrying instead of giving up.
             if (autoRole == "join" && !Active && now >= labJoinRetryAt && (!LateLabJoiner || now > 90)) { labJoinRetryAt = now + 3; StartJoin(); }
             if (now >= nextMetric)

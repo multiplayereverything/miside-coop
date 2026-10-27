@@ -43,6 +43,11 @@ namespace MiSideTogether
         // Per-case overrides, tuned from play-testing. Add new cases here (or in the ini file).
         static readonly List<Rule> BuiltIn = new List<Rule>
         {
+            // The core computer (Scenes 13 and 15) is one seat: whoever presses it sits and operates it, the others
+            // watch through their eyes. Mirrored, every player sat down and only the operator's program could end the
+            // seat, so the others stayed seated (every-chapter run, Scene 13). Playbook "how-coop-mods-work" 1.5:
+            // the initiator picks, the others follow.
+            new Rule { Match = "InteractivePC", Who = Who.Actor, Pov = true, Note = "core computer: one operator" },
         };
 
         static List<Rule> loaded;

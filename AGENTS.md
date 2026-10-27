@@ -101,7 +101,10 @@ Start with `docs/HANDOFF.md` (current state, next steps, new-PC setup), `README.
 
 ## Rules
 - **Build and test:** build with `scripts/build.ps1`. Test with `scripts/run-tour.ps1 -Tour <tour>` or `scripts/lab-suite.ps1`.
-  - Lab windows are hidden. The user's save folder is backed up and restored per run, and the lab refuses to start beside the user's own MiSide.
+  - Lab copies run as 480x270 windows at the lowest quality, 30 fps (`-mt-fps`) and BelowNormal priority, parked down the right edge of the primary monitor without ever taking focus (`launch-lab.ps1 -Hidden` hides them instead). The user's PC is shared with other mods' labs: one tour at a time, and never send keys or clicks to the desktop.
+  - A fresh install stops in `SceneLoading` on the game's LANGUAGE/VOICE picker; lab copies answer it with English (`FirstRunLanguageTick`, Lab.cs).
+  - The user's save folder is backed up and restored per run, and the lab refuses to start beside the user's own MiSide.
+  - Steam with one account: `run-tour.ps1 -Tour steam` uses the lab Steam mock (`src/Network/SteamMock.cs`, `-mt-steam-mock`, `-mt-steam-fail`): fake accounts, rich presence through `private/steam-mock`, sessions held until accepted, failed sends.
 - **Evidence:** `private/lab-*/misidetogether-lab.log` (`MT-CHECK`, `MT-METRIC` with `modmax` worst frame, `MT-STATE` every 2 s, `MT-ERROR`, `MT-MODERROR`). Kept per tour in `artifacts/tests/logs/<tour>/`, with Unity error excerpts.
 - **Latency runs:** `run-tour.ps1 -Lag 120 -Jitter 40 -JoinAddress <LAN IP>` simulates internet latency (`-mt-lag`, lab only).
 - **Control runs:** `run-tour.ps1 -ExtraHostArgs "-mt-nopatch" -Players 1` loads the mod without any game hook, to tell game-side failures from the mod's.
