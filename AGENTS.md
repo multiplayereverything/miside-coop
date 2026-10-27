@@ -1,6 +1,6 @@
 ﻿# MiSide Together development
 
-Start with `../handoff.md` (current state, next steps), `README.md` (behaviour, limitations) and `docs/SYNC.md` (every synced thing, how, which tour proves it, and the work list). Keep them current, along with `MODLOG.md`. Per-cutscene tuning: `CUTSCENES.md`. Per-chapter coverage: `docs/SYNC-INVENTORY.md` (regenerate with the `inventory` tour plus `python tools/inventory_report.py`).
+Start with `docs/HANDOFF.md` (current state, next steps, new-PC setup), `README.md` (behaviour, limitations) and `docs/SYNC.md` (every synced thing, how, which tour proves it, and the work list). Keep them current, along with `MODLOG.md`. Per-cutscene tuning: `CUTSCENES.md`. Per-chapter coverage: `docs/SYNC-INVENTORY.md` (regenerate with the `inventory` tour plus `python tools/inventory_report.py`).
 
 ## Repository
 - **GitHub:** https://github.com/multiplayereverything/miside-coop (public, branch `main`). This folder is the repo; `.gitignore` keeps out `artifacts/` (builds, test logs, the generated dialogue script), `private/` (lab copies, backups), `graphify-out/` and `obj/`.
