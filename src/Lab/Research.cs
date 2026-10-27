@@ -38,6 +38,11 @@ namespace MiSideTogether
             }
             File.WriteAllText(path, text.ToString());
             Log("Lab: dumped " + dumpScene + " to " + path);
+            StringBuilder wires = new StringBuilder();
+            DumpWires(wires);
+            string wiresPath = Path.Combine(Root, "private-wires-" + dumpScene.Replace(' ', '_') + ".txt");
+            File.WriteAllText(wiresPath, wires.ToString());
+            Log("Lab: wiring of " + dumpScene + " to " + wiresPath);
         }
 
         static void DumpObject(Transform t, int depth, StringBuilder text)

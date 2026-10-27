@@ -33,7 +33,7 @@ namespace MiSideTogether
         // (Location1_InputNamePlayer.CheckName). A lab copy gets no input, so it answers each step as a player would.
         // Each player does this on their own machine, so both copies run it. Before this, the phone was never armed.
         float labTutorialAt;
-        bool labTutorialAnswered;
+        bool labTutorialAnswered, labTutorialShirt;
         float labTutorialLogAt;
 
         void LabScene1Tutorial(float now)
@@ -71,6 +71,20 @@ namespace MiSideTogether
                     t.indexHint = 3;
                     Log("Lab: tutorial - walked");
                     return;
+                }
+                // Hint 3 ("interact"): with quest hints on, eventYesQuest switched on "Interactive TShip Tutorial"; clicking it
+                // starts the T-shirt dialogue, whose end arms the room's interactives (the phone among them). Found with the
+                // wiring dump (-mt-dump, private-wires-*.txt). With hints off, eventNoQuest arms them at once.
+                if (t.play && t.indexHint >= 3 && !labTutorialShirt)
+                {
+                    foreach (ObjectInteractive o in Object.FindObjectsOfType<ObjectInteractive>())
+                        if (o != null && o.name == "Interactive TShip Tutorial" && o.active)
+                        {
+                            labTutorialShirt = true;
+                            o.Click();
+                            Log("Lab: tutorial - looked at the T-shirt");
+                            return;
+                        }
                 }
                 if (t.frameTutorial != null && t.frameTutorial.activeInHierarchy && !labTutorialAnswered)
                 {

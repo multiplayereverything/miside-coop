@@ -273,3 +273,8 @@ Ideas cross-checked against QuestionBlock64's MiSide-Multiplayer (it has no lice
 - **Tests on 0.3.3:** suite 24/24 (with `steam`, `quest`, `core`); every chapter 18 of 18.
 - **Co-op Anything:** PR cranebeaker/coop-anything#220 refreshed to v0.3.2 facts (commit bd91310).
 
+## Unreleased (2026-10-27): Scene 1 phone proven
+- **Wiring dump (lab):** `-mt-dump <scene>` also writes `private-wires-<scene>.txt`, every persistent UnityEvent call in the scene (UnityEvent properties, arrays and lists of them, and game structs holding them such as `Time_Events.TimePoint`). It found the Scene 1 gate in one run, after tracing `Time_Events`/`Events_Data` had disturbed them.
+- **Scene 1 gate:** `Location1Tutorial.eventYesQuest` (quest hints on) switches on "Interactive TShip Tutorial"; clicking it starts the T-shirt dialogue, whose `eventFinish` arms the room's interactives (`ObjectInteractiveGroup.ActivationAndDestroy`), the phone among them. `eventNoQuest` (hints off) arms them at once. The lab now clicks the T-shirt after the walking step.
+- **`phone` tour passes** (first time): phone armed 37 s into the chapter, the host holds it, the client sees it in the host's hand (1.39 m), does not pick one up and has none left. The host's T-shirt click is replayed on the client, which needs no click of its own. Added to the suite.
+
