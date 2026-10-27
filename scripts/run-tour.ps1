@@ -5,6 +5,7 @@ $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path $PSScriptRoot -Parent
 $tours = @{
     'connect'  = @{ Seconds = 60;   Expect = @('ui.panel', 'connect.handshake', 'connect.roster', 'steam.ready', 'ui.menu', 'ui.menu.open') }
+    'core'     = @{ Seconds = 300;  Expect = @('chapter.loaded@host', 'core.driven@host', 'client.core.followed') }
     'quest'    = @{ Seconds = 360;  Expect = @('chapter.loaded@host', 'quest.clicked@host', 'client.quest.moved') }
     'steam'    = @{ Seconds = 80;   SteamMock = $true; Expect = @('connect.handshake', 'connect.roster', 'steam.ready', 'client.steam.joined', 'client.steam.order') }
     'avatars'  = @{ Seconds = 200;  Expect = @('ui.panel', 'chapter.loaded@host', 'client.follow.scene', 'client.follow.player', 'avatar.model', 'avatar.props', 'avatar.bones', 'avatar.near', 'avatar.anim', 'avatar.params', 'client.avatar.follows') }
@@ -129,6 +130,6 @@ foreach ($p in $result.instances.PSObject.Properties) {
     $i = $p.Value
     $passed = @($i.checks | Where-Object pass).Count; $total = @($i.checks).Count
     Write-Output ("  {0}: checks {1}/{2}, scene {3}, errors {4} (slope {5}/10s), heap slope {6} MB/10s, mod ms median {7} max {8} (worst frame {11}), mod objects {9}, mita desync max {10}" -f $p.Name, $passed, $total, $i.scene_end, $i.errors_end, $i.error_slope_per_10s, $i.heap_slope_mb_per_10s, $i.modms_median, $i.modms_max, $i.modobjects_end, $i.mitadesync_max, $i.modmax_frame_ms)
-    if ($i.sync) { $s = $i.sync; Write-Output ("     sync vs host: {0} samples, npc p90 {1} m, npc anim mismatch {2}, dialogue mismatch {3}, dialogue lag max/mean {4}, cutscene mismatch {5}, timeline p90 {6} s, npc anim start p90 {7} s over {8} changes (missed {9})" -f $s.samples, $s.npc_m_p90, $s.npc_anim_mismatch, $s.dialogue_mismatch, $s.dialogue_lag_max_mean, $s.cutscene_mismatch, $s.timeline_s_p90, $s.npc_anim_start_s_p90, $s.npc_anim_changes, $s.npc_anim_missed) }
+    if ($i.sync) { $s = $i.sync; Write-Output ("     sync vs host: {0} samples, npc p90 {1} m, npc anim mismatch {2}, dialogue mismatch {3}, dialogue lag max/mean {4}, cutscene mismatch {5}, timeline p90 {6} s, npc anim start p90 {7} s over {8} changes (missed {9}, early {10})" -f $s.samples, $s.npc_m_p90, $s.npc_anim_mismatch, $s.dialogue_mismatch, $s.dialogue_lag_max_mean, $s.cutscene_mismatch, $s.timeline_s_p90, $s.npc_anim_start_s_p90, $s.npc_anim_changes, $s.npc_anim_missed, $s.npc_anim_early) }
 }
 Remove-Item $lock -Force -ErrorAction SilentlyContinue

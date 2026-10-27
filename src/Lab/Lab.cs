@@ -38,6 +38,7 @@ namespace MiSideTogether
                 if (args[i] == "-mt-dump" && i + 1 < args.Length) dumpScene = args[++i].Replace('_', ' ');
                 if (args[i] == "-mt-trace" && i + 1 < args.Length) traceTypes = args[++i];
                 if (args[i] == "-mt-fps" && i + 1 < args.Length) int.TryParse(args[++i], out labFps);
+                if (args[i] == "-mt-look") lookDump = true;
                 if (args[i] == "-mt-steam-mock" && i + 1 < args.Length) int.TryParse(args[++i], out steamMockSlot);
                 if (args[i] == "-mt-steam-fail" && i + 1 < args.Length) int.TryParse(args[++i], out steamMockFail);
             }

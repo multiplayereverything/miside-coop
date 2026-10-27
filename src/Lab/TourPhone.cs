@@ -28,10 +28,74 @@ namespace MiSideTogether
 
         bool labPhoneHostActed, labPhoneMoved; float labPhoneSeenAt = -1;
 
+        // Scene 1's tutorial waits for the player to move the mouse and walk (Location1Tutorial: eventReadyMouse and
+        // eventReadyMove fire when their timers fill), asks whether to show quest hints, and then asks for a name
+        // (Location1_InputNamePlayer.CheckName). A lab copy gets no input, so it answers each step as a player would.
+        // Each player does this on their own machine, so both copies run it. Before this, the phone was never armed.
+        float labTutorialAt;
+        bool labTutorialAnswered;
+        float labTutorialLogAt;
+
+        void LabScene1Tutorial(float now)
+        {
+            if (now < labTutorialAt) return;
+            labTutorialAt = now + 2;
+            foreach (Location1Tutorial t in Object.FindObjectsOfType<Location1Tutorial>())
+            {
+                if (t == null || !t.isActiveAndEnabled) continue;
+                if (now >= labTutorialLogAt)
+                {
+                    labTutorialLogAt = now + 10;
+                    Log("Lab: tutorial state hint " + t.indexHint + " play=" + t.play + " request=" + t.requestPlayer + " canMove " + t.timeCanMove.ToString("0.0")
+                        + " mouse=" + (t.objectMouseMove != null && t.objectMouseMove.activeInHierarchy) + " move=" + (t.objectMove != null && t.objectMove.activeInHierarchy)
+                        + " frame=" + (t.frameTutorial != null && t.frameTutorial.activeInHierarchy) + " style=" + (t.frameStyle != null && t.frameStyle.activeInHierarchy)
+                        + " fill " + (t.imageTimeMouse != null ? t.imageTimeMouse.fillAmount.ToString("0.00") : "-") + "/" + (t.imageTimeMove != null ? t.imageTimeMove.fillAmount.ToString("0.00") : "-"));
+                }
+                // Location1Tutorial.Update (GameAssembly 0x3209b0): hint 1 fills imageTimeMouse from the mouse axes, then
+                // invokes eventReadyMouse, hides the prompt and goes to hint 2 (0.5 s pause); hint 2 does the same for
+                // walking with imageTimeMove and eventReadyMove, then hint 3. The same transitions, without the input:
+                if (t.play && t.indexHint == 1)
+                {
+                    if (t.imageTimeMouse != null) t.imageTimeMouse.fillAmount = 1;
+                    t.eventReadyMouse?.Invoke();
+                    if (t.objectMouseMove != null) t.objectMouseMove.SetActive(false);
+                    t.indexHint = 2; t.timeCanMove = 0.5f;
+                    Log("Lab: tutorial - moved the mouse");
+                    return;
+                }
+                if (t.play && t.indexHint == 2)
+                {
+                    if (t.imageTimeMove != null) t.imageTimeMove.fillAmount = 1;
+                    t.eventReadyMove?.Invoke();
+                    if (t.objectMove != null) t.objectMove.SetActive(false);
+                    t.indexHint = 3;
+                    Log("Lab: tutorial - walked");
+                    return;
+                }
+                if (t.frameTutorial != null && t.frameTutorial.activeInHierarchy && !labTutorialAnswered)
+                {
+                    labTutorialAnswered = true;
+                    t.ChangePlayerQuest(true);
+                    t.CloseQuestHint();
+                    Log("Lab: tutorial - quest hints on (requestPlayer=" + t.requestPlayer + ", play=" + t.play + ", hint " + t.indexHint + ")");
+                    return;
+                }
+            }
+            foreach (Location1_InputNamePlayer n in Object.FindObjectsOfType<Location1_InputNamePlayer>())
+            {
+                if (n == null || !n.isActiveAndEnabled || n.inputName == null || !n.inputName.gameObject.activeInHierarchy || n.inputName.text == Name) continue;
+                n.inputName.text = Name;
+                n.CheckName();
+                Log("Lab: tutorial - name " + Name);
+                return;
+            }
+        }
+
         void PhoneHost(float now, string scene)
         {
             // The lab cannot press a key, so the game's location hint screens (which wait for one) are off for this tour.
             GlobalGame.hintScreen = false;
+            if (scene == "Scene 1 - RealRoom") LabScene1Tutorial(now);
             if (!tourStarted && scene == "SceneMenu" && now - tourSceneAt > 6) { tourStarted = true; LoadThroughGame("Scene 1 - RealRoom"); }
             if (scene != "Scene 1 - RealRoom" || LocalPlayer == null || now - tourSceneAt < 25) return;
             if (labPhoneAt < 0)
@@ -73,6 +137,7 @@ namespace MiSideTogether
         void PhoneClient(float now, string scene)
         {
             GlobalGame.hintScreen = false;
+            if (scene == "Scene 1 - RealRoom") LabScene1Tutorial(now);
             PlayerMove player = LocalPlayer;
             if (scene != "Scene 1 - RealRoom" || player == null || !peers.ContainsKey(0)) return;
             Peer host = peers[0];

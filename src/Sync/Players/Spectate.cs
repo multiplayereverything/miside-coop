@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 namespace MiSideTogether
@@ -14,7 +14,7 @@ namespace MiSideTogether
         Vector3 savedCameraPos; Quaternion savedCameraRot; float savedFov;
         public int spectateFrames;
 
-        public static void NoteLocalClick(string key) { if (Instance != null) { Instance.lastClickKey = key; Instance.lastClickAt = Time.realtimeSinceStartup; } }
+        public static void NoteLocalClick(string key) { if (Instance != null) { Instance.lastClickKey = key; Instance.lastClickAt = Time.realtimeSinceStartup; NoteCoreOperator(key, true); } }
 
         // Sender: should the others watch through this player's eyes right now?
         bool WatchMe()

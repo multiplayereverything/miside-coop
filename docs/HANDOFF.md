@@ -6,25 +6,28 @@ Read this first when picking the work up on another PC. Then `AGENTS.md` (archit
 Co-op for MiSide (2 to 4 players). Everyone sees the others as the main character with real animations, and the game stays in sync: chapters, story, dialogue, cutscenes, Mita and the other NPCs, room state, minigames and endings. BepInEx, to match the user's Baldi Together and Spooky Together mods.
 
 ## State (2026-10-27)
-- **Version:** 0.3.2, a full GitHub release (`v0.3.2`, commit `78939ad`) on https://github.com/multiplayereverything/miside-coop, with `MiSideTogether-0.3.2.zip` (layout `BepInEx/plugins/MiSideTogether/MiSideTogether.dll`, what the launcher installs) and the DLL. Protocol `Wire.Version` 4. Every player needs the same build.
-- **Online play:** Steam P2P (friends join from MULTIPLAYER in the game's menu), LAN/VPN, or a direct address (TCP 27030). It doesn't use the Multiplayer Everything relay.
+- **Version:** 0.3.3, a GitHub pre-release (`v0.3.3`) on https://github.com/multiplayereverything/miside-coop, with `MiSideTogether-0.3.3.zip` (layout `BepInEx/plugins/MiSideTogether/MiSideTogether.dll`, what the launcher installs) and the DLL. Protocol `Wire.Version` 4 (`Op.Call` 8-14 are new; only same-version players connect). The last full release is v0.3.2.
+- **Online play:** Steam P2P (friends join from MULTIPLAYER in the game's menu, or Steam's Join Game / invite, `+mt_join`), LAN/VPN, or a direct address (TCP 27030). It doesn't use the Multiplayer Everything relay.
+- **This PC (2026-10-27):** the repo lives at `Desktop\AIStuff\ai-work-pc-games\Miside Multiplayer Mod`, outside the game; `scripts\game-dir.ps1` finds the game. BepInEx be.790 and the mod are installed in the game. The user's save folder is empty, as they want it.
 - **Website:** `games.json` in the website repo has the `miside` entry. The Website session updates it; don't edit it from here.
-- **Tests (hidden lab copies on one PC):** suite 21/21 tours pass; the 0.3.2 release run passed 22/23 (only `phone` fails, see below). Pressing every interaction in every chapter (`scripts/interactions-all.ps1`): 17 of 18 chapters pass.
-- **Not tested:** a real playtest with friends; two real Steam accounts on separate PCs; four real players (4-player runs are lab-only); installing through the launcher.
+- **Tests (lab copies on one PC, minimized):** suite 24 tours, all pass on 0.3.3 (`steam`, `quest`, `core` are new). Pressing every interaction in every chapter: 18 of 18 chapters pass.
+- **Not tested:** a real playtest with friends; two real Steam accounts on separate PCs; four real players (4-player runs are lab-only); installing through the launcher; the other player's shading seen by a person.
 
-## Done in 0.3.2
-- **Scene 12 exit door:** cutscene starts are retried for 5 s and start when only the timeline is playing (`NeedsStart`). Player animations started by the host's story are caught up on clients (`Op.Call` 7, `Interactions.cs`), checked by the client's own key.
-- **Avatar shading:** the copy of the player's body receives shadows like Mita (user report: flat and over-bright).
-- **Held items and the Scene 1 phone:** done by the presser only (`HeldItems.cs`). Cutscenes in a running chapter are run by the host.
-- **Lab:** `MT-LOOK` material dump (`src/Lab/LookDump.cs`); `-mt-trace` (`src/Lab/Trace.cs`, don't trace `ObjectDoor`, it freezes the game).
+## Done in 0.3.3
+- **Lab on a fresh install:** the game's first-run LANGUAGE/VOICE picker is answered (English); lab copies start minimized as normal small windows ("MiSide lab - host"), lowest quality, 30 fps, BelowNormal priority, never focused.
+- **Steam:** failed reliable sends wait and go out in order (were dropped). A lab Steam mock (`SteamMock.cs`) and the `steam` tour test the Steam transport with one account (join by `+mt_join`, rich presence, held sessions, failed sends); mutation-checked.
+- **Scene 13 seat:** the core computer (`InteractivePC`) is one operator, the others watch through their eyes; nobody is left seated. Scene 13 passes the every-chapter run.
+- **Core computer (Scenes 13, 15) shared:** the operator's keys, Enter, folders and program stages are replayed on every copy (`CoreComputer.cs`, `Op.Call` 10-14); `core` tour, mutation-checked.
+- **Scene 14 quest game shared:** clicks and replies (`QuestGame.cs`, `Op.Call` 8-9); `quest` tour, mutation-checked.
+- **Scene 1 tutorial in the lab:** answered (hint question, mouse, walking) as decompiled from `Location1Tutorial.Update`.
+- **Lab metrics:** NPC animation lag counts lateness only (early chapter-start changes reported as `early`); the interactions tour waits for the client's player before its final checks.
 
 ## Open, in order
-1. **Ask the user** to check the other player's shading in the game. The lab windows are hidden, so it hasn't been seen.
-2. **Co-op Anything write-up** (PR cranebeaker/coop-anything#220) still says 16 of 18 chapters and lists the Scene 12 door as broken. Refresh it.
-3. **Scene 13 seat:** after the host takes the cartridge (presser-only), the other player stays seated at the PC until they stand up. Expected; document it in README/CUTSCENES.md, or make the tour accept it.
-4. **Scene 1 phone:** never armed in hidden lab windows within 4 minutes, so its pickup is unproven (`phone` tour).
-5. **Scene 14 quest game** and the **Scene 13/15 core computer:** not shared. Design notes are in `docs/SYNC.md` item 4 (decompiled entry points).
-6. Trigger and puzzle relay tours, echo windows, a real two-account Steam session, performance.
+1. **Ask the user** to check the other player's shading in the game (0.3.2 change, not seen by a person yet).
+2. **Scene 1 phone:** after the tutorial something later in the opening still keeps the phone unarmed in the lab (`phone` tour). Tracing `Time_Events`/`Events_Data` disturbs them; try a dump of `Events_Data` indexes over time instead.
+3. **Scene 14 phone chat** (`Location14_PlayerMobileMove`) before the quest game, and the **core computer's entry pattern** (sphere moves from raw input in `GamesCore_Main.Update`; its stage change is relayed).
+4. **Two Steam accounts:** the real proof. Checklist for the user: both on Steam and friends, same mod build; host picks HOST GAME, the friend picks JOIN <name> (STEAM) in MULTIPLAYER (or Join Game in Steam's friends list); then play to Scene 2 and back to the menu. Logs: `BepInEx\LogOutput.log` on both.
+5. Trigger and puzzle relay tours, echo windows, performance.
 
 ## Release rules
 - Every version is a real GitHub release in this repo, tagged `vX.Y.Z`. Test builds are pre-releases. A tag or a draft alone doesn't count.

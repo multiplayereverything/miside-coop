@@ -101,7 +101,7 @@ Start with `docs/HANDOFF.md` (current state, next steps, new-PC setup), `README.
 
 ## Rules
 - **Build and test:** build with `scripts/build.ps1`. Test with `scripts/run-tour.ps1 -Tour <tour>` or `scripts/lab-suite.ps1`.
-  - Lab copies run as 480x270 windows at the lowest quality, 30 fps (`-mt-fps`) and BelowNormal priority, parked down the right edge of the primary monitor without ever taking focus (`launch-lab.ps1 -Hidden` hides them instead). The user's PC is shared with other mods' labs: one tour at a time, and never send keys or clicks to the desktop.
+  - Lab copies start minimized as normal 480x270 windows titled "MiSide lab - <name>" (lowest quality, 30 fps via `-mt-fps`, BelowNormal priority). Restoring one from the taskbar brings it up small at the right edge of the primary monitor; the launcher sets that once and never moves, re-minimizes or focuses a window afterwards (`launch-lab.ps1 -Hidden` hides them instead). The mod keeps `Application.runInBackground` on, so minimized copies keep running. The user's PC is shared with other mods' labs: one tour at a time, and never send keys or clicks to the desktop.
   - A fresh install stops in `SceneLoading` on the game's LANGUAGE/VOICE picker; lab copies answer it with English (`FirstRunLanguageTick`, Lab.cs).
   - The user's save folder is backed up and restored per run, and the lab refuses to start beside the user's own MiSide.
   - Steam with one account: `run-tour.ps1 -Tour steam` uses the lab Steam mock (`src/Network/SteamMock.cs`, `-mt-steam-mock`, `-mt-steam-fail`): fake accounts, rich presence through `private/steam-mock`, sessions held until accepted, failed sends.

@@ -89,6 +89,7 @@ namespace MiSideTogether
             int state = AnimState(player);
             if (animating && (!labMyAnimating || state != labMyState)) labLastAnimAt = now;
             labMyAnimating = animating; labMyState = state;
+            if (labDoneNotice != null && (player != null || now - labDoneAt > 15)) { string n = labDoneNotice; labDoneNotice = null; InteractionsDone(n); }
         }
 
         void InteractionsNotice(string notice)
@@ -96,13 +97,30 @@ namespace MiSideTogether
             float now = Time.realtimeSinceStartup;
             if (notice.StartsWith("lab-press-done", StringComparison.Ordinal))
             {
+                // The host can finish before this machine's player exists (Scene 1: nothing is armed yet): judged
+                // once it does (InteractionsClient), within 15 s.
+                labDoneNotice = notice; labDoneAt = now;
+                return;
+            }
+            InteractionsPress(notice, now);
+        }
+
+        string labDoneNotice;
+        float labDoneAt;
+
+        void InteractionsDone(string notice)
+        {
+            {
                 PlayerMove player = LocalPlayer;
                 bool hostFree = !notice.EndsWith("|0", StringComparison.Ordinal);
                 CheckOnce("interactions.mirrored", labBothAnimated >= labHostAnimated * 0.9f, labBothAnimated + " of " + labHostAnimated + " host interactions behaved right here (mirrored, or presser-only when they hand over an item)");
                 CheckOnce("interactions.placed", labPlacedOk >= labPlacedChecked * 0.9f, labPlacedOk + " of " + labPlacedChecked + " mirrored interactions played within 0.6 m of the host's spot");
-                CheckOnce("interactions.free", player != null && (!player.animationRun || !hostFree), player != null && player.animationRun ? "in an animation at the end, like the host (the chapter's own)" : "not stuck in an animation at the end");
-                return;
+                CheckOnce("interactions.free", player != null && (!player.animationRun || !hostFree), player == null ? "no player here" : player.animationRun ? "in an animation at the end, like the host (the chapter's own)" : "not stuck in an animation at the end");
             }
+        }
+
+        void InteractionsPress(string notice, float now)
+        {
             string[] p = notice.Substring("lab-press:".Length).Split('|');
             if (p.Length < 2) return;
             // p[2]: 1 hands the presser an item, 2 started a minigame (both: only the presser plays it).

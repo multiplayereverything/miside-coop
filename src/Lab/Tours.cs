@@ -71,6 +71,7 @@ namespace MiSideTogether
             if (labTour == "connect") { MenuChecks(now, scene); return; }
             if (labTour == "steam") { SteamTour(now, scene); return; }
             if (labTour == "quest") { if (Hosting) QuestHost(now, scene); return; }
+            if (labTour == "core") { if (Hosting) CoreHost(now, scene); return; }
             if (Hosting) HostTour(now, scene); else if (Connected) ClientTour(now, scene);
         }
 

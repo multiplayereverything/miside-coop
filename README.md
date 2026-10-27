@@ -59,8 +59,9 @@ The full list (how each thing syncs, who is in charge and which test proves it) 
 ## Known limitations
 - **Scene 19 (Glasses):** the game cannot start it cold (not even single-player from the chapter menu). Reached through the story from Scene 18, everyone moves there together.
 - **Handheld Tetris:** it is each player's own and is not mirrored.
-- **Steam testing:** Steam joining was verified on one PC and one account only. A real two-account session is the next thing to verify.
-- **Scene 13, 14 and 15 computers:** the core computer's keyboard and folders (Scenes 13 and 15) and the Scene 14 phone chat and PC are not shared yet. The story events around them are, but a reply or folder one player picks does not reach the others.
+- **Steam testing:** the Steam transport is tested in the lab with a stand-in for Steam (one account). A real two-account session is the next thing to verify.
+- **Core computer (Scenes 13 and 15):** one player sits and operates it; the others watch through their eyes. What the operator types and opens is replayed on everyone's copy.
+- **Scene 14:** the PC's point-and-click game follows the player at the PC (clicks and replies are shared). The phone chat before it is still each player's own.
 
 ## Install
 1. Install **BepInEx 6 (Unity.IL2CPP, win-x64)**, build be.790, from https://builds.bepinex.dev/projects/bepinex_be, into the MiSide folder.

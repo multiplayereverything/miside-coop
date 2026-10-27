@@ -87,19 +87,24 @@ def compare(host, client):
 
 def compare_anims(host, client):
     """NPC animation starts: each host state change paired with the same change on the client within 3 s."""
-    lags, missed = [], 0
+    # Lateness only: a client that changes first (its own NPC for a moment at chapter start, before the host's
+    # stream takes over) counts as on time and is reported as "npc_anim_early".
+    lags, missed, early = [], 0, 0
     for t, scene, who, state in host:
         if who == "me" or not scene.startswith("Scene_"):
             continue
         near = [c[0] - t for c in client if c[1] == scene and c[2] == who and c[3] == state and abs(c[0] - t) <= 3.0]
         if near:
-            lags.append(abs(min(near, key=abs)))
+            lag = min(near, key=abs)
+            if lag < -1.0:
+                early += 1
+            lags.append(max(0.0, lag))
         else:
             missed += 1
     total = len(lags) + missed
     p90 = sorted(lags)[int(len(lags) * 0.9)] if lags else None
     return {"npc_anim_changes": total, "npc_anim_start_s_p90": round(p90, 2) if p90 is not None else None,
-            "npc_anim_missed": round(missed / total, 2) if total else None}
+            "npc_anim_missed": round(missed / total, 2) if total else None, "npc_anim_early": early}
 
 
 def parse(path):

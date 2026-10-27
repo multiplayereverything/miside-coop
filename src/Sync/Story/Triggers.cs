@@ -72,6 +72,7 @@ namespace MiSideTogether
         //  7 ObjectAnimationPlayer started on the host's player (0 AnimationPlay, 1 Fast, 2 OnPlayer): catch-up, Interactions.cs
         //  8 Location14_PlayerQuest.Move           Scene 14 quest game click: "8:<quest>|x,y,z|<QuestInteractive or empty>"
         //  9 Location14_GameQuestPlayer.ChangeDialogue(bool)  Scene 14 quest game reply (QuestGame.cs)
+        // 10-14 Scenes 13/15 core computer: text field keys, Enter, folders, program stages (CoreComputer.cs)
         public static void Call(int entry, Component source, int arg)
         {
             if (source == null) return;
@@ -97,6 +98,7 @@ namespace MiSideTogether
                 case 7: QueueAnimationCatchUp(target, arg); break;
                 case 8: ApplyQuestMove(target); break;
                 case 9: ApplyQuestReply(target, arg); break;
+                case 10: case 11: case 12: case 13: case 14: ApplyCoreCall(entry, target, arg); break;
                 case 5: case 6:
                 {
                     Trigger_DistanceCamera t = SceneKeys.Find<Trigger_DistanceCamera>(target);

@@ -5,7 +5,7 @@ using Object = UnityEngine.Object;
 
 namespace MiSideTogether
 {
-    // Lab-only research: how the game lights its own characters next to the remote player's copy. Once per chapter,
+    // Lab-only research (-mt-look): how the game lights its own characters next to the remote player's copy. Once per chapter,
     // 10 s after a copy exists, MT-LOOK lines list every renderer of the local body, Mita and the copy (layer, shader,
     // probes, a few toon material values) and the game scripts on the local body that the copy leaves out.
     public sealed partial class TogetherRuntime
@@ -14,9 +14,11 @@ namespace MiSideTogether
             "_GIFlatShade", "_GIShadeThreshold", "_LightAffectShadow", "_DirectionalLightIntensity", "_PointSpotlightIntensity", "_LightIntensity", "_Color" };
         string lookScene;
         float lookAvatarAt = -1;
+        bool lookDump;   // -mt-look
 
         void LookTick()
         {
+            if (!lookDump) return;
             string scene = ActiveSceneName;
             if (scene == lookScene || scene == "SceneMenu") return;
             GameObject copy = null;

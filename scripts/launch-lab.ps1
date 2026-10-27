@@ -1,5 +1,6 @@
-﻿# Starts isolated lab copies (private\lab-host, private\lab-client, ...) as small windows parked down the right edge of
-# the primary monitor (never activated, never topmost), at the lowest quality and BelowNormal priority. -Hidden hides them.
+﻿# Starts isolated lab copies (private\lab-host, private\lab-client, ...) minimized to the taskbar as normal windows titled
+# "MiSide lab - <name>": clicking one restores it small at the right edge of the primary monitor, stacked so they don't
+# overlap. Never activated, never moved again after launch; lowest quality, BelowNormal priority. -Hidden hides them.
 # Test-owned PIDs go to private\lab-pids.txt; stop only those (never a user-owned game process).
 param(
     [int]$Players = 2, [int]$Seconds = 0, [switch]$Visible, [switch]$Hidden, [switch]$SteamMock,
@@ -14,10 +15,21 @@ $labs = @(
     @{ Name = 'c3'; Dir = 'lab-c3' }
 ) | Select-Object -First $Players
 
-Add-Type -Namespace MiSideLab -Name Win -MemberDefinition @'
+# A PowerShell session keeps a type once added: a changed definition needs a new name (Win2, Win3, ...).
+if (-not ('MiSideLab.Win2' -as [type])) { Add-Type -Namespace MiSideLab -Name Win2 -MemberDefinition @'
 [DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr hWnd, int nCmdShow);
 [DllImport("user32.dll")] public static extern bool SetWindowPos(System.IntPtr hWnd, System.IntPtr after, int x, int y, int w, int h, uint flags);
-'@
+[DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern bool SetWindowText(System.IntPtr hWnd, string text);
+[StructLayout(LayoutKind.Sequential)] public struct Placement { public int length, flags, showCmd, minX, minY, maxX, maxY, left, top, right, bottom; }
+[DllImport("user32.dll")] public static extern bool SetWindowPlacement(System.IntPtr hWnd, ref Placement p);
+public static void Park(System.IntPtr hWnd, int x, int y, int w, int h) {
+    Placement p = new Placement(); p.length = Marshal.SizeOf(typeof(Placement));
+    p.showCmd = 7;   // SW_SHOWMINNOACTIVE: minimized, focus stays where it is
+    p.minX = p.minY = p.maxX = p.maxY = -1;
+    p.left = x; p.top = y; p.right = x + w; p.bottom = y + h;   // where it comes back when the user restores it
+    SetWindowPlacement(hWnd, ref p);
+}
+'@ }
 
 $missing = $labs | Where-Object { -not (Test-Path (Join-Path $modRoot "private/$($_.Dir)/MiSideFull.exe")) } | ForEach-Object { $_.Dir -replace '^lab-', '' }
 if ($missing) { & (Join-Path $PSScriptRoot 'make-lab.ps1') -Names $missing }
@@ -53,16 +65,16 @@ foreach ($lab in $labs) {
     $started += $p
     try { $p.PriorityClass = 'BelowNormal' } catch { }
     if (!$Visible) {
-        # As soon as Unity creates the window: hidden, or parked at the right edge, stacked top to bottom
-        # (SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE, then SW_SHOWNOACTIVATE). It never takes focus.
+        # Once, as soon as Unity creates the window: hidden, or minimized with its restore spot at the right edge,
+        # stacked top to bottom. Nothing touches it afterwards, so a window the user restored or moved stays put.
         for ($i = 0; $i -lt 150; $i++) {
             $p.Refresh()
             if ($p.MainWindowHandle -ne [IntPtr]::Zero) {
-                if ($Hidden) { [MiSideLab.Win]::ShowWindow($p.MainWindowHandle, 0) | Out-Null }
+                if ($Hidden) { [MiSideLab.Win2]::ShowWindow($p.MainWindowHandle, 0) | Out-Null }
                 else {
-                    $y = $area.Top + ($slot * 300) % [Math]::Max(300, $area.Height - 300)
-                    [MiSideLab.Win]::SetWindowPos($p.MainWindowHandle, [IntPtr]::Zero, $area.Right - 500, $y, 0, 0, 0x0001 -bor 0x0004 -bor 0x0010) | Out-Null
-                    [MiSideLab.Win]::ShowWindow($p.MainWindowHandle, 4) | Out-Null
+                    $y = $area.Top + ($slot * 320) % [Math]::Max(320, $area.Height - 320)
+                    [MiSideLab.Win2]::SetWindowText($p.MainWindowHandle, "MiSide lab - $($lab.Name)") | Out-Null
+                    [MiSideLab.Win2]::Park($p.MainWindowHandle, $area.Right - 500, $y, 496, 309)
                     $slot++
                 }
                 break

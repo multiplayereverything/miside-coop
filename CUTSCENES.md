@@ -34,7 +34,7 @@ A rule's match text is compared, ignoring case, against the scene key of what wa
 
 | Match | Rule | Why |
 | --- | --- | --- |
-| (none) | | Every case follows the defaults: the phone and the plane hold an item, so the presser does them. |
+| `InteractivePC` | who=actor, pov=on | The core computer (Scenes 13, 15) is one seat: the presser operates it, the others watch through their eyes. Mirrored, everyone sat down and the others could not get up. |
 
 ## Ini file
 
@@ -53,4 +53,5 @@ When the user reports a cutscene that needs different handling, add the rule to 
 - 2026-10: held items are detected from the game's wiring, so the plane and anything else handed to the player is presser-only with the item in their hand. Cutscenes are run by the host.
 - 2026-10-26: hand animations (`PlayerMove.AnimationHandPlay`) follow the same rule as body ones; they used to be blocked for every replayed click, mirrored ones included.
 - 2026-10-26: the cartridge (Scenes 6, 10, 13) and the Scene 14 smartphone are presser-only by the held-item detection (the item goes into the hand); the every-chapter tour confirms it.
+- 2026-10-27: `InteractivePC` presser-only with pov: the every-chapter run left the other player seated at the Scene 13 computer after the host moved on.
 - 2026-10: the Scene 1 phone is presser-only too, at the user's request. Whoever picks it up holds and uses it; the others see them pick it up and cannot take another (the replayed click disables theirs).

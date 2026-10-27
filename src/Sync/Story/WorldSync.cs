@@ -30,6 +30,7 @@ namespace MiSideTogether
             firedEnter.Clear(); firedExit.Clear(); missingLogged.Clear(); storyRetries.Clear();
             mitaTargets.Clear(); mitaAnim.Clear();
             doorLast.Clear(); doorAppliedAt.Clear();
+            coreOperatorHere = false; coreStageAt.Clear();
             Replaying = false;
         }
 
@@ -182,7 +183,7 @@ namespace MiSideTogether
                         // Not armed here yet (ObjectInteractive.active): Click would do nothing, so wait for the story to arm it.
                         if (Missing(interactive, key) || Inactive(interactive, key, interactive.active)) return;
                         // Someone else's interaction: its animation is theirs (Interactions.cs).
-                        ReplayingInteraction = true; ReplayingInteractionKey = key; NoteReplayedClick(key);
+                        ReplayingInteraction = true; ReplayingInteractionKey = key; NoteReplayedClick(key); NoteCoreOperator(key, false);
                         try { interactive.Click(); } finally { ReplayingInteraction = false; ReplayingInteractionKey = null; }
                         break;
                     case Op.MouseClick:
