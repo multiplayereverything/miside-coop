@@ -4,7 +4,7 @@
 param([switch]$NoInstall)
 $ErrorActionPreference = 'Stop'
 $mod = Split-Path -Parent $PSScriptRoot
-$game = Split-Path -Parent $mod
+. (Join-Path $PSScriptRoot 'game-dir.ps1'); $game = Get-MiSideDir
 
 # The machine-wide dotnet has runtimes only; the SDK lives in %USERPROFILE%\.dotnet.
 $userDotnet = Join-Path $env:USERPROFILE '.dotnet'
@@ -21,7 +21,7 @@ if (-not (Test-Path $params)) {
     $venv = Join-Path $mod 'private\venv\Scripts\python.exe'
     if (-not (Test-Path $venv)) {
         python -m venv (Join-Path $mod 'private\venv')
-        & $venv -m pip install -q UnityPy
+        & $venv -m pip install -q --disable-pip-version-check UnityPy
     }
     & $venv -I (Join-Path $mod 'tools\extract_animator_params.py') (Join-Path $game 'MiSideFull_Data') $params
     if ($LASTEXITCODE -ne 0) { throw 'Animator parameter extraction failed.' }

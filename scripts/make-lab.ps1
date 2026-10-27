@@ -5,7 +5,7 @@
 param([string[]]$Names = @('host', 'client'))
 $ErrorActionPreference = 'Stop'
 $mod = Split-Path -Parent $PSScriptRoot
-$game = Split-Path -Parent $mod
+. (Join-Path $PSScriptRoot 'game-dir.ps1'); $game = Get-MiSideDir
 foreach ($name in $Names) {
     $lab = Join-Path $mod "private\lab-$name"
     New-Item -ItemType Directory -Force $lab | Out-Null

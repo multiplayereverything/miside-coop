@@ -33,8 +33,7 @@ Co-op for MiSide (2 to 4 players). Everyone sees the others as the main characte
 - Never put a bot token or `discord.json` in any repo or message.
 
 ## Setting up a new PC
-1. **Game:** MiSide from Steam (app 2527500). The scripts assume this repo sits inside the game folder: `<Steam>\steamapps\common\MiSide\MultiplayerMod`. Clone it there:
-   `git clone https://github.com/multiplayereverything/miside-coop "<Steam>\steamapps\common\MiSide\MultiplayerMod"`
+1. **Game and repo:** MiSide from Steam (app 2527500). Clone the repo anywhere (the user keeps it outside the game folder, e.g. `Desktop\AIStuff\ai-work-pc-games\Miside Multiplayer Mod`). `scripts\game-dir.ps1` finds the game: `MISIDE_GAME` if set, then the folder above the repo (cloned inside the game, as on the first PC), then `steamapps\common\MiSide` in every Steam library. Run the scripts from the PowerShell that allows them (`-ExecutionPolicy Bypass` per process if scripts are disabled).
 2. **Loader:** BepInEx 6.0.0-**be.790**, Unity.IL2CPP win-x64, from https://builds.bepinex.dev/projects/bepinex_be, unzipped into the game folder. Start the game once and wait for the menu (about a minute) so `BepInEx\interop\` gets generated. The build references it.
 3. **SDK:** .NET 8 SDK. `scripts/build.ps1` uses `%USERPROFILE%\.dotnet` if it's there, else the dotnet on `PATH`.
 4. **Python 3** on `PATH`. The first build makes `private\venv` and installs UnityPy, then extracts the animator parameter table from the game data into `artifacts\generated\` (never distribute it).

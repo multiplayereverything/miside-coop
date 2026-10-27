@@ -9,7 +9,7 @@
 param([switch]$Join, [string]$Name = 'Player 2', [int]$Width = 1280, [int]$Height = 720)
 $ErrorActionPreference = 'Stop'
 $mod = Split-Path -Parent $PSScriptRoot
-$game = Split-Path -Parent $mod
+. (Join-Path $PSScriptRoot 'game-dir.ps1'); $game = Get-MiSideDir
 $copy = Join-Path $mod 'private\lab-second'
 
 if (-not (Test-Path (Join-Path $copy 'MiSideFull.exe'))) { & (Join-Path $PSScriptRoot 'make-lab.ps1') -Names 'second' }
