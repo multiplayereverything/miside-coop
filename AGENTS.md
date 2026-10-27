@@ -2,6 +2,13 @@
 
 Start with `docs/HANDOFF.md` (current state, next steps, new-PC setup), `README.md` (behaviour, limitations) and `docs/SYNC.md` (every synced thing, how, which tour proves it, and the work list). Keep them current, along with `MODLOG.md`. Per-cutscene tuning: `CUTSCENES.md`. Per-chapter coverage: `docs/SYNC-INVENTORY.md` (regenerate with the `inventory` tour plus `python tools/inventory_report.py`).
 
+## How to work (Karpathy guidelines, `andrej-karpathy-skills:karpathy-guidelines`)
+Every agent on this repo follows these. They favour care over speed; use judgement on trivial edits.
+1. **Think before coding.** State your assumptions. Before writing a fix, find out what the game actually does: the wiring dump (`-mt-dump`), `-mt-trace`, disassembly, and a control run with `-mt-nopatch`. If there are two readings of a request, name both; when the user has said not to ask, pick one and note the choice in `MODLOG.md`.
+2. **Simplicity first.** Write the least code that solves the problem, with nothing speculative: no options, abstractions or error handling for cases that can't happen. Reuse what exists (`Op.Call` entries, the prop stream, `CutsceneRules`) before adding a new op or system.
+3. **Surgical changes.** Every changed line traces to the task. Match the surrounding style and line endings (most files are CRLF, some have a BOM). Don't reformat or refactor neighbouring code; mention unrelated problems instead of fixing them. Remove what your own change left unused, including temporary lab logging.
+4. **Goal-driven execution.** Turn the task into a check that can fail: a tour with `MT-CHECK`s, then a mutation run proving the check fails without the fix. Loop until it passes. Report only what was observed (`/results-table`: ✅ with evidence, ⚠️ when not verified).
+
 ## Repository
 - **GitHub:** https://github.com/multiplayereverything/miside-coop (public, branch `main`). This folder is the repo (anywhere on disk; `scripts/game-dir.ps1` finds the game); `.gitignore` keeps out `artifacts/` (builds, test logs, the generated dialogue script), `private/` (lab copies, backups), `graphify-out/` and `obj/`.
 - **Online play:** Steam P2P (the game's own `steam_api64`), LAN/VPN, or an address. This mod does not use the Multiplayer Everything global relay.
