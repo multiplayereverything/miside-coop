@@ -7,6 +7,7 @@ $tours = @{
     'connect'  = @{ Seconds = 60;   Expect = @('ui.panel', 'connect.handshake', 'connect.roster', 'steam.ready', 'ui.menu', 'ui.menu.open') }
     'core'     = @{ Seconds = 300;  Expect = @('chapter.loaded@host', 'core.driven@host', 'client.core.followed') }
     'quest'    = @{ Seconds = 360;  Expect = @('chapter.loaded@host', 'quest.clicked@host', 'client.quest.moved') }
+    'mobile'   = @{ Seconds = 300;  Expect = @('mobile.walked@host', 'client.mobile.seen', 'client.mobile.done') }
     'steam'    = @{ Seconds = 80;   SteamMock = $true; Expect = @('connect.handshake', 'connect.roster', 'steam.ready', 'client.steam.joined', 'client.steam.order') }
     'avatars'  = @{ Seconds = 200;  Expect = @('ui.panel', 'chapter.loaded@host', 'client.follow.scene', 'client.follow.player', 'avatar.model', 'avatar.props', 'avatar.bones', 'avatar.near', 'avatar.anim', 'avatar.params', 'client.avatar.follows') }
     'story'    = @{ Seconds = 200;  Expect = @('chapter.loaded@host', 'story.sent@host', 'client.story.applied', 'story.received@host') }

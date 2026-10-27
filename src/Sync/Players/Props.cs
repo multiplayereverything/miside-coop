@@ -28,6 +28,8 @@ namespace MiSideTogether
                 if (player != null && rb.transform.IsChildOf(player.transform)) continue;
                 if (rb.GetComponentInParent<ObjectDoor>() != null || rb.GetComponentInParent<Rigidbody_Ragdoll>() != null
                     || rb.GetComponentInParent<MitaPerson>() != null || rb.GetComponentInParent<PlayerMove>() != null) continue;
+                // Scene 14's phone character is the holder's: a watcher's copy only follows it (PhoneCharacter.cs).
+                if (MobileWatcher && rb.GetComponent<Location14_PlayerMobileMove>() != null) continue;
                 propList.Add(rb);
                 if (propList.Count >= 256) break;
             }
@@ -70,8 +72,13 @@ namespace MiSideTogether
             }
             if (IsClient && !ClientStoryLive) return;
             Rigidbody rb = SceneKeys.Find<Rigidbody>(key);
-            if (rb == null || rb.isKinematic) return;
-            rb.position = p; rb.rotation = r; rb.velocity = v; rb.angularVelocity = av;
+            if (rb == null) return;
+            // Scene 14's phone character stays kinematic on a watcher (its Play, which frees it, runs only for the
+            // holder): it is placed, not simulated (PhoneCharacter.cs).
+            if (rb.isKinematic && MobileWatcher && rb.GetComponent<Location14_PlayerMobileMove>() != null) rb.MovePosition(p);
+            else if (rb.isKinematic) return;
+            else { rb.position = p; rb.velocity = v; rb.angularVelocity = av; }
+            rb.rotation = r;
             propAppliedAt[key] = Time.realtimeSinceStartup;
             propsApplied++;
         }

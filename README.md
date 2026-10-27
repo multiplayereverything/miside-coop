@@ -61,7 +61,7 @@ The full list (how each thing syncs, who is in charge and which test proves it) 
 - **Handheld Tetris:** it is each player's own and is not mirrored.
 - **Steam testing:** the Steam transport is tested in the lab with a stand-in for Steam (one account). A real two-account session is the next thing to verify.
 - **Core computer (Scenes 13 and 15):** one player sits and operates it; the others watch through their eyes. What the operator types and opens is replayed on everyone's copy.
-- **Scene 14:** the PC's point-and-click game follows the player at the PC (clicks and replies are shared). The phone chat before it is still each player's own.
+- **Scene 14:** the PC's point-and-click game follows the player at the PC (clicks and replies are shared). Before it, the phone's little character in the toy house is walked by whoever picked up the phone; the others see it walk.
 
 ## Install
 1. Install **BepInEx 6 (Unity.IL2CPP, win-x64)**, build be.790, from https://builds.bepinex.dev/projects/bepinex_be, into the MiSide folder.

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Playables;
@@ -72,6 +72,7 @@ namespace MiSideTogether
             if (labTour == "steam") { SteamTour(now, scene); return; }
             if (labTour == "quest") { if (Hosting) QuestHost(now, scene); return; }
             if (labTour == "core") { if (Hosting) CoreHost(now, scene); return; }
+            if (labTour == "mobile") { if (Hosting) MobileHost(now, scene); else if (Connected) MobileClient(now, scene); return; }
             if (Hosting) HostTour(now, scene); else if (Connected) ClientTour(now, scene);
         }
 

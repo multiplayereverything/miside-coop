@@ -50,6 +50,9 @@ namespace MiSideTogether
             Patch(typeof(Trigger_DistanceCamera), "Exit", null, "CameraExitPostfix");
             Patch(typeof(Location14_GameQuestPlayer), "ClickMouse", "QuestClickPrefix", "QuestClickPostfix");
             Patch(typeof(Location14_PlayerQuest), "Move", null, "QuestMovePostfix");
+            Patch(typeof(Location14_PlayerMobileMove), "Play", "MobilePlayPrefix", "MobilePlayPostfix");
+            Patch(typeof(Location14_PlayerMobileMove), "Update", "MobileRunPrefix", null);
+            Patch(typeof(Location14_PlayerMobileMove), "FixedUpdate", "MobileRunPrefix", null);
             Patch(typeof(Location14_ButtonChangeDialogue), "OnPointerDown", "QuestReplyPrefix", "QuestReplyPostfix");
             Patch(typeof(GamesCore_InputField), "ButtonClick", "CoreClickPrefix", null);
             Patch(typeof(GamesCore_InputField), "ButtonBackspace", "CoreBackspacePrefix", null);
@@ -210,6 +213,15 @@ namespace MiSideTogether
         static void KeyboardUpperPostfix(InputKeyboard_Main __instance) { Safe("KeyboardUpper", () => TogetherRuntime.Call(4, __instance, 0)); }
         static void QuestClickPrefix() { TogetherRuntime.QuestClickPrefix(); }
         static void QuestClickPostfix() { TogetherRuntime.QuestClickPostfix(); }
+        // Scene 14 phone character: only the phone's holder runs it; the others show it from the prop stream.
+        static bool MobilePlayPrefix(Location14_PlayerMobileMove __instance)
+        {
+            if (!TogetherRuntime.MobileWatcher) return true;
+            try { if (__instance != null && !__instance.gameObject.activeSelf) __instance.gameObject.SetActive(true); } catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook MobilePlay: " + ex.Message); }
+            return false;
+        }
+        static void MobilePlayPostfix(Location14_PlayerMobileMove __instance) { Safe("MobilePlay", () => TogetherRuntime.MobilePlayed(__instance)); }
+        static bool MobileRunPrefix() { return !TogetherRuntime.MobileWatcher; }
         static void QuestMovePostfix(Location14_PlayerQuest __instance, Vector3 _pos, UnityEngine.Events.UnityEvent _event) { Safe("QuestMove", () => TogetherRuntime.QuestMoved(__instance, _pos, _event)); }
         static void QuestReplyPrefix(Location14_ButtonChangeDialogue __instance, out bool __state) { __state = __instance != null && __instance.active; }
         // Core computer input is sent before the method runs: Enter's right/wrong event can change the screen at once.

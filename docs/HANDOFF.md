@@ -25,7 +25,7 @@ Co-op for MiSide (2 to 4 players). Everyone sees the others as the main characte
 ## Open, in order
 1. **Ask the user** to check the other player's shading in the game (0.3.2 change, not seen by a person yet).
 2. **Scene 1 phone: proven** (`phone` tour passes, in the suite since 2026-10-27). The gate was the tutorial's "interact" step: with quest hints on, the player clicks "Interactive TShip Tutorial", and the end of the T-shirt dialogue arms the room (`ObjectInteractiveGroup.ActivationAndDestroy`). Found with the wiring dump (`-mt-dump <scene>` also writes `private-wires-<scene>.txt`: every persistent UnityEvent call).
-3. **Scene 14 phone chat** (`Location14_PlayerMobileMove`) before the quest game, and the **core computer's entry pattern** (sphere moves from raw input in `GamesCore_Main.Update`; its stage change is relayed).
+3. **Scene 14 phone character: done (0.3.4, `mobile` tour).** Next: the **core computer's entry pattern** (sphere moves from raw input in `GamesCore_Main.Update`; its stage change is relayed).
 4. **Two Steam accounts:** the real proof. Checklist for the user: both on Steam and friends, same mod build; host picks HOST GAME, the friend picks JOIN <name> (STEAM) in MULTIPLAYER (or Join Game in Steam's friends list); then play to Scene 2 and back to the menu. Logs: `BepInEx\LogOutput.log` on both.
 5. Trigger and puzzle relay tours, echo windows, performance.
 

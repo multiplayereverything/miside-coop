@@ -28,6 +28,7 @@ namespace MiSideTogether
         public static void NoteCoreOperator(string clickKey, bool local)
         {
             if (clickKey != null && clickKey.Contains("InteractivePC")) coreOperatorHere = local;
+            NoteMobileHolder(clickKey, local);
         }
 
         public static void CoreKey(GamesCore_InputField field, int entry)

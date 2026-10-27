@@ -59,6 +59,7 @@ Start with `docs/HANDOFF.md` (current state, next steps, new-PC setup), `README.
 | `Location18_Novella.NextDialogue` (postfix) | Visual novel: a client's click is sent to the host, which reads on; clients step after the host's streamed position. |
 | `Trigger_MouseEvent.Enter` (postfix, one-shot looks only), `Trigger_DistanceCircle.Update` (prefix + postfix: `targetInside` flips) | `Op.LookTrigger` / `Op.DistanceTrigger`. |
 | `Basement_Safe.ClickButton`, `InputKeyboard_Main.AddKey`/`RemoveKey`/`ButtonEnter`/`ButtonUpper`, `Trigger_DistanceCamera.Enter`/`Exit` | `Op.Call` method relays (table in `Triggers.cs`). |
+| `Location14_PlayerMobileMove.Play` (prefix + postfix), `.Update`/`.FixedUpdate` (prefix) | Scene 14 phone character: the phone's holder runs it and relays `Op.Call` 15; on the others it is shown, not run, and placed from the prop stream (`PhoneCharacter.cs`). |
 | Minigame end methods (prefix + postfix) | While the player's end method runs, story relays are held (`MinigameEnding`). Watchers fire the kind's end UnityEvents (`MinigameKind.Events`). |
 
 ## Not hooked, but driven by the mod

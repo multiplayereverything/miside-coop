@@ -30,7 +30,7 @@ namespace MiSideTogether
             firedEnter.Clear(); firedExit.Clear(); missingLogged.Clear(); storyRetries.Clear();
             mitaTargets.Clear(); mitaAnim.Clear();
             doorLast.Clear(); doorAppliedAt.Clear();
-            coreOperatorHere = false; coreStageAt.Clear();
+            coreOperatorHere = false; coreStageAt.Clear(); mobileHolder = 0;
             Replaying = false;
         }
 
