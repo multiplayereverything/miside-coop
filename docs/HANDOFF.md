@@ -10,7 +10,7 @@ Co-op for MiSide (2 to 4 players). Everyone sees the others as the main characte
 - **Online play:** Steam P2P (friends join from MULTIPLAYER in the game's menu, or Steam's Join Game / invite, `+mt_join`), LAN/VPN, or a direct address (TCP 27030). It doesn't use the Multiplayer Everything relay.
 - **This PC (2026-10-27):** the repo lives at `Desktop\AIStuff\ai-work-pc-games\Miside Multiplayer Mod`, outside the game; `scripts\game-dir.ps1` finds the game. BepInEx be.790 and the mod are installed in the game. The user's save folder is empty, as they want it.
 - **Website:** `games.json` in the website repo has the `miside` entry. The Website session updates it; don't edit it from here.
-- **Tests (lab copies on one PC, minimized):** suite 33 tours on 0.3.5 (2026-10-28; new: `safe`, `choice`, `menureturn`, `menuleave`, `roomhold`, `scene1`, `scene1end`, and `core` now types the right version and compares both screens): all 33 pass in one full run (after the leak measure was corrected). Pressing every interaction in every chapter: 18 of 18 chapters pass.
+- **Tests (lab copies on one PC, minimized):** suite 34 tours on 0.3.5 (2026-10-28; new: `safe`, `choice`, `menureturn`, `menuleave`, `roomhold`, `scene1` (all of Scene 1), `scene1end`, `scene3` (Scene 3 to Mita's walk), and `core` now types the right version and compares both screens): last full run 33 of 34, `scene19` failed when the client stuck on the first splash screen and passed on its own rerun. Pressing every interaction in every chapter: 18 of 18 chapters pass.
 - **Not tested:** a real playtest with friends; two real Steam accounts on separate PCs; four real players (4-player runs are lab-only); installing through the launcher; the other player's shading seen by a person.
 
 ## Done in 0.3.3
