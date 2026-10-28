@@ -12,6 +12,7 @@ $tours = @{
     'choice'   = @{ Seconds = 240;  AllowGameErrors = $true; Expect = @('choice.picked@host', 'client.choice.applied', 'client.choice.navmesh') }
     'scene1end' = @{ Seconds = 420; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived') }
     'scene3'   = @{ Seconds = 480; AllowGameErrors = $true; Expect = @('s3.walk@host', 'client.s3.walk', 'client.s3.navmesh', 'client.s3.choice') }
+    'storypilot' = @{ Seconds = 420; Expect = @('pilot.acted@host', 'client.pilot.same') }
     'roomhold' = @{ Seconds = 200; Expect = @('room.off@host', 'client.room.kept') }
     'menuleave' = @{ Seconds = 200; ClientLeaves = $true; Expect = @('leave.seen@host', 'client.leave.left') }
     'menureturn' = @{ Seconds = 200; Expect = @('menu.back@host', 'client.menu.clean') }
