@@ -89,6 +89,9 @@ namespace MiSideTogether
                 if (scene != LocalSceneHash || !ClientStoryLive || replayQueue.Count > 0) continue;
                 PlayableDirector d = SceneKeys.Find<PlayableDirector>(key);
                 if (d == null || !d.gameObject.activeInHierarchy) continue;
+                // A timeline of a presser-only interaction animation (Scene 1's phone) is the presser's: started here, it
+                // ran the phone's story on this machine alone (the story autopilot found the client a quest ahead).
+                if (d.GetComponent<ObjectAnimationPlayer>() != null && CutsceneRules.ForInteraction(null, key).Who == CutsceneRules.Who.Actor) continue;
                 Playable_Animation p = d.GetComponent<Playable_Animation>();
                 if (p != null && p.scrpd != d) p = null;
                 if (!Playing(d) || (p != null && NeedsStart(p)))

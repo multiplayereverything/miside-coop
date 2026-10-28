@@ -130,6 +130,11 @@ namespace MiSideTogether
         static bool InteractPrefix(ObjectInteractive __instance, out bool __state)
         {
             __state = __instance != null && __instance.active;
+            // This player's own press, noted before the game's click code runs: that code can start the interaction's
+            // animation at once, and without the note the animation counted as another player's (it was held back when
+            // the other player happened to be animating too).
+            if (__state && !TogetherRuntime.Replaying && !TogetherRuntime.ReplayingInteraction)
+                try { TogetherRuntime.NoteLocalClick(SceneKeys.Key(__instance)); } catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook Interact note: " + ex.Message); }
             bool hostOnly = false;
             try { hostOnly = TogetherRuntime.HostOnlyClick(__instance); } catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook Interact: " + ex.Message); }
             if (hostOnly) __state = false;

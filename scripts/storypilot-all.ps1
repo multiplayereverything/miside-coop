@@ -7,8 +7,9 @@ param([string[]]$Chapters = @())
 $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path $PSScriptRoot -Parent
 if ($Chapters.Count -eq 0) {
-    # As interactions-all.ps1: Scene 18 (the visual novel) has its own tour; Scene 19 cannot be started cold.
-    $Chapters = @('Scene 1 - RealRoom', 'Scene 2 - InGame', 'Scene 3 - WeTogether', 'Scene 4 - StartSecret', 'Scene 5 - StartHorror',
+    # As interactions-all.ps1 without Scene 1 (its tutorial and phone app have the scene1 tour): Scene 18 (the visual
+    # novel) has its own tour; Scene 19 cannot be started cold.
+    $Chapters = @('Scene 2 - InGame', 'Scene 3 - WeTogether', 'Scene 4 - StartSecret', 'Scene 5 - StartHorror',
         'Scene 6 - BasementFirst', 'Scene 7 - Backrooms', 'Scene 8 - ReRooms', 'Scene 9 - ChibiMita', 'Scene 10 - ManekenWorld',
         'Scene 11 - Backrooms', 'Scene 12 - Freak', 'Scene 13 - HelloCore', 'Scene 14 - MobilePlayer', 'Scene 15 - BasementAndDeath',
         'Scene 16 - TheEnd', 'Scene 17 - Dreamer', 'Scene 20 - FightMita')
