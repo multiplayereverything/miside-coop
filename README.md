@@ -43,6 +43,7 @@ The full list (how each thing syncs, who is in charge and which test proves it) 
 | Chapters and saves | The host leads. Chapter transitions run the game's own `Scene_Load` on every machine.<br>Clients continue from the host's save files. Their own saves are backed up while connected and restored afterwards (or at the next start after a crash). |
 | Players | A copy of the main character's body with the sender's **exact skeleton pose** (all 68 bones).<br>Props and outfit parts show exactly when they show on the sender. Name tags. |
 | Cutscenes | **Run by the host:** a client never starts a cutscene on its own. The host starts it and everyone plays it from the host's command, kept on the host's time.<br>Other players are hidden during a real cutscene and gathered next to the host (on safe floor) after it. |
+| Scene 1 phone | **The host holds it.** Only the host picks up the phone, presses its prompts and plays the app; everyone else's app is a view of the host's: it opens and closes with it, shows the same Mita lines, the host's name, the same days, shop and cooking board. Their own Space, name entry and app buttons do nothing. |
 | Interactions | **Held items:** anything that puts an item in the player's hand (like the toy plane) is done by the presser, and everyone sees the item in their hand. The mod reads this from the game itself, with no list per cutscene.<br>**Mirror** (everything else): pressing the phone, the toy plane and similar plays the same animation on every player's own character, at the same spot, so everyone sees it first-hand. Two players on one spot don't see each other's body.<br>Cases can be tuned one by one ([CUTSCENES.md](CUTSCENES.md)), e.g. "only the presser does it". |
 | Story | Pressing things, trigger volumes, one-shot "look at" triggers, distance triggers, dialogue choices and skips, the basement safe keypad and the on-screen keyboard happen for everyone. Anyone can drive the story. |
 | Dialogue | The host's lines are everyone's: a line the host shows starts for everyone, a line it finished is skipped for those behind. The start lag is measured in the tests. |
@@ -55,9 +56,11 @@ The full list (how each thing syncs, who is in charge and which test proves it) 
 | Randomness | Random placements, materials, idle animations and random lines roll the same on every machine. |
 | Minigames | **One plays, the others watch them play.** When the player finishes, the game's own end events run for everyone (card game, dance, tic-tac-toe, QuadLiner), so the story carries on the same way. |
 | Pause | The pause menu does not freeze time while connected. |
+| Main menu | A player who goes back to the main menu while the host is in a chapter leaves the game (they are not pulled back in). When the host goes back to the menu, everyone follows through the game's own exit. |
 
 ## Known limitations
 - **Scene 19 (Glasses):** the game cannot start it cold (not even single-player from the chapter menu). Reached through the story from Scene 18, everyone moves there together.
+- **Scene 1 app mini-games:** the money and the cooking board's result are the host's; the inside of a mini-game (each cut, each move) can play out a little differently on the others' screens.
 - **Handheld Tetris:** it is each player's own and is not mirrored.
 - **Steam testing:** the Steam transport is tested in the lab with a stand-in for Steam (one account). A real two-account session is the next thing to verify.
 - **Core computer (Scenes 13 and 15):** one player sits and operates it; the others watch through their eyes. What the operator types and opens is replayed on everyone's copy.
