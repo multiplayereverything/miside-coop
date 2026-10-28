@@ -20,7 +20,8 @@ namespace MiSideTogether
         string labTour = "";
         bool labRuleSet;
         int labPlayers = 2;   // lab instances in this run; the host tour waits for all clients (but the lobby's late one)
-        float nextMetric, labJoinRetryAt;
+        float nextMetric, labJoinRetryAt, labLiveAt;
+        double labLiveMB;
         readonly System.Diagnostics.Stopwatch labWatch = new System.Diagnostics.Stopwatch();
         long labModTicks; int labFrames; float labWindowStart;
         readonly HashSet<string> labChecked = new HashSet<string>();
@@ -30,6 +31,7 @@ namespace MiSideTogether
             for (int i = 0; i < args.Length; i++)
             {
                 if (args[i] == "-mt-lab") LabMode = true;
+                if (args[i] == "-mt-noshots") noShots = true;
                 if (args[i] == "-mt-tour" && i + 1 < args.Length) labTour = args[++i];
                 if (args[i] == "-mt-players" && i + 1 < args.Length) int.TryParse(args[++i], out labPlayers);
                 if (args[i] == "-mt-lag" && i + 2 < args.Length) { int.TryParse(args[++i], out Transport.LabDelayMs); int.TryParse(args[++i], out Transport.LabJitterMs); }
@@ -172,7 +174,11 @@ namespace MiSideTogether
                 long allocated = GC.GetTotalAllocatedBytes(false);
                 double allocRate = labAllocLast > 0 ? (allocated - labAllocLast) / 1048576.0 / Mathf.Max(0.001f, window) : 0;
                 labAllocLast = allocated;
-                double liveMB = GC.GetGCMemoryInfo().HeapSizeBytes / 1048576.0;
+                // What a full collection leaves, measured once a minute (it pauses the lab game briefly). The heap size at
+                // the last collection (GCMemoryInfo.HeapSizeBytes, used before) includes garbage and grows with the
+                // allocation rate alone, so a busy session looked like a leak.
+                if (now >= labLiveAt) { labLiveAt = now + 60; labLiveMB = GC.GetTotalMemory(true) / 1048576.0; }
+                double liveMB = labLiveMB;
                 labModTicks = 0; labFrames = 0; labWindowStart = now; labMaxFrameTicks = 0;
                 Log(string.Format("MT-METRIC t={0:0} role={1} scene={2} peers={3} avatars={4} models={5} heapMB={6:0.0} errors={7} moderrors={8} modms={9:0.000} fps={10:0.0} modobjects={11} replay={12} mitadesync={13:0.00} player={14} phase={15}",
                     now, Hosting ? "host" : "client", ActiveSceneName.Replace(' ', '_'), AcceptedCount, avatars, models, GC.GetTotalMemory(false) / 1048576.0,

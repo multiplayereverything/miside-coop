@@ -12,7 +12,8 @@ namespace MiSideTogether
     {
         string labShotPending;
 
-        public void LabShot(string label) { if (LabMode) labShotPending = label; }
+        public static bool noShots;   // -mt-noshots: tell the screenshots' own memory use apart from the mod's
+        public void LabShot(string label) { if (LabMode && !noShots) labShotPending = label; }
 
         // Every machine at once: <label>-Host, <label>-C1, ...
         void LabShotAll(string label)
