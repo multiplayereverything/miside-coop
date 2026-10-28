@@ -54,6 +54,7 @@ namespace MiSideTogether
             Patch(typeof(Tamagotchi_Main), "GameStart", null, "AppStartPostfix");
             Patch(typeof(Tamagotchi_Main), "GameStop", null, "AppStopPostfix");
             Patch(typeof(Tamagotchi_Dialogue), "KeyNextDialogue", "AppReadPrefix", null);
+            Patch(typeof(Tamagotchi_Dialogue), "NextDialogue", "AppReadPrefix", null);
             Patch(typeof(Location1_InputNamePlayer), "CheckName", "AppNamePrefix", "AppNamePostfix");
             Patch(typeof(ButtonMouseClick), "PointerDown", "AppButtonPrefix", "AppButtonDownPostfix");
             Patch(typeof(ButtonMouseClick), "PointerUp", "AppButtonPrefix", "AppButtonUpPostfix");
@@ -246,7 +247,9 @@ namespace MiSideTogether
         static bool Is<T>(Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase o) { return o != null && o.TryCast<Component>() is Component c && c != null && c.GetIl2CppType().Name == typeof(T).Name; }
         static void AppStartPostfix(Tamagotchi_Main __instance) { if (Is<Tamagotchi_Main>(__instance)) Safe("AppStart", () => TogetherRuntime.AppStarted(__instance, true)); }
         static void AppStopPostfix(Tamagotchi_Main __instance) { if (Is<Tamagotchi_Main>(__instance)) Safe("AppStop", () => TogetherRuntime.AppStarted(__instance, false)); }
-        static bool AppReadPrefix(Tamagotchi_Dialogue __instance) { return !TogetherRuntime.AppViewer || !Is<Tamagotchi_Dialogue>(__instance); }
+        // Space and a click call NextDialogue straight from Tamagotchi_Dialogue.Update (0x3da43d), besides KeyNextDialogue;
+        // a conversation's first line (StartDialogue, index still -1) is the game's own and goes through.
+        static bool AppReadPrefix(Tamagotchi_Dialogue __instance) { return !TogetherRuntime.AppViewer || !Is<Tamagotchi_Dialogue>(__instance) || __instance.dialogueIndex < 0; }
         static bool AppNamePrefix(Location1_InputNamePlayer __instance) { return !TogetherRuntime.AppViewer || !Is<Location1_InputNamePlayer>(__instance); }
         static bool AppButtonPrefix(ButtonMouseClick __instance)
         {

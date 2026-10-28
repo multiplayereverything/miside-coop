@@ -146,12 +146,15 @@ def main():
     expects, out = [], None
     allow_game_errors = False   # a tour that reproduces a known game-side failure (scene19)
     busy = None                 # other games were running beside the lab: frame cost is reported, not judged
+    npc_lag_limit = 1.0         # p90 seconds an NPC animation may start after the host's (--npc-lag-limit per tour)
     i = 0
     while i < len(args):
         if args[i] == "--expect":
             expects.append(args[i + 1]); i += 2
         elif args[i] == "--allow-game-errors":
             allow_game_errors = True; i += 1
+        elif args[i] == "--npc-lag-limit":
+            npc_lag_limit = float(args[i + 1]); i += 2
         elif args[i] == "--busy":
             busy = args[i + 1]; i += 2
         elif args[i] == "--out":
@@ -248,7 +251,7 @@ def main():
             sync = compare(host_states, info["_states"])
             sync.update(compare_anims(results["host"]["_anims"], info["_anims"]))
             info["sync"] = sync
-            if sync["npc_anim_changes"] >= 5 and (sync["npc_anim_start_s_p90"] or 0) > 1.0:
+            if sync["npc_anim_changes"] >= 5 and (sync["npc_anim_start_s_p90"] or 0) > npc_lag_limit:
                 failures.append(f"{role}: NPC animations start {sync['npc_anim_start_s_p90']:.2f} s after the host's (p90)")
             if sync["samples"] >= 5:
                 if (sync["dialogue_mismatch"] or 0) > 0.4:

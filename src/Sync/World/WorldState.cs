@@ -97,8 +97,9 @@ namespace MiSideTogether
                 if (buildList != null) BuildTrackedStep();
                 return;
             }
-            // About 60 objects a frame: a full sweep of a big chapter (1500 objects) takes about half a second at 60 fps.
-            for (int n = 0; n < 60 && tracked.Count > 0; n++)
+            // About 120 objects a frame: a full sweep of a big chapter (1500 objects) takes about 0.2 s at 60 fps, 0.4 s at
+            // 30 (at 60 a frame, story switches in Scene 1's app reached clients up to 2 s late).
+            for (int n = 0; n < 120 && tracked.Count > 0; n++)
             {
                 Tracked e = tracked[sweep++ % tracked.Count];
                 if (e.G == null) continue;

@@ -136,7 +136,18 @@ namespace MiSideTogether
             if (appTarget == null || Time.realtimeSinceStartup < appStepAt) return;
             Tamagotchi_Dialogue d = AppDialogue();
             if (d == null || d.dialogueRun == null || RunKey(d.dialogueRun) != appTarget) return;   // not open here (yet), or another one
-            if (d.play || (appTargetIndex >= 0 && d.dialogueIndex >= appTargetIndex)) return;              // typing, or already there
+            if (appTargetIndex >= 0 && d.dialogueIndex >= appTargetIndex) return;                         // already there
+            // Behind the host while this line still types out: show it in full now (the typing then ends by itself) and
+            // step next time, so Mita's line animations here start close to the host's (they lagged over a second).
+            // Update (0x3d9410) appends stringDialogueNeed[Now.Length] before it checks for the end, so the text is set to all
+            // but the last character: the game adds it and ends the typing itself (set in full, it ran past the end).
+            if (d.play)
+            {
+                string need = d.stringDialogueNeed ?? "", now = d.stringDialogueNow ?? "";
+                if (need.Length > 1 && now.Length < need.Length - 1) d.stringDialogueNow = need.Substring(0, need.Length - 1);
+                appStepAt = Time.realtimeSinceStartup + 0.1f;
+                return;
+            }
             appStepAt = Time.realtimeSinceStartup + 0.2f;
             bool was = Replaying;
             Replaying = true;
