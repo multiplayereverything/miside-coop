@@ -5,8 +5,8 @@ Read this first when picking the work up on another PC. Then `AGENTS.md` (archit
 ## Goal
 Co-op for MiSide (2 to 4 players). Everyone sees the others as the main character with real animations, and the game stays in sync: chapters, story, dialogue, cutscenes, Mita and the other NPCs, room state, minigames and endings. BepInEx, to match the user's Baldi Together and Spooky Together mods.
 
-## State (2026-10-27)
-- **Version:** 0.3.3, a GitHub pre-release (`v0.3.3`) on https://github.com/multiplayereverything/miside-coop, with `MiSideTogether-0.3.3.zip` (layout `BepInEx/plugins/MiSideTogether/MiSideTogether.dll`, what the launcher installs) and the DLL. Protocol `Wire.Version` 4 (`Op.Call` 8-14 are new; only same-version players connect). The last full release is v0.3.2.
+## State (2026-10-28)
+- **Version:** 0.3.5 in progress (local commits, protocol `Wire.Version` 5: the carry message carries the hand bone). The last published pre-release is v0.3.4 (`de23d30`).
 - **Online play:** Steam P2P (friends join from MULTIPLAYER in the game's menu, or Steam's Join Game / invite, `+mt_join`), LAN/VPN, or a direct address (TCP 27030). It doesn't use the Multiplayer Everything relay.
 - **This PC (2026-10-27):** the repo lives at `Desktop\AIStuff\ai-work-pc-games\Miside Multiplayer Mod`, outside the game; `scripts\game-dir.ps1` finds the game. BepInEx be.790 and the mod are installed in the game. The user's save folder is empty, as they want it.
 - **Website:** `games.json` in the website repo has the `miside` entry. The Website session updates it; don't edit it from here.
@@ -21,6 +21,16 @@ Co-op for MiSide (2 to 4 players). Everyone sees the others as the main characte
 - **Scene 14 quest game shared:** clicks and replies (`QuestGame.cs`, `Op.Call` 8-9); `quest` tour, mutation-checked.
 - **Scene 1 tutorial in the lab:** answered (hint question, mouse, walking) as decompiled from `Location1Tutorial.Update`.
 - **Lab metrics:** NPC animation lag counts lateness only (early chapter-start changes reported as `early`); the interactions tour waits for the client's player before its final checks.
+
+## Done in 0.3.5 (from the 2026-10-28 playtest with two friends)
+- **Minigame hooks check the real type:** the game shares one compiled body between methods with identical code, so a hook on `Location18_TicTacToe.StartGame` also ran for Scene 1's tutorial hint; a client became "minigame owner" and the host's phone pickup was blocked. Every minigame and phone-character hook now checks `GetIl2CppType()`.
+- **Scene 1 phone and app host-driven** (`AppSync.cs`, see SYNC.md 4b): one phone holder, the app's dialogue, name, days, shop, cooking board and money follow the host; `scene1` tour with screenshots, client ends on the host's day.
+- **Phone in the holder's hand for the others:** carried items ride on the holder's nearest wrist/hand bone (the game's hold slot sits near the camera); `phone` tour checks 0.12 m from the hand.
+- **Rooms stay on around a player:** the room sync no longer switches off a room (solid colliders at least 2.5 m wide) while this player stands in it; it goes off when they leave.
+- **Back to the menu:** a client that goes to the main menu by itself leaves the game; following the host to the menu uses `GameController.ExitGame` (a plain load left the player's hands in the menu: `menureturn` tour, failed before the fix).
+- **Menu layout:** MULTIPLAYER sits in the play group under LOAD GAME; the column is tightened so EXIT keeps its place and gap (screenshot checked).
+- **Dialogue choices** wait for the client's menu and player before `ClickButton` (decompiled 0x3dfd10); **NavMesh agents** of puppeted NPCs are put back on the mesh. Neither error reproduced in the lab (`choice` tour), so both are guards for the playtest errors.
+- **Lab screenshots:** `LabShot`/`LabShotAll` (`LabShots.cs`) and `tools/shots_to_png.py`.
 
 ## Open, in order
 1. **Ask the user** to check the other player's shading in the game (0.3.2 change, not seen by a person yet).

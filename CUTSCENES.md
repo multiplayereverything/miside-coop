@@ -34,6 +34,7 @@ A rule's match text is compared, ignoring case, against the scene key of what wa
 
 | Match | Rule | Why |
 | --- | --- | --- |
+| `Smartphone` | who=actor | Scene 1's phone animations (take, open message, download, play; day 2's "PlayerSmartphone") are the host's; the others' app follows the host's (AppSync.cs). Mirrored, every player held a phone. |
 | `InteractivePC` | who=actor, pov=on | The core computer (Scenes 13, 15) is one seat: the presser operates it, the others watch through their eyes. Mirrored, everyone sat down and the others could not get up. |
 
 ## Ini file

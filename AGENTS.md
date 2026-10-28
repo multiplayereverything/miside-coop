@@ -67,6 +67,7 @@ Every agent on this repo follows these. They favour care over speed; use judgeme
 | `Trigger_MouseEvent.Enter` (postfix, one-shot looks only), `Trigger_DistanceCircle.Update` (prefix + postfix: `targetInside` flips) | `Op.LookTrigger` / `Op.DistanceTrigger`. |
 | `Basement_Safe.ClickButton`, `InputKeyboard_Main.AddKey`/`RemoveKey`/`ButtonEnter`/`ButtonUpper`, `Trigger_DistanceCamera.Enter`/`Exit` | `Op.Call` method relays (table in `Triggers.cs`). |
 | `Location14_PlayerMobileMove.Play` (prefix + postfix), `.Update`/`.FixedUpdate` (prefix) | Scene 14 phone character: the phone's holder runs it and relays `Op.Call` 15; on the others it is shown, not run, and placed from the prop stream (`PhoneCharacter.cs`). |
+| `Tamagotchi_Main.GameStart`/`GameStop`, `Tamagotchi_Dialogue.KeyNextDialogue`, `Location1_InputNamePlayer.CheckName`, `ButtonMouseClick.PointerDown`/`PointerUp`, `UnityEngine.UI.Button.Press`, `TamagotchiGame_Cooking.Ready` | Scene 1 phone app: the host's are relayed (`Op.Call` 16-23), the clients' own input in the app does nothing (`AppSync.cs`). Buttons count only under `Tamagotchi/` in Scene 1. |
 | Minigame end methods (prefix + postfix) | While the player's end method runs, story relays are held (`MinigameEnding`). Watchers fire the kind's end UnityEvents (`MinigameKind.Events`). |
 
 ## Not hooked, but driven by the mod
@@ -99,6 +100,7 @@ Every agent on this repo follows these. They favour care over speed; use judgeme
 - **Few loose props, few timelines:** there are almost no loose physics props, and timelines exist only in Scenes 1, 3, 5, 6, 8, 12 and 13 (`tools/count_timelines.py`). Most "cutscenes" are scripted player and Mita animations started by story events.
 - **Steam relaunch:** a direct exe launch relaunches through Steam; lab copies carry `steam_appid.txt` (2527500).
 - **Quoting arguments:** `Start-Process -ArgumentList` does not quote.
+- **Shared compiled bodies:** IL2CPP folds methods with identical code into one function, so a Harmony hook on one also runs for the others (a minigame's `StartGame` ran for a tutorial hint). Hooks that act on their instance must check `__instance.GetIl2CppType().Name`.
 - **Scene 19 (Glasses):** cannot be started cold, even from the menu. Scene 20 cannot be started cold right after Scene 18.
 
 ## Lobby and chapter start
@@ -110,6 +112,7 @@ Every agent on this repo follows these. They favour care over speed; use judgeme
 ## Rules
 - **Build and test:** build with `scripts/build.ps1`. Test with `scripts/run-tour.ps1 -Tour <tour>` or `scripts/lab-suite.ps1`.
   - Lab copies start minimized as normal 480x270 windows titled "MiSide lab - <name>" (lowest quality, 30 fps via `-mt-fps`, BelowNormal priority). Restoring one from the taskbar brings it up small at the right edge of the primary monitor; the launcher sets that once and never moves, re-minimizes or focuses a window afterwards (`launch-lab.ps1 -Hidden` hides them instead). The mod keeps `Application.runInBackground` on, so minimized copies keep running. The user's PC is shared with other mods' labs: one tour at a time, and never send keys or clicks to the desktop.
+  - Screenshots: `LabShot("label")` / `LabShotAll("label")` write `shots/<label>.rgb` next to the lab game (encoders are stripped); `python tools/shots_to_png.py private/lab-host/shots private/lab-client/shots` makes PNGs to compare what each player sees.
   - `-mt-dump <scene>` (scene name with `_` for spaces) writes the hierarchy and, in `private-wires-<scene>.txt`, every persistent UnityEvent call (`source [Type].field -> target [Type].Method`). To find what arms or starts something, search the wiring for its name and walk backwards.
   - A fresh install stops in `SceneLoading` on the game's LANGUAGE/VOICE picker; lab copies answer it with English (`FirstRunLanguageTick`, Lab.cs).
   - The user's save folder is backed up and restored per run, and the lab refuses to start beside the user's own MiSide.
