@@ -1,6 +1,6 @@
 ﻿# Runs every feature tour in a row and prints one line per tour. Results: artifacts/tests/<tour>-results.json.
 # Usage: lab-suite.ps1 [-Tours connect,avatars,...] [-WithChapters]
-param([string[]]$Tours = @('connect', 'avatars', 'story', 'mita', 'cutscene', 'world', 'carry', 'dialogue', 'gather', 'room', 'mirror', 'interactions', 'triggers', 'held', 'hostcut', 'novella', 'scene19', 'lobby', 'migrate', 'death', 'minigame', 'steam', 'quest', 'core', 'phone', 'mobile', 'safe', 'choice', 'menureturn', 'scene1', 'menuleave', 'roomhold', 'scene1end'), [switch]$WithChapters)
+param([string[]]$Tours = @('connect', 'avatars', 'story', 'mita', 'cutscene', 'world', 'carry', 'dialogue', 'gather', 'room', 'mirror', 'interactions', 'triggers', 'held', 'hostcut', 'novella', 'scene19', 'lobby', 'migrate', 'death', 'minigame', 'steam', 'quest', 'core', 'phone', 'mobile', 'safe', 'choice', 'menureturn', 'scene1', 'menuleave', 'roomhold', 'scene1end', 'scene3'), [switch]$WithChapters)
 $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path $PSScriptRoot -Parent
 if ($WithChapters) { $Tours += 'chapters' }
