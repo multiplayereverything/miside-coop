@@ -238,7 +238,20 @@ namespace MiSideTogether
                     case Op.DialogueChoice:
                         DialogueChanger dialogue = SceneKeys.Find<DialogueChanger>(key);
                         if (Missing(dialogue, key)) return;
+                        // The choice is only clickable while its menu is open here (play, buttons built); clicked before,
+                        // ClickButton threw a NullReferenceException (playtest, Scene 3). Not open yet: open it the
+                        // game's way and click on the next retry.
+                        // ClickButton (0x3dfd10) first reaches the player through a static, then buttons[arg]: both must
+                        // exist here, or it throws.
+                        if (!dialogue.play || dialogue.buttons == null || dialogue.indexButtons == null || LocalPlayer == null
+                            || arg < 0 || arg >= dialogue.buttons.Length || dialogue.buttons[arg] == null)
+                        {
+                            if (!dialogue.play && dialogue.gameObject.activeInHierarchy) dialogue.Play();
+                            Inactive(dialogue, key, false);
+                            return;
+                        }
                         dialogue.ClickButton(arg);
+                        dialogueChoicesApplied++;
                         break;
                 }
                 Log("MT-STORY applied " + op + " " + key);
@@ -429,6 +442,15 @@ namespace MiSideTogether
                 if (state.Snap) { t.SetPositionAndRotation(state.Position, state.Rotation); state.Snap = false; }
                 else t.SetPositionAndRotation(Vector3.Lerp(t.position, state.Position, k), Quaternion.Slerp(t.rotation, state.Rotation, k));
                 NavMeshAgent agent = npc.Agent;
+                // Placed where the host's NPC is, the agent can end up off the walkable mesh (a cutscene spot); the game's
+                // own AI here then calls SetDestination on it every frame and Unity logs an error each time (playtest,
+                // Scene 3). Put the agent back on the nearest walkable point; the body stays where the host's is.
+                if (agent != null && agent.isActiveAndEnabled && !agent.isOnNavMesh && NavMesh.SamplePosition(t.position, out NavMeshHit hit, 3f, NavMesh.AllAreas))
+                {
+                    Vector3 keep = t.position; Quaternion keepRot = t.rotation;
+                    agent.Warp(hit.position);
+                    t.SetPositionAndRotation(keep, keepRot);
+                }
                 if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh)
                 {
                     agent.updatePosition = false; agent.updateRotation = false;

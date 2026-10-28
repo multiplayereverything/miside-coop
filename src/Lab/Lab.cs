@@ -69,6 +69,7 @@ namespace MiSideTogether
         {
             if (type != LogType.Error && type != LogType.Exception && type != LogType.Assert) return;
             int count = Interlocked.Increment(ref errorCount);
+            if (condition != null && condition.Contains("SetDestination")) Interlocked.Increment(ref navMeshErrors);
             // The first 200 game errors are kept with their source line, so a failed run says what went wrong.
             if (count <= 200)
             {
