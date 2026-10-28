@@ -442,6 +442,7 @@ namespace MiSideTogether
             if (!labChecked.Contains("steam.ready") && (Steam.Ready || now - tourSceneAt > 20)) CheckOnce("steam.ready", Steam.Ready && Steam.Self != 0, Steam.Ready ? "Steam user " + Steam.Self + " (" + Steam.SelfName + "), " + Steam.FriendsInGame().Count + " friend(s) in MiSide" : Steam.Problem);
             if (!MenuBuilt) { if (now - tourSceneAt > 30) CheckOnce("ui.menu", false, "MULTIPLAYER page was not built"); return; }
             MenuNextLocation next = menuButton.GetComponent<MenuNextLocation>();
+            if (!labChecked.Contains("ui.menu")) LabShot("menu-main-" + Name);   // the main menu with MULTIPLAYER, before opening it
             CheckOnce("ui.menu", next != null && next.nextLocation == menuPage, "MULTIPLAYER button opens the page; page rows " + MenuRowCount);
             if (labMenuOpenAt < 0 && next != null && Connected) { labMenuOpenAt = now; next.Click(); }
             if (labMenuOpenAt > 0 && now - labMenuOpenAt > 2)

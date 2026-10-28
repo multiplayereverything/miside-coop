@@ -55,6 +55,10 @@ namespace MiSideTogether
             Patch(typeof(Tamagotchi_Main), "GameStop", null, "AppStopPostfix");
             Patch(typeof(Tamagotchi_Dialogue), "KeyNextDialogue", "AppReadPrefix", null);
             Patch(typeof(Location1_InputNamePlayer), "CheckName", "AppNamePrefix", "AppNamePostfix");
+            Patch(typeof(ButtonMouseClick), "PointerDown", "AppButtonPrefix", "AppButtonDownPostfix");
+            Patch(typeof(ButtonMouseClick), "PointerUp", "AppButtonPrefix", "AppButtonUpPostfix");
+            Patch(typeof(TamagotchiGame_Cooking), "Ready", null, "AppCookedPostfix");
+            Patch(typeof(UnityEngine.UI.Button), "Press", "AppUiButtonPrefix", "AppUiButtonPostfix");
             Patch(typeof(Location14_PlayerMobileMove), "Update", "MobileRunPrefix", null);
             Patch(typeof(Location14_PlayerMobileMove), "FixedUpdate", "MobileRunPrefix", null);
             Patch(typeof(Location14_ButtonChangeDialogue), "OnPointerDown", "QuestReplyPrefix", "QuestReplyPostfix");
@@ -244,6 +248,20 @@ namespace MiSideTogether
         static void AppStopPostfix(Tamagotchi_Main __instance) { if (Is<Tamagotchi_Main>(__instance)) Safe("AppStop", () => TogetherRuntime.AppStarted(__instance, false)); }
         static bool AppReadPrefix(Tamagotchi_Dialogue __instance) { return !TogetherRuntime.AppViewer || !Is<Tamagotchi_Dialogue>(__instance); }
         static bool AppNamePrefix(Location1_InputNamePlayer __instance) { return !TogetherRuntime.AppViewer || !Is<Location1_InputNamePlayer>(__instance); }
+        static bool AppButtonPrefix(ButtonMouseClick __instance)
+        {
+            try { return !TogetherRuntime.AppViewer || !Is<ButtonMouseClick>(__instance) || !TogetherRuntime.IsAppButton(__instance); }
+            catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook AppButton: " + ex.Message); return true; }
+        }
+        static void AppButtonDownPostfix(ButtonMouseClick __instance) { if (Is<ButtonMouseClick>(__instance)) Safe("AppButton", () => TogetherRuntime.AppPressed(__instance, false)); }
+        static void AppButtonUpPostfix(ButtonMouseClick __instance) { if (Is<ButtonMouseClick>(__instance)) Safe("AppButton", () => TogetherRuntime.AppPressed(__instance, true)); }
+        static bool AppUiButtonPrefix(UnityEngine.UI.Button __instance)
+        {
+            try { return !TogetherRuntime.AppViewer || __instance == null || !TogetherRuntime.IsAppButton(__instance); }
+            catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook AppUiButton: " + ex.Message); return true; }
+        }
+        static void AppUiButtonPostfix(UnityEngine.UI.Button __instance) { Safe("AppUiButton", () => TogetherRuntime.AppClicked(__instance)); }
+        static void AppCookedPostfix(TamagotchiGame_Cooking __instance) { if (Is<TamagotchiGame_Cooking>(__instance)) Safe("AppCooked", () => TogetherRuntime.AppCooked(__instance)); }
         static void AppNamePostfix(Location1_InputNamePlayer __instance) { if (Is<Location1_InputNamePlayer>(__instance)) Safe("AppName", () => TogetherRuntime.AppNamed(__instance)); }
         static void QuestMovePostfix(Location14_PlayerQuest __instance, Vector3 _pos, UnityEngine.Events.UnityEvent _event) { Safe("QuestMove", () => TogetherRuntime.QuestMoved(__instance, _pos, _event)); }
         static void QuestReplyPrefix(Location14_ButtonChangeDialogue __instance, out bool __state) { __state = __instance != null && __instance.active; }

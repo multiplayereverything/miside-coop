@@ -55,8 +55,8 @@ namespace MiSideTogether
             Transform main = FindDeep(menu.transform, "Location Menu"), options = FindDeep(menu.transform, "Location MainOptions");
             if (main == null || options == null) { Log("Native menu: pages not found"); menuFailed = true; return; }
             MenuLocation mainLocation = main.GetComponent<MenuLocation>();
-            Transform settings = main.Find("Button Settings"), exit = main.Find("Button Exit"), voice = main.Find("Button LanguageVoice");
-            if (mainLocation == null || settings == null || exit == null || voice == null) { Log("Native menu: buttons not found"); menuFailed = true; return; }
+            Transform settings = main.Find("Button Settings"), exit = main.Find("Button Exit");
+            if (mainLocation == null || mainLocation.objects == null || mainLocation.objects.Count < 4 || settings == null || exit == null) { Log("Native menu: buttons not found"); menuFailed = true; return; }
 
             // The page: a copy of the options page, renamed and retitled, emptied down to its title and Back.
             GameObject page = Object.Instantiate(options.gameObject, options.parent).Cast<GameObject>();
@@ -74,25 +74,32 @@ namespace MiSideTogether
             foreach (string n in new[] { "Button Full Clear", "Button Option Graphics", "Button Volume" }) { Transform t = page.transform.Find(n); if (t != null) Object.Destroy(t.gameObject); }
             menuPage = page;
 
-            // The main menu button: a copy of Settings opening our page, placed where LanguageVoice''s next row would be;
-            // Exit moves one row down.
+            // The main menu button: a copy of Settings opening our page, in the play group right after Load Game. The
+            // rows below move down one and the column is tightened back to its old height, so Exit keeps its place and its
+            // gap (playtest: squeezed between Voice and Exit, Exit was hard to see).
             GameObject button = Object.Instantiate(settings.gameObject, settings.parent).Cast<GameObject>();
             button.name = "Button MiSideTogether";
             SetText(button, "MULTIPLAYER");
-            RectTransform voiceRect = voice.GetComponent<RectTransform>(), rect = button.GetComponent<RectTransform>(), exitRect = exit.GetComponent<RectTransform>();
-            rect.anchoredPosition = new Vector2(voiceRect.anchoredPosition.x, voiceRect.anchoredPosition.y - RowStep);
-            exitRect.anchoredPosition = new Vector2(exitRect.anchoredPosition.x, exitRect.anchoredPosition.y - RowStep);
-            button.transform.SetSiblingIndex(exit.GetSiblingIndex());
+            RectTransform rect = button.GetComponent<RectTransform>(), exitRect = exit.GetComponent<RectTransform>();
+            List<RectTransform> order = new List<RectTransform>();
+            if (mainLocation.objects != null) foreach (RectTransform r in mainLocation.objects) if (r != null) order.Add(r);
+            int at = order.FindIndex(r => r.name.Contains("Load"));
+            at = at >= 0 ? at + 1 : Mathf.Min(3, order.Count - 1);
+            float top = order[0].anchoredPosition.y, span = top - order[order.Count - 1].anchoredPosition.y;
+            float slot = top - order[at - 1].anchoredPosition.y + RowStep, scale = span / (span + RowStep);
+            for (int i = 0; i < order.Count; i++)
+            {
+                float offset = top - order[i].anchoredPosition.y + (i >= at ? RowStep : 0);
+                order[i].anchoredPosition = new Vector2(order[i].anchoredPosition.x, top - offset * scale);
+            }
+            rect.anchoredPosition = new Vector2(order[at - 1].anchoredPosition.x, top - slot * scale);
+            button.transform.SetSiblingIndex(order[at].GetSiblingIndex());
             MenuNextLocation next = button.GetComponent<MenuNextLocation>();
             if (next != null) next.nextLocation = page;
-            if (mainLocation.objects != null)
-            {
-                int at = mainLocation.objects.IndexOf(exitRect);
-                if (at < 0) mainLocation.objects.Add(rect); else mainLocation.objects.Insert(at, rect);
-            }
+            mainLocation.objects.Insert(at, rect);
             // MenuLocation sizes its per-row state in Start(); re-run it so the game knows about the new row.
             RestartLocation(mainLocation);
-            Link(voice.GetComponent<ButtonMouseClick>(), button.GetComponent<ButtonMouseClick>(), exit.GetComponent<ButtonMouseClick>());
+            Link(order[at - 1].GetComponent<ButtonMouseClick>(), button.GetComponent<ButtonMouseClick>(), order[at].GetComponent<ButtonMouseClick>());
             menuButton = button;
             rowsSignature = "";
             RefreshRows();

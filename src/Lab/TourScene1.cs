@@ -34,6 +34,7 @@ namespace MiSideTogether
         void Scene1Host(float now, string scene)
         {
             GlobalGame.hintScreen = false;
+            if (scene == "SceneMenu" && !labS1MenuShot && now - tourSceneAt > 4) { labS1MenuShot = true; LabShotAll("menu"); }
             if (!tourStarted && scene == "SceneMenu" && now - tourSceneAt > 6) { tourStarted = true; LoadThroughGame("Scene 1 - RealRoom"); }
             // In the phone app the player object is switched off (the camera is the app's), so only the steps before need it.
             Tamagotchi_Main app = Object.FindObjectOfType<Tamagotchi_Main>();
@@ -41,7 +42,7 @@ namespace MiSideTogether
             if (scene != "Scene 1 - RealRoom" || (LocalPlayer == null && !inApp)) return;
             LabScene1Tutorial(now);   // also types the name in the app, where there is no player object
             Scene1State(now);
-            if (now - tourSceneAt > 220) CheckOnce("scene1.done", true, "played Scene 1 for 220 s (" + labS1Shots + " screenshots)");
+            if (now - tourSceneAt > 500) CheckOnce("scene1.done", true, "played Scene 1 for 500 s (" + labS1Shots + " screenshots)");
             if (now - tourSceneAt > 20 && now >= labS1ShotAt) { labS1ShotAt = now + 15; LabShotAll("s1-" + (labS1Shots++).ToString("00")); }
             if (now < labS1StepAt || now - tourSceneAt < 25) return;
             labS1StepAt = now + 2;
@@ -73,8 +74,59 @@ namespace MiSideTogether
                     c.Click();
                     return;
                 }
+            if (Scene1Day2(now)) return;
             Tamagotchi_Dialogue d = AppDialogue();
             if (d != null && !d.play) { Log("Lab: scene1 host reads on (Space): '" + d.stringDialogueNow + "'"); d.KeyNextDialogue(); labS1StepAt = now + 3; }
+        }
+
+        bool labS1CutDown, labS1MenuShot;
+
+        static ButtonMouseClick AppButton(string pathPart)
+        {
+            foreach (ButtonMouseClick b in Object.FindObjectsOfType<ButtonMouseClick>())
+                if (b != null && b.isActiveAndEnabled && PathOf(b.transform).Contains(pathPart)) return b;
+            return null;
+        }
+
+        void Press(ButtonMouseClick b, string what) { Log("Lab: scene1 host presses " + what); b.PointerDown(); b.PointerUp(); }
+
+        // Day 2: Mita is hungry. Open the shop, buy food, give it to her, and cook it on the board (take a vegetable,
+        // hold the knife and let go, until the board is done: TamagotchiGame_Cooking.ready).
+        bool Scene1Day2(float now)
+        {
+            if (AppDialogue() != null) return false;
+            TamagotchiGame_Cooking cooking = Object.FindObjectOfType<TamagotchiGame_Cooking>();
+            if (cooking != null && cooking.isActiveAndEnabled && !cooking.ready)
+            {
+                ButtonMouseClick knife = AppButton("InterfaceCut/Pointer");
+                // A well-timed release cuts (the game's own Cut, which the release calls when the slider is in place).
+                if (labS1CutDown && knife != null) { cooking.Cut(); knife.PointerUp(); labS1CutDown = false; Log("Lab: scene1 host cuts (cut " + cooking.indexCut + ", food " + cooking.indexCutFood + ")"); return true; }
+                if (cooking.foodTakeNow == null)
+                {
+                    foreach (Trigger_MouseClick c in Object.FindObjectsOfType<Trigger_MouseClick>())
+                        if (c != null && c.isActiveAndEnabled && (c.name == "Carrot" || c.name == "Potato")) { Log("Lab: scene1 host takes the " + c.name); c.Click(); return true; }
+                    return false;
+                }
+                if (knife != null && cooking.canCut) { knife.PointerDown(); labS1CutDown = true; labS1StepAt = now + 0.6f; Log("Lab: scene1 host holds the knife"); return true; }
+                return false;
+            }
+            foreach (Trigger_MouseClick c in Object.FindObjectsOfType<Trigger_MouseClick>())
+                if (c != null && c.isActiveAndEnabled && c.enabled && c.name == "Food" && PathOf(c.transform).Contains("Quest 5")) { Log("Lab: scene1 host gives Mita the food"); c.Click(); return true; }
+            GameObject bought = SceneObject("BuySoup");   // "you bought ..." popup: a standard UI button closes it
+            UnityEngine.UI.Button ok = bought != null && bought.activeInHierarchy ? bought.GetComponent<UnityEngine.UI.Button>() : null;
+            if (ok != null) { Log("Lab: scene1 host closes the purchase popup"); ok.Press(); return true; }
+            ButtonMouseClick buy = AppButton("Shop Food/FrameKategory 1/Game 1");
+            if (buy != null) { Press(buy, "buy food"); return true; }
+            ButtonMouseClick food = AppButton("Shop Change/FrameKategory/Button 1");   // the shop's first category: food
+            if (food != null) { Press(food, "the food category"); return true; }
+            GameObject pointer = SceneObject("PointerButton");
+            Tamagotchi_Main app = Object.FindObjectOfType<Tamagotchi_Main>();
+            if (pointer != null && pointer.activeInHierarchy && app != null && app.buttonShop != null)
+            {
+                ButtonMouseClick shop = app.buttonShop.GetComponent<ButtonMouseClick>();
+                if (shop != null) { Press(shop, "the shop"); return true; }
+            }
+            return false;
         }
 
         void Scene1Client(float now, string scene)

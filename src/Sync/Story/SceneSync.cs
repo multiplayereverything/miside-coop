@@ -141,10 +141,23 @@ namespace MiSideTogether
             Log("Host is in " + name + " (scene " + seq + ")");
         }
 
+        int inHostChapterSeq = -1;   // the host's scene number this client last stood in
+
         void ClientSceneTick(string active)
         {
             if (wantedScene.Length == 0) return;
             float now = Time.realtimeSinceStartup;
+            if (active == wantedScene) inHostChapterSeq = wantedSeq;
+            // Back in the main menu by this player's own choice (pause menu, exit) while the host is still in the chapter
+            // this player was in: they leave the game instead of being pulled back in (playtest).
+            else if (active == "SceneMenu" && inHostChapterSeq == wantedSeq && wantedScene.StartsWith("Scene ", StringComparison.Ordinal) && (followLoad == null || followLoad.isDone)
+                && now - arrivedAt > 3f)   // the story's own way to the menu reaches here a moment before the host's
+            {
+                inHostChapterSeq = -1;
+                Tell("You left the game (back to the main menu).");
+                Shutdown();
+                return;
+            }
             if (active != wantedScene)
             {
                 if (followLoad != null && !followLoad.isDone) return;

@@ -32,7 +32,7 @@ namespace MiSideTogether
         public int stateApplied, stateSent;
         const int MaxTracked = 8000;
 
-        void ResetWorldState() { buildList = null; buildSkip = null; buildAnimated = null; trackedAnimators.Clear(); pendingAnimators.Clear(); animatorSweep = 0; tracked.Clear(); trackedLights.Clear(); stateChanges.Clear(); pendingState.Clear(); sweep = 0; lightSweep = 0; stateReady = false; stateReadyAt = -1; }
+        void ResetWorldState() { buildList = null; buildSkip = null; buildAnimated = null; trackedAnimators.Clear(); pendingAnimators.Clear(); animatorSweep = 0; tracked.Clear(); trackedLights.Clear(); stateChanges.Clear(); pendingState.Clear(); sweep = 0; lightSweep = 0; stateReady = false; stateReadyAt = -1; deferredOff.Clear(); }
 
         // Built once per chapter, a moment after the player exists, from every loaded scene object we do not sync otherwise.
         void BuildTracked()
@@ -88,7 +88,7 @@ namespace MiSideTogether
 
         void WorldStateTick(float now)
         {
-            if (!Hosting) return;
+            if (!Hosting) { DeferredOffTick(now); return; }
             if (!stateReady)
             {
                 if (LocalPlayer == null) { stateReadyAt = -1; return; }
@@ -210,6 +210,45 @@ namespace MiSideTogether
             }
         }
 
+        // A room the host's story switches off (the host moved on, into the phone app, through a door that unloads the
+        // area behind) stays on here while this player still stands in it; it goes off once they leave. Playtest: a
+        // player left behind saw a black void. "In it": inside the bounds of its solid colliders, if those are room-sized.
+        readonly Dictionary<string, Transform> deferredOff = new Dictionary<string, Transform>();
+        float deferredCheckAt;
+
+        static bool Around(Transform t, PlayerMove player)
+        {
+            if (player == null || t == null) return false;
+            Bounds b = new Bounds(); bool any = false;
+            foreach (Collider c in t.GetComponentsInChildren<Collider>())
+            {
+                if (c == null || c.isTrigger || !c.enabled) continue;
+                if (any) b.Encapsulate(c.bounds); else { b = c.bounds; any = true; }
+            }
+            if (!any || b.size.x < 2.5f || b.size.z < 2.5f) return false;   // a prop, not a room
+            b.Expand(1f);
+            return b.Contains(player.transform.position + Vector3.up);
+        }
+
+        void DeferredOffTick(float now)
+        {
+            if (deferredOff.Count == 0 || now < deferredCheckAt) return;
+            deferredCheckAt = now + 1;
+            PlayerMove player = LocalPlayer;
+            List<string> done = new List<string>();
+            foreach (KeyValuePair<string, Transform> d in deferredOff)
+            {
+                if (d.Value == null) { done.Add(d.Key); continue; }
+                if (Around(d.Value, player)) continue;
+                done.Add(d.Key);
+                if (!d.Value.gameObject.activeSelf) continue;
+                Replaying = true;
+                try { d.Value.gameObject.SetActive(false); stateApplied++; Log("Room state: " + d.Key + " off now that this player left it"); }
+                finally { Replaying = false; }
+            }
+            foreach (string k in done) deferredOff.Remove(k);
+        }
+
         void ApplyStateEntry(byte[] entry)
         {
             using (BinaryReader r = new BinaryReader(new MemoryStream(entry)))
@@ -237,11 +276,21 @@ namespace MiSideTogether
                 if (t == null) return;
                 PlayerMove player = LocalPlayer;
                 if (player != null && t.IsChildOf(player.transform)) return;
+                if (kind == 1)
+                {
+                    bool on = r.ReadBoolean();
+                    deferredOff.Remove(key);
+                    if (!on && t.gameObject.activeSelf && Around(t, player)) { deferredOff[key] = t; Log("Room state: keeping " + key + " on while this player is in it"); return; }
+                    if (t.gameObject.activeSelf == on) return;
+                    Replaying = true;
+                    try { t.gameObject.SetActive(on); stateApplied++; }
+                    finally { Replaying = false; }
+                    return;
+                }
                 Replaying = true;
                 try
                 {
-                    if (kind == 1) { if (t.gameObject.activeSelf != r.ReadBoolean()) t.gameObject.SetActive(!t.gameObject.activeSelf); }
-                    else if (kind == 2) { Vector3 p; Quaternion q; ReadTransform(r, out p, out q); t.localPosition = p; t.localRotation = q; }
+                    if (kind == 2) { Vector3 p; Quaternion q; ReadTransform(r, out p, out q); t.localPosition = p; t.localRotation = q; }
                     stateApplied++;
                 }
                 finally { Replaying = false; }
