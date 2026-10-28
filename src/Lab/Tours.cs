@@ -77,7 +77,7 @@ namespace MiSideTogether
             if (labTour == "menuleave") { MenuLeaveTick(now, scene); return; }
             if (labTour == "roomhold") { RoomHoldTick(now, scene); return; }
             if (labTour == "choice") { if (Hosting) ChoiceHost(now, scene); else if (Connected) ChoiceClient(now, scene); return; }
-            if (labTour == "scene1") { if (Hosting) Scene1Host(now, scene); else if (Connected) Scene1Client(now, scene); return; }
+            if (labTour == "scene1") { Scene1EndTick(now, scene); if (Hosting) Scene1Host(now, scene); else if (Connected) Scene1Client(now, scene); return; }
             if (labTour == "scene1end") { Scene1EndTick(now, scene); if (Hosting) Scene1Host(now, scene); else if (Connected) Scene1Client(now, scene); return; }
             if (labTour == "mobile") { if (Hosting) MobileHost(now, scene); else if (Connected) MobileClient(now, scene); return; }
             if (Hosting) HostTour(now, scene); else if (Connected) ClientTour(now, scene);

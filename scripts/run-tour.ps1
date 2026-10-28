@@ -8,7 +8,7 @@ $tours = @{
     'core'     = @{ Seconds = 300;  Expect = @('chapter.loaded@host', 'core.driven@host', 'client.core.followed', 'core.answered@host', 'client.core.same') }
     'quest'    = @{ Seconds = 360;  Expect = @('chapter.loaded@host', 'quest.clicked@host', 'client.quest.moved') }
     # scene1: the app's Mita follows the host's steps (name, tidy-up), about 1 s late at a step; normal play is held to 1 s by 'mita'.
-    'scene1'   = @{ Seconds = 600;  NpcLagLimit = 1.5; Expect = @('scene1.done@host', 'client.scene1.day') }
+    'scene1'   = @{ Seconds = 1500; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived') }
     'choice'   = @{ Seconds = 240;  AllowGameErrors = $true; Expect = @('choice.picked@host', 'client.choice.applied', 'client.choice.navmesh') }
     'scene1end' = @{ Seconds = 420; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived') }
     'roomhold' = @{ Seconds = 200; Expect = @('room.off@host', 'client.room.kept') }

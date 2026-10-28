@@ -42,14 +42,6 @@ namespace MiSideTogether
             if (scene != "Scene 1 - RealRoom" || (LocalPlayer == null && !inApp)) return;
             LabScene1Tutorial(now);   // also types the name in the app, where there is no player object
             Scene1State(now);
-            if (now - tourSceneAt > 480 && !labS1DaySent)
-            {
-                labS1DaySent = true;
-                string day = Scene1Day();
-                Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-s1day:" + day)));
-                Log("Lab: scene1 host is on " + day);
-            }
-            if (now - tourSceneAt > 500) CheckOnce("scene1.done", Scene1Day().Contains("Quest 6"), "played Scene 1 for 500 s, on " + Scene1Day() + " (" + labS1Shots + " screenshots)");
             if (now - tourSceneAt > 20 && now >= labS1ShotAt) { labS1ShotAt = now + 15; LabShotAll("s1-" + (labS1Shots++).ToString("00")); }
             if (now < labS1StepAt || now - tourSceneAt < 25) return;
             labS1StepAt = now + 2;
@@ -93,11 +85,12 @@ namespace MiSideTogether
                 if (last != null && loader != null) { labS1Jumped = true; loader.StartLoad(); last.gameObject.SetActive(true); Log("Lab: scene1end host preloads " + loader.nameSceneLoad + " and jumps to " + last.name); return; }
             }
             if (Scene1Day2(now)) return;
+            if (Scene1Later(now)) return;
             Tamagotchi_Dialogue d = AppDialogue();
             if (d != null && !d.play) { Log("Lab: scene1 host reads on (Space): '" + d.stringDialogueNow + "'"); d.KeyNextDialogue(); labS1StepAt = now + 3; }
         }
 
-        bool labS1CutDown, labS1MenuShot, labS1DaySent, labS1Jumped;
+        bool labS1CutDown, labS1MenuShot, labS1Jumped;
         float labS1EndAt = -1;
 
         // scene1end: after the last day the game loads Scene 2 (Scene_Load.GoScene); everyone must arrive with a player.
@@ -119,12 +112,6 @@ namespace MiSideTogether
             return day;
         }
 
-        // Client: the host's day must be this player's day too (the days follow the host's app, AppSync.cs).
-        void Scene1DayNotice(string notice)
-        {
-            string host = notice.Substring("lab-s1day:".Length), here = Scene1Day();
-            CheckOnce("scene1.day", host == here && host.Contains("Quest 6"), "host on " + host + ", here " + here);
-        }
 
         static ButtonMouseClick AppButton(string pathPart)
         {
@@ -139,7 +126,7 @@ namespace MiSideTogether
         // hold the knife and let go, until the board is done: TamagotchiGame_Cooking.ready).
         bool Scene1Day2(float now)
         {
-            if (AppDialogue() != null) return false;
+            if (AppDialogue() != null || !Scene1Day().StartsWith("Quest 5")) return false;   // day 2 only (its rules match later screens too)
             TamagotchiGame_Cooking cooking = Object.FindObjectOfType<TamagotchiGame_Cooking>();
             if (cooking != null && cooking.isActiveAndEnabled && !cooking.ready)
             {
@@ -170,6 +157,78 @@ namespace MiSideTogether
             {
                 ButtonMouseClick shop = app.buttonShop.GetComponent<ButtonMouseClick>();
                 if (shop != null) { Press(shop, "the shop"); return true; }
+            }
+            return false;
+        }
+
+        string labS1MiniGame;
+        int labS1Wins;
+        bool labS1TvBought, labS1TvChecked;
+        readonly System.Collections.Generic.HashSet<System.IntPtr> labS1Clicked = new System.Collections.Generic.HashSet<System.IntPtr>();
+
+        // Days 5 and later, as a player does them. The lab cannot play a mini-game, so a win's money comes from the app's
+        // own MoneyAdd (the money is the host's for everyone, AppSync 22); the rest is the app's own buttons and clicks.
+        bool Scene1Later(float now)
+        {
+            if (AppDialogue() != null) return false;
+            Tamagotchi_Main app = Object.FindObjectOfType<Tamagotchi_Main>();
+            if (app == null || !app.play) return false;
+            ButtonMouseClick gift = AppButton("Gift/ButtonGame");   // day 33: give Mita the present
+            if (gift != null) { Press(gift, "give Mita the present"); return true; }
+            ButtonMouseClick collect = AppButton("AddMoney/Button");   // "you earned ..." after a mini-game
+            if (collect != null) { Press(collect, "collect the money (" + app.money + ")"); return true; }
+            if (app.playMinigame && app.minigameNow != null)
+            {
+                string game = app.minigameNow.name;
+                if (labS1MiniGame != game) { labS1MiniGame = game; app.MoneyAdd(1000); Log("Lab: scene1 host wins the mini-game " + game + " (MoneyAdd 1000, money " + app.money + ")"); }
+                ButtonMouseClick close = AppButton("Life/ButtonCloseMiniGame");
+                if (close != null) { Press(close, "close the mini-game"); return true; }
+                return false;
+            }
+            labS1MiniGame = null;
+            // Earn money: the games list (Life/ButtonGame), then a game (Work/FrameKategory .../Game ..). Two wins.
+            if (labS1Wins < 2)
+            {
+                // A game the app has the energy for (Tamagotchi_MiniGameCase.energy); with too little, Click refuses.
+                foreach (Tamagotchi_MiniGameCase g in Object.FindObjectsOfType<Tamagotchi_MiniGameCase>())
+                {
+                    if (g == null || !g.isActiveAndEnabled || g.energy > app.energy) continue;
+                    ButtonMouseClick pick = g.GetComponent<ButtonMouseClick>();
+                    if (pick == null) continue;
+                    labS1Wins++;
+                    Press(pick, "the mini-game " + PathOf(g.transform).Split('/')[^2] + " (energy " + g.energy + " of " + app.energy + ")");
+                    return true;
+                }
+                if (AppButton("Work/FrameKategory") != null) { Log("Lab: scene1 no mini-game affordable with energy " + app.energy); labS1Wins = 2; return false; }
+                ButtonMouseClick games = AppButton("Life/ButtonGame");
+                if (games != null) { Press(games, "the mini-games list"); return true; }
+            }
+            // Day 10: search the furniture for Mita's comb (TamagotchiGame_FindFurniture, each piece a Trigger_MouseClick).
+            // Day 20: put the wardrobe in its place (PlaceForScarf/Squa). Each object is clicked once.
+            TamagotchiGame_FindFurniture search = Object.FindObjectOfType<TamagotchiGame_FindFurniture>();
+            foreach (Trigger_MouseClick c in Object.FindObjectsOfType<Trigger_MouseClick>())
+            {
+                if (c == null || !c.isActiveAndEnabled || labS1Clicked.Contains(c.Pointer)) continue;
+                string path = PathOf(c.transform);
+                bool piece = search != null && search.isActiveAndEnabled && path.Contains("/Furnitures/");
+                if (!piece && c.name != "Squa") continue;
+                labS1Clicked.Add(c.Pointer);
+                Log("Lab: scene1 host clicks " + c.name);
+                c.Click();
+                return true;
+            }
+            ButtonMouseClick tv = AppButton("Shop Furniture/FrameKategory 1/Game 3");
+            if (tv != null) { labS1TvBought = true; Press(tv, "buy the TV"); return true; }
+            ButtonMouseClick furniture = AppButton("Shop Change/FrameKategory/Button 2");
+            if (furniture != null) { Press(furniture, "the furniture category"); return true; }
+            // Day 5, after the wins: a real win's "you earned" button checks the money for the TV
+            // (Location1Main.CheckMoneyForTelevision); the lab's stand-in win has no such screen, so the host calls it.
+            // Then the shop, furniture, the TV.
+            if (labS1Wins >= 2 && !labS1TvBought && Scene1Day().StartsWith("Quest 6"))
+            {
+                Location1Main room = Object.FindObjectOfType<Location1Main>();
+                if (!labS1TvChecked && room != null) { labS1TvChecked = true; room.CheckMoneyForTelevision(); Log("Lab: scene1 host checks the money for the TV (" + app.money + ")"); return true; }
+                if (app.buttonShop != null && app.buttonShop.GetComponent<ButtonMouseClick>() is ButtonMouseClick shop && shop != null && shop.isActiveAndEnabled) { Press(shop, "the shop (for the TV)"); return true; }
             }
             return false;
         }
