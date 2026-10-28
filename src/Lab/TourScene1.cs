@@ -81,12 +81,34 @@ namespace MiSideTogether
                     c.Click();
                     return;
                 }
+            if (labTour == "scene1end" && inApp && !labS1Jumped)
+            {
+                // To the last day (37): switch its quest on, as day 33's last dialogue does (eventStop -> Quest 10 SetActive).
+                GameObject quests = SceneObject("Quests");
+                Transform last = null;
+                if (quests != null) for (int i = 0; i < quests.transform.childCount; i++) if (quests.transform.GetChild(i).name.StartsWith("Quest 10")) last = quests.transform.GetChild(i);
+                // Day 5 also starts loading Scene 2 in the background (Quest 6: Scene_Load.StartLoad); day 37's GoScene
+                // switches to it, so the jump does both.
+                Scene_Load loader = Object.FindObjectOfType<Scene_Load>();
+                if (last != null && loader != null) { labS1Jumped = true; loader.StartLoad(); last.gameObject.SetActive(true); Log("Lab: scene1end host preloads " + loader.nameSceneLoad + " and jumps to " + last.name); return; }
+            }
             if (Scene1Day2(now)) return;
             Tamagotchi_Dialogue d = AppDialogue();
             if (d != null && !d.play) { Log("Lab: scene1 host reads on (Space): '" + d.stringDialogueNow + "'"); d.KeyNextDialogue(); labS1StepAt = now + 3; }
         }
 
-        bool labS1CutDown, labS1MenuShot, labS1DaySent;
+        bool labS1CutDown, labS1MenuShot, labS1DaySent, labS1Jumped;
+        float labS1EndAt = -1;
+
+        // scene1end: after the last day the game loads Scene 2 (Scene_Load.GoScene); everyone must arrive with a player.
+        void Scene1EndTick(float now, string scene)
+        {
+            if (scene != "Scene 2 - InGame") return;
+            if (labS1EndAt < 0) labS1EndAt = now;
+            if (LocalPlayer != null && now - labS1EndAt > 15 && now - labS1EndAt < 16) LabShot("end-" + Name);
+            if (LocalPlayer != null && now - labS1EndAt > 20) CheckOnce("end.arrived", true, "in Scene 2 with a player, camera " + (Camera.main != null ? Camera.main.name : "none"));
+            else if (now - labS1EndAt > 90) CheckOnce("end.arrived", false, "in Scene 2 for 90 s without a player");
+        }
 
         // The day: the last switched-on quest under World/Quests ("Quest 6 - 5 день" is day 5).
         static string Scene1Day()

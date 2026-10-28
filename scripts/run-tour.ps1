@@ -10,6 +10,7 @@ $tours = @{
     # scene1: the app's Mita follows the host's steps (name, tidy-up), about 1 s late at a step; normal play is held to 1 s by 'mita'.
     'scene1'   = @{ Seconds = 600;  NpcLagLimit = 1.5; Expect = @('scene1.done@host', 'client.scene1.day') }
     'choice'   = @{ Seconds = 240;  AllowGameErrors = $true; Expect = @('choice.picked@host', 'client.choice.applied', 'client.choice.navmesh') }
+    'scene1end' = @{ Seconds = 420; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived') }
     'roomhold' = @{ Seconds = 200; Expect = @('room.off@host', 'client.room.kept') }
     'menuleave' = @{ Seconds = 200; ClientLeaves = $true; Expect = @('leave.seen@host', 'client.leave.left') }
     'menureturn' = @{ Seconds = 200; Expect = @('menu.back@host', 'client.menu.clean') }
