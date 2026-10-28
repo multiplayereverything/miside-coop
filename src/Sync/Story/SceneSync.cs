@@ -141,23 +141,25 @@ namespace MiSideTogether
             Log("Host is in " + name + " (scene " + seq + ")");
         }
 
-        int inHostChapterSeq = -1;   // the host's scene number this client last stood in
+        // A client that leaves the chapter for the main menu by its own choice (pause menu, main menu:
+        // GameController.ExitGame) leaves the game instead of being pulled back in (playtest). The mod's own call, when it
+        // follows the host to the menu, is not the player's choice.
+        static bool exitingForHost;
+        public static bool leftByChoice;
+
+        public static void BeforeExitGame()
+        {
+            TogetherRuntime rt = Instance;
+            if (rt == null || !rt.IsClient || !rt.Connected || exitingForHost) return;
+            rt.Tell("You left the game (back to the main menu).");
+            leftByChoice = true;
+            rt.Shutdown();
+        }
 
         void ClientSceneTick(string active)
         {
             if (wantedScene.Length == 0) return;
             float now = Time.realtimeSinceStartup;
-            if (active == wantedScene) inHostChapterSeq = wantedSeq;
-            // Back in the main menu by this player's own choice (pause menu, exit) while the host is still in the chapter
-            // this player was in: they leave the game instead of being pulled back in (playtest).
-            else if (active == "SceneMenu" && inHostChapterSeq == wantedSeq && wantedScene.StartsWith("Scene ", StringComparison.Ordinal) && (followLoad == null || followLoad.isDone)
-                && now - arrivedAt > 3f)   // the story's own way to the menu reaches here a moment before the host's
-            {
-                inHostChapterSeq = -1;
-                Tell("You left the game (back to the main menu).");
-                Shutdown();
-                return;
-            }
             if (active != wantedScene)
             {
                 if (followLoad != null && !followLoad.isDone) return;
@@ -171,7 +173,7 @@ namespace MiSideTogether
                 // From a chapter to the main menu: the game's own way out (pause menu, main menu), which also takes the
                 // player away. A plain load of the menu left the player active there (playtest: "I see my hands").
                 GameController controller = wantedScene == "SceneMenu" && active.StartsWith("Scene ", StringComparison.Ordinal) ? UnityEngine.Object.FindObjectOfType<GameController>() : null;
-                if (controller != null) { controller.ExitGame(); return; }
+                if (controller != null) { exitingForHost = true; try { controller.ExitGame(); } finally { exitingForHost = false; } return; }
                 followLoad = LoadThroughGame(wantedScene);
                 return;
             }

@@ -152,7 +152,8 @@ namespace MiSideTogether
             // game's own settings, which set the frame rate again when they load.
             if (labFps > 0 && Application.targetFrameRate != labFps) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = labFps; }
             // Lab clients may start before the host listens; keep retrying instead of giving up.
-            if (autoRole == "join" && !Active && now >= labJoinRetryAt && (!LateLabJoiner || now > 90)) { labJoinRetryAt = now + 3; StartJoin(); }
+            // A lab client that left by its own choice (menuleave tour) stays out.
+            if (autoRole == "join" && !Active && !leftByChoice && now >= labJoinRetryAt && (!LateLabJoiner || now > 90)) { labJoinRetryAt = now + 3; StartJoin(); }
             if (now >= nextMetric)
             {
                 nextMetric = now + 10;

@@ -51,6 +51,7 @@ namespace MiSideTogether
             Patch(typeof(Location14_GameQuestPlayer), "ClickMouse", "QuestClickPrefix", "QuestClickPostfix");
             Patch(typeof(Location14_PlayerQuest), "Move", null, "QuestMovePostfix");
             Patch(typeof(Location14_PlayerMobileMove), "Play", "MobilePlayPrefix", "MobilePlayPostfix");
+            Patch(typeof(GameController), "ExitGame", "ExitGamePrefix", null);
             Patch(typeof(Tamagotchi_Main), "GameStart", null, "AppStartPostfix");
             Patch(typeof(Tamagotchi_Main), "GameStop", null, "AppStopPostfix");
             Patch(typeof(Tamagotchi_Dialogue), "KeyNextDialogue", "AppReadPrefix", null);
@@ -245,6 +246,7 @@ namespace MiSideTogether
         // Scene 1 phone app (AppSync.cs): the host's app is relayed; on clients the player's own reading on and name
         // check do nothing. Each checks the real type (shared compiled bodies, see Minigames.KindOf).
         static bool Is<T>(Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase o) { return o != null && o.TryCast<Component>() is Component c && c != null && c.GetIl2CppType().Name == typeof(T).Name; }
+        static void ExitGamePrefix(GameController __instance) { if (Is<GameController>(__instance)) Safe("ExitGame", TogetherRuntime.BeforeExitGame); }
         static void AppStartPostfix(Tamagotchi_Main __instance) { if (Is<Tamagotchi_Main>(__instance)) Safe("AppStart", () => TogetherRuntime.AppStarted(__instance, true)); }
         static void AppStopPostfix(Tamagotchi_Main __instance) { if (Is<Tamagotchi_Main>(__instance)) Safe("AppStop", () => TogetherRuntime.AppStarted(__instance, false)); }
         // Space and a click call NextDialogue straight from Tamagotchi_Dialogue.Update (0x3da43d), besides KeyNextDialogue;

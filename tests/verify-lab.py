@@ -147,12 +147,15 @@ def main():
     allow_game_errors = False   # a tour that reproduces a known game-side failure (scene19)
     busy = None                 # other games were running beside the lab: frame cost is reported, not judged
     npc_lag_limit = 1.0         # p90 seconds an NPC animation may start after the host's (--npc-lag-limit per tour)
+    client_leaves = False       # the tour has a client leave the game on purpose (menuleave): it ends elsewhere
     i = 0
     while i < len(args):
         if args[i] == "--expect":
             expects.append(args[i + 1]); i += 2
         elif args[i] == "--allow-game-errors":
             allow_game_errors = True; i += 1
+        elif args[i] == "--client-leaves":
+            client_leaves = True; i += 1
         elif args[i] == "--npc-lag-limit":
             npc_lag_limit = float(args[i + 1]); i += 2
         elif args[i] == "--busy":
@@ -265,7 +268,7 @@ def main():
         info.pop("_anims", None)
     host_scene = results.get("host", {}).get("scene_end")
     for role, info in results.items():
-        if role != "host" and host_scene and info.get("scene_end") and info["scene_end"] != host_scene \
+        if role != "host" and not client_leaves and host_scene and info.get("scene_end") and info["scene_end"] != host_scene \
                 and "Loading" not in str(info["scene_end"]) and "Loading" not in str(host_scene):
             failures.append(f"{role}: ended in {info['scene_end']}, host in {host_scene}")
     for spec in expects:

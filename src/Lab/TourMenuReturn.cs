@@ -8,8 +8,36 @@ namespace MiSideTogether
     // main menu"). Both also log whether a player object is still active in the menu.
     //   menu.back@host    the host reached the main menu
     //   menu.clean        the client reached the main menu with no player object active (no hands)
+    // Lab tour "menuleave" (2 players, Scene 2): the client goes back to the main menu by itself (GameController.ExitGame)
+    // while the host stays in the chapter; it must leave the game, not be pulled back in.
+    //   leave.left        the client is in the menu and no longer connected
+    //   leave.seen@host   the host no longer has the client
     public sealed partial class TogetherRuntime
     {
+        float labLeaveAt = -1;
+
+        void MenuLeaveTick(float now, string scene)
+        {
+            GlobalGame.hintScreen = false;
+            if (Hosting)
+            {
+                if (!tourStarted && scene == "SceneMenu" && now - tourSceneAt > 6) { tourStarted = true; LoadThroughGame("Scene 2 - InGame"); return; }
+                if (labLeaveAt < 0 && AcceptedCount > 0 && scene == "Scene 2 - InGame") labLeaveAt = now;
+                if (labLeaveAt > 0 && AcceptedCount == 0) CheckOnce("leave.seen", true, "the client left; host still in " + scene);
+                return;
+            }
+            if (scene == "Scene 2 - InGame" && LocalPlayer != null && now - tourSceneAt > 25 && labLeaveAt < 0)
+            {
+                labLeaveAt = now;
+                GameController gc = Object.FindObjectOfType<GameController>();
+                Log("Lab: client goes back to the main menu by itself");
+                if (gc != null) gc.ExitGame();
+                return;
+            }
+            if (labLeaveAt > 0 && scene == "SceneMenu" && now - labLeaveAt > 15)
+                CheckOnce("leave.left", Network == null, Network == null ? "in the main menu, not connected" : "still connected (pulled back?)");
+        }
+
         float labMenuBackAt = -1;
         bool labMenuShotTaken, labMenuSawChapter;
 

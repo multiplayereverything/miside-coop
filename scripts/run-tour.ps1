@@ -10,6 +10,7 @@ $tours = @{
     # scene1: the app's Mita follows the host's steps (name, tidy-up), about 1 s late at a step; normal play is held to 1 s by 'mita'.
     'scene1'   = @{ Seconds = 600;  NpcLagLimit = 1.5; Expect = @('scene1.done@host', 'client.scene1.day') }
     'choice'   = @{ Seconds = 240;  AllowGameErrors = $true; Expect = @('choice.picked@host', 'client.choice.applied', 'client.choice.navmesh') }
+    'menuleave' = @{ Seconds = 200; ClientLeaves = $true; Expect = @('leave.seen@host', 'client.leave.left') }
     'menureturn' = @{ Seconds = 200; Expect = @('menu.back@host', 'client.menu.clean') }
     'safe'     = @{ Seconds = 300;  Expect = @('safe.typed@host', 'client.safe.followed') }
     'mobile'   = @{ Seconds = 300;  Expect = @('mobile.walked@host', 'client.mobile.seen', 'client.mobile.done') }
@@ -89,6 +90,7 @@ $probe = Join-Path $labRoot 'tour-probe.json'
 $probeArgs = @((Join-Path $modRoot 'tests/verify-lab.py'), $modRoot, '--out', $probe)
 if ($spec.AllowGameErrors) { $probeArgs += '--allow-game-errors' }
 if ($spec.NpcLagLimit) { $probeArgs += @('--npc-lag-limit', [string]$spec.NpcLagLimit) }
+if ($spec.ClientLeaves) { $probeArgs += '--client-leaves' }
 foreach ($e in $spec.Expect) { $probeArgs += @('--expect', $e) }
 do {
     Start-Sleep 5
@@ -114,6 +116,7 @@ New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
 $verify = @((Join-Path $modRoot 'tests/verify-lab.py'), $modRoot, '--out', $out)
 if ($spec.AllowGameErrors) { $verify += '--allow-game-errors' }
 if ($spec.NpcLagLimit) { $verify += @('--npc-lag-limit', [string]$spec.NpcLagLimit) }
+if ($spec.ClientLeaves) { $verify += '--client-leaves' }
 # Other games running beside the lab (another mod's lab copies) slow every copy down: frame cost is then not the mod's.
 $busyGames = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.WorkingSet64 -gt 300MB -and $_.Path -and $_.Path -notlike "$labRoot*" -and ($_.Path -like '*steamapps*' -or $_.ProcessName -match 'Unity|BALDI') })
 if ($busyGames.Count -gt 0) { $verify += @('--busy', (($busyGames | ForEach-Object ProcessName | Sort-Object -Unique) -join ',')) }
