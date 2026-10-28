@@ -42,7 +42,14 @@ namespace MiSideTogether
             if (scene != "Scene 1 - RealRoom" || (LocalPlayer == null && !inApp)) return;
             LabScene1Tutorial(now);   // also types the name in the app, where there is no player object
             Scene1State(now);
-            if (now - tourSceneAt > 500) CheckOnce("scene1.done", true, "played Scene 1 for 500 s (" + labS1Shots + " screenshots)");
+            if (now - tourSceneAt > 480 && !labS1DaySent)
+            {
+                labS1DaySent = true;
+                string day = Scene1Day();
+                Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-s1day:" + day)));
+                Log("Lab: scene1 host is on " + day);
+            }
+            if (now - tourSceneAt > 500) CheckOnce("scene1.done", Scene1Day().Contains("Quest 6"), "played Scene 1 for 500 s, on " + Scene1Day() + " (" + labS1Shots + " screenshots)");
             if (now - tourSceneAt > 20 && now >= labS1ShotAt) { labS1ShotAt = now + 15; LabShotAll("s1-" + (labS1Shots++).ToString("00")); }
             if (now < labS1StepAt || now - tourSceneAt < 25) return;
             labS1StepAt = now + 2;
@@ -79,7 +86,23 @@ namespace MiSideTogether
             if (d != null && !d.play) { Log("Lab: scene1 host reads on (Space): '" + d.stringDialogueNow + "'"); d.KeyNextDialogue(); labS1StepAt = now + 3; }
         }
 
-        bool labS1CutDown, labS1MenuShot;
+        bool labS1CutDown, labS1MenuShot, labS1DaySent;
+
+        // The day: the last switched-on quest under World/Quests ("Quest 6 - 5 день" is day 5).
+        static string Scene1Day()
+        {
+            GameObject quests = SceneObject("Quests");
+            string day = "none";
+            if (quests != null) for (int i = 0; i < quests.transform.childCount; i++) { Transform q = quests.transform.GetChild(i); if (q.gameObject.activeSelf && q.name.StartsWith("Quest ")) day = q.name; }
+            return day;
+        }
+
+        // Client: the host's day must be this player's day too (the days follow the host's app, AppSync.cs).
+        void Scene1DayNotice(string notice)
+        {
+            string host = notice.Substring("lab-s1day:".Length), here = Scene1Day();
+            CheckOnce("scene1.day", host == here && host.Contains("Quest 6"), "host on " + host + ", here " + here);
+        }
 
         static ButtonMouseClick AppButton(string pathPart)
         {

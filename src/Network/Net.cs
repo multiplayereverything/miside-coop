@@ -260,6 +260,7 @@ namespace MiSideTogether
                     if (notice.StartsWith("lab-core:", StringComparison.Ordinal)) { CoreNotice(notice); break; }
                     if (notice.StartsWith("lab-safe:", StringComparison.Ordinal)) { SafeNotice(notice); break; }
                     if (notice == "lab-choice") { ChoiceNotice(); break; }
+                    if (notice.StartsWith("lab-s1day:", StringComparison.Ordinal)) { Scene1DayNotice(notice); break; }
                     if (notice.StartsWith("lab-shot:", StringComparison.Ordinal)) { LabShot(notice.Substring(9) + "-" + Name); break; }
                     if (notice.StartsWith("lab-drop:", StringComparison.Ordinal)) { string[] v = notice.Substring(9).Split(','); labDrop = new Vector3(float.Parse(v[0], System.Globalization.CultureInfo.InvariantCulture), float.Parse(v[1], System.Globalization.CultureInfo.InvariantCulture), float.Parse(v[2], System.Globalization.CultureInfo.InvariantCulture)); if (v.Length > 3) labDropKey = string.Join(",", v, 3, v.Length - 3); labDropKnown = true; break; }
                     if (notice.StartsWith("lab-room:", StringComparison.Ordinal)) { labRoomNotice = notice.Substring(9); labRoomNoticeAt = Time.realtimeSinceStartup; break; }

@@ -168,6 +168,10 @@ namespace MiSideTogether
                 Tell("Following the host to " + wantedScene + "...");
                 // Same GlobalGame state the host's menu or story set before its load (chapter, save level, flags).
                 if (clientLoadStatics != null) clientLoadStatics.ApplyLoad(active.StartsWith("Scene ", StringComparison.Ordinal));
+                // From a chapter to the main menu: the game's own way out (pause menu, main menu), which also takes the
+                // player away. A plain load of the menu left the player active there (playtest: "I see my hands").
+                GameController controller = wantedScene == "SceneMenu" && active.StartsWith("Scene ", StringComparison.Ordinal) ? UnityEngine.Object.FindObjectOfType<GameController>() : null;
+                if (controller != null) { controller.ExitGame(); return; }
                 followLoad = LoadThroughGame(wantedScene);
                 return;
             }
