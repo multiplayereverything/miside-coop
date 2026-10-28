@@ -193,8 +193,13 @@ namespace MiSideTogether
                 w.Write(id); w.Write((byte)held.Count);
                 foreach (KeyValuePair<string, Transform> h in held)
                 {
+                    // Relative to the hand that holds it (the nearest wrist or hand bone), so it rides in the hand of the
+                    // body the others see. The game's hold slot ("RightItem FixPosition") sits near the camera, not in
+                    // the hand: relative to the body root the item floated beside the body (playtest: the phone).
+                    Transform anchor = HoldingBone(layout, h.Value.position) ?? body;
+                    Wire.Text(w, anchor == body ? "" : BodyLayout.Path(body, anchor) ?? "");
                     Wire.Text(w, h.Key);
-                    WritePose(w, body.InverseTransformPoint(h.Value.position), Quaternion.Inverse(body.rotation) * h.Value.rotation);
+                    WritePose(w, anchor.InverseTransformPoint(h.Value.position), Quaternion.Inverse(anchor.rotation) * h.Value.rotation);
                 }
                 w.Write((byte)released.Count);
                 foreach (string key in released)
@@ -209,7 +214,22 @@ namespace MiSideTogether
         }
 
         // --- Watchers: carried objects follow the actor's body ---------------------------------------------------
-        sealed class Carried { public int Owner; public Vector3 LocalPos; public Quaternion LocalRot; public Transform_Magnet Magnet; public float Since = Time.realtimeSinceStartup; }
+        sealed class Carried { public int Owner; public string Bone = ""; public Vector3 LocalPos; public Quaternion LocalRot; public Transform_Magnet Magnet; public float Since = Time.realtimeSinceStartup; }
+
+        // The wrist or hand bone of the body nearest to a held item (null when the body has none within reach).
+        static Transform HoldingBone(BodyLayout layout, Vector3 at)
+        {
+            Transform best = null; float bestD = 0.6f;
+            foreach (Transform b in layout.Bones)
+            {
+                if (b == null) continue;
+                string n = b.name.ToLowerInvariant();
+                if (!n.Contains("wrist") && !n.Contains("hand")) continue;
+                float d = Vector3.Distance(b.position, at);
+                if (d < bestD) { bestD = d; best = b; }
+            }
+            return best;
+        }
         readonly Dictionary<string, Carried> carried = new Dictionary<string, Carried>();
 
         void ReadCarry(BinaryReader reader, int from)
@@ -230,6 +250,7 @@ namespace MiSideTogether
             if (count > 8) throw new IOException("Too many carried objects.");
             for (int i = 0; i < count; i++)
             {
+                string bone = Wire.Text(reader, 512);
                 string key = Wire.Text(reader, 1024);
                 Vector3 lp; Quaternion lr; ReadTransform(reader, out lp, out lr);
                 Carried c;
@@ -242,7 +263,7 @@ namespace MiSideTogether
                     c = new Carried { Magnet = m };
                     carried[key] = c;
                 }
-                c.Owner = id; c.LocalPos = lp; c.LocalRot = lr;
+                c.Owner = id; c.Bone = bone; c.LocalPos = lp; c.LocalRot = lr;
                 carryFramesApplied++;
             }
             int released = reader.ReadByte();
@@ -266,7 +287,9 @@ namespace MiSideTogether
                 Peer owner;
                 if (c.Magnet == null || !peers.TryGetValue(c.Owner, out owner) || owner.Avatar == null || owner.Avatar.Root == null) continue;
                 Transform body = owner.Avatar.Root.transform;
-                Moved(c.Magnet).SetPositionAndRotation(body.TransformPoint(c.LocalPos), body.rotation * c.LocalRot);
+                Transform anchor = c.Bone.Length > 0 ? body.Find(c.Bone) : null;
+                if (anchor == null) anchor = body;
+                Moved(c.Magnet).SetPositionAndRotation(anchor.TransformPoint(c.LocalPos), anchor.rotation * c.LocalRot);
             }
         }
 

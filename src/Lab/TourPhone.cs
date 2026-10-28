@@ -168,9 +168,16 @@ namespace MiSideTogether
             foreach (KeyValuePair<string, Carried> pair in carried)
             {
                 if (!pair.Key.Contains("Smartphone") || Time.realtimeSinceStartup - pair.Value.Since < 1f || pair.Value.Magnet == null || host.Avatar == null || host.Avatar.Root == null) continue;
+                // In the hand: within 0.3 m of a wrist or hand bone of the host's body here (the item rides on that bone).
                 Transform moved = Moved(pair.Value.Magnet);
-                float d = Vector3.Distance(moved.position, host.Avatar.Root.transform.position);
-                if (d < 2.5f) CheckOnce("phone.seen", true, "the phone is in the host's hand here (" + d.ToString("0.00") + " m from their body)");
+                float d = 99;
+                foreach (Transform b in host.Avatar.Root.GetComponentsInChildren<Transform>())
+                {
+                    string n = b.name.ToLowerInvariant();
+                    if (n.Contains("wrist") || n.Contains("hand")) d = Mathf.Min(d, Vector3.Distance(b.position, moved.position));
+                }
+                if (d < 0.3f) CheckOnce("phone.seen", true, "the phone is in the host's hand here (" + d.ToString("0.00") + " m from their hand)");
+                else if (Time.realtimeSinceStartup - pair.Value.Since > 8) CheckOnce("phone.seen", false, "the phone is " + d.ToString("0.00") + " m from the host's hand here");
             }
             if (labPhoneHostActed)
             {
