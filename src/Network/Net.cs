@@ -258,6 +258,7 @@ namespace MiSideTogether
                     if (notice == "lab-quest-open") { LabOpenQuest(); break; }
                     if (notice.StartsWith("lab-mobile:", StringComparison.Ordinal)) { MobileNotice(notice); break; }
                     if (notice.StartsWith("lab-core:", StringComparison.Ordinal)) { CoreNotice(notice); break; }
+                    if (notice.StartsWith("lab-core2:", StringComparison.Ordinal)) { CoreAnswerNotice(notice); break; }
                     if (notice.StartsWith("lab-safe:", StringComparison.Ordinal)) { SafeNotice(notice); break; }
                     if (notice == "lab-choice") { ChoiceNotice(); break; }
                     if (notice.StartsWith("lab-s1day:", StringComparison.Ordinal)) { Scene1DayNotice(notice); break; }

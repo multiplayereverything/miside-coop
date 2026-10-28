@@ -29,7 +29,7 @@ namespace MiSideTogether
                 pc.Click();
                 return;
             }
-            if (now < labCoreStepAt || labCoreStep > 6) return;
+            if (now < labCoreStepAt || labCoreStep > 10) return;
             labCoreStepAt = now + 2;
             GamesCore_Main main = Object.FindObjectOfType<GamesCore_Main>();
             GamesCore_InputField field = Object.FindObjectOfType<GamesCore_InputField>();
@@ -51,7 +51,65 @@ namespace MiSideTogether
                     Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-core:" + typed)));
                     break;
                 }
+                // Then the right answer, as a player types it: clear the field, press the on-screen key of each needed
+                // character (buttonsClick, each with its character as text), Enter. Both copies must end the same
+                // (playtest: one player's computer said "PORTAL ACTIVATED", the other's did not).
+                case 7:
+                    if (field == null) break;
+                    for (int i = 0; i < 12 && field.indexCharNow > 0; i++) field.ButtonBackspace();
+                    labCoreKeys = KeysFor(field);
+                    Log("Lab: core step clear, then type '" + field.fieldCharsNeed + "' with keys " + string.Join(",", labCoreKeys));
+                    break;
+                case 8:
+                    if (field == null || labCoreKeys == null) break;
+                    foreach (int k in labCoreKeys) { field.canInput = true; field.indexButtonNow = k; field.ButtonClick(); }
+                    Log("Lab: core step typed " + Typed(field));
+                    break;
+                case 9: if (field != null) { field.ButtonEnter(); Log("Lab: core step Enter -> " + Typed(field) + " canInput=" + field.canInput); } break;
+                case 10:
+                {
+                    string state = CoreScreen(field);
+                    LabShotAll("core-after-enter");
+                    CheckOnce("core.answered", field != null && labCoreKeys != null && labCoreKeys.Count > 0, "host after the right answer: " + state);
+                    Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-core2:" + state)));
+                    break;
+                }
             }
+        }
+
+        System.Collections.Generic.List<int> labCoreKeys;
+
+        // The on-screen keys that type fieldCharsNeed, skipping the characters already fixed in the field (dontEdit).
+        static System.Collections.Generic.List<int> KeysFor(GamesCore_InputField field)
+        {
+            var keys = new System.Collections.Generic.List<int>();
+            string need = field.fieldCharsNeed ?? "";
+            for (int c = 0; c < need.Length; c++)
+            {
+                if (field.fieldCharsNow != null && c < field.fieldCharsNow.Count && field.fieldCharsNow[c] != null && field.fieldCharsNow[c].dontEdit) continue;
+                for (int b = 0; b < field.buttonsClick.Count; b++)
+                {
+                    GameObject key = field.buttonsClick[b];
+                    UnityEngine.UI.Text label = key != null ? key.GetComponentInChildren<UnityEngine.UI.Text>(true) : null;
+                    if (label != null && label.text == need[c].ToString()) { keys.Add(b); break; }
+                }
+            }
+            return keys;
+        }
+
+        // What the computer shows: the typed field, whether it still takes input, and which of its screens are on.
+        static string CoreScreen(GamesCore_InputField field)
+        {
+            string on = "";
+            GamesCore_Main main = Object.FindObjectOfType<GamesCore_Main>();
+            if (main != null) foreach (Transform t in main.GetComponentsInChildren<Transform>()) if (t.parent == main.transform) on += t.name + ";";
+            return Typed(field) + "|input=" + (field != null && field.canInput) + "|" + on;
+        }
+
+        void CoreAnswerNotice(string notice)
+        {
+            string host = notice.Substring("lab-core2:".Length), here = CoreScreen(Object.FindObjectOfType<GamesCore_InputField>());
+            CheckOnce("core.same", host == here, "host's computer " + host + " / here " + here);
         }
 
         // The cursor (indexCharNow) and every slot's character: "2:AB___".

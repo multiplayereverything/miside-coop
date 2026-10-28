@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path $PSScriptRoot -Parent
 $tours = @{
     'connect'  = @{ Seconds = 60;   Expect = @('ui.panel', 'connect.handshake', 'connect.roster', 'steam.ready', 'ui.menu', 'ui.menu.open') }
-    'core'     = @{ Seconds = 300;  Expect = @('chapter.loaded@host', 'core.driven@host', 'client.core.followed') }
+    'core'     = @{ Seconds = 300;  Expect = @('chapter.loaded@host', 'core.driven@host', 'client.core.followed', 'core.answered@host', 'client.core.same') }
     'quest'    = @{ Seconds = 360;  Expect = @('chapter.loaded@host', 'quest.clicked@host', 'client.quest.moved') }
     # scene1: the app's Mita follows the host's steps (name, tidy-up), about 1 s late at a step; normal play is held to 1 s by 'mita'.
     'scene1'   = @{ Seconds = 600;  NpcLagLimit = 1.5; Expect = @('scene1.done@host', 'client.scene1.day') }
