@@ -48,6 +48,10 @@ namespace MiSideTogether
             // seat, so the others stayed seated (every-chapter run, Scene 13). Playbook "how-coop-mods-work" 1.5:
             // the initiator picks, the others follow.
             new Rule { Match = "InteractivePC", Who = Who.Actor, Pov = true, Note = "core computer: one operator" },
+            // Scene 1's phone: its animations ("Animation Smartphone Take/OpenMessage/DownLoad/Play", day 2's "Animation
+            // PlayerSmartphone ...") are the host's alone; the others' phone app follows the host's (AppSync.cs). Mirrored,
+            // every player held a phone and ran their own app (playtest: "only one player can hold the phone").
+            new Rule { Match = "Smartphone", Who = Who.Actor, Note = "Scene 1 phone: the host holds it" },
         };
 
         static List<Rule> loaded;

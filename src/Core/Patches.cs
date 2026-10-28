@@ -51,6 +51,10 @@ namespace MiSideTogether
             Patch(typeof(Location14_GameQuestPlayer), "ClickMouse", "QuestClickPrefix", "QuestClickPostfix");
             Patch(typeof(Location14_PlayerQuest), "Move", null, "QuestMovePostfix");
             Patch(typeof(Location14_PlayerMobileMove), "Play", "MobilePlayPrefix", "MobilePlayPostfix");
+            Patch(typeof(Tamagotchi_Main), "GameStart", null, "AppStartPostfix");
+            Patch(typeof(Tamagotchi_Main), "GameStop", null, "AppStopPostfix");
+            Patch(typeof(Tamagotchi_Dialogue), "KeyNextDialogue", "AppReadPrefix", null);
+            Patch(typeof(Location1_InputNamePlayer), "CheckName", "AppNamePrefix", "AppNamePostfix");
             Patch(typeof(Location14_PlayerMobileMove), "Update", "MobileRunPrefix", null);
             Patch(typeof(Location14_PlayerMobileMove), "FixedUpdate", "MobileRunPrefix", null);
             Patch(typeof(Location14_ButtonChangeDialogue), "OnPointerDown", "QuestReplyPrefix", "QuestReplyPostfix");
@@ -117,7 +121,14 @@ namespace MiSideTogether
 
         // Click only fires its event when the object is armed (ObjectInteractive.active, read before Click disarms it):
         // an unarmed click did nothing here, so there is nothing to relay.
-        static void InteractPrefix(ObjectInteractive __instance, out bool __state) { __state = __instance != null && __instance.active; }
+        static bool InteractPrefix(ObjectInteractive __instance, out bool __state)
+        {
+            __state = __instance != null && __instance.active;
+            bool hostOnly = false;
+            try { hostOnly = TogetherRuntime.HostOnlyClick(__instance); } catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook Interact: " + ex.Message); }
+            if (hostOnly) __state = false;
+            return !hostOnly;
+        }
         static void InteractPostfix(ObjectInteractive __instance, bool __state) { if (__state) Safe("Interact", () => TogetherRuntime.Story(Op.Interact, __instance, 0)); }
 
         static void MouseClickPostfix(Trigger_MouseClick __instance) { Safe("MouseClick", () => TogetherRuntime.Story(Op.MouseClick, __instance, 0)); }
@@ -214,14 +225,26 @@ namespace MiSideTogether
         static void QuestClickPrefix() { TogetherRuntime.QuestClickPrefix(); }
         static void QuestClickPostfix() { TogetherRuntime.QuestClickPostfix(); }
         // Scene 14 phone character: only the phone's holder runs it; the others show it from the prop stream.
+        // The game shares one compiled body between methods with identical code, so these hooks can run for other types'
+        // Play/Update too (see Minigames.KindOf): only the phone character itself is held back.
+        static bool IsMobile(Location14_PlayerMobileMove m) { return m != null && m.GetIl2CppType().Name == nameof(Location14_PlayerMobileMove); }
         static bool MobilePlayPrefix(Location14_PlayerMobileMove __instance)
         {
-            if (!TogetherRuntime.MobileWatcher) return true;
-            try { if (__instance != null && !__instance.gameObject.activeSelf) __instance.gameObject.SetActive(true); } catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook MobilePlay: " + ex.Message); }
+            if (!TogetherRuntime.MobileWatcher || !IsMobile(__instance)) return true;
+            try { if (!__instance.gameObject.activeSelf) __instance.gameObject.SetActive(true); } catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook MobilePlay: " + ex.Message); }
             return false;
         }
-        static void MobilePlayPostfix(Location14_PlayerMobileMove __instance) { Safe("MobilePlay", () => TogetherRuntime.MobilePlayed(__instance)); }
-        static bool MobileRunPrefix() { return !TogetherRuntime.MobileWatcher; }
+        static void MobilePlayPostfix(Location14_PlayerMobileMove __instance) { if (IsMobile(__instance)) Safe("MobilePlay", () => TogetherRuntime.MobilePlayed(__instance)); }
+        static bool MobileRunPrefix(Location14_PlayerMobileMove __instance) { return !TogetherRuntime.MobileWatcher || !IsMobile(__instance); }
+
+        // Scene 1 phone app (AppSync.cs): the host's app is relayed; on clients the player's own reading on and name
+        // check do nothing. Each checks the real type (shared compiled bodies, see Minigames.KindOf).
+        static bool Is<T>(Il2CppInterop.Runtime.InteropTypes.Il2CppObjectBase o) { return o != null && o.TryCast<Component>() is Component c && c != null && c.GetIl2CppType().Name == typeof(T).Name; }
+        static void AppStartPostfix(Tamagotchi_Main __instance) { if (Is<Tamagotchi_Main>(__instance)) Safe("AppStart", () => TogetherRuntime.AppStarted(__instance, true)); }
+        static void AppStopPostfix(Tamagotchi_Main __instance) { if (Is<Tamagotchi_Main>(__instance)) Safe("AppStop", () => TogetherRuntime.AppStarted(__instance, false)); }
+        static bool AppReadPrefix(Tamagotchi_Dialogue __instance) { return !TogetherRuntime.AppViewer || !Is<Tamagotchi_Dialogue>(__instance); }
+        static bool AppNamePrefix(Location1_InputNamePlayer __instance) { return !TogetherRuntime.AppViewer || !Is<Location1_InputNamePlayer>(__instance); }
+        static void AppNamePostfix(Location1_InputNamePlayer __instance) { if (Is<Location1_InputNamePlayer>(__instance)) Safe("AppName", () => TogetherRuntime.AppNamed(__instance)); }
         static void QuestMovePostfix(Location14_PlayerQuest __instance, Vector3 _pos, UnityEngine.Events.UnityEvent _event) { Safe("QuestMove", () => TogetherRuntime.QuestMoved(__instance, _pos, _event)); }
         static void QuestReplyPrefix(Location14_ButtonChangeDialogue __instance, out bool __state) { __state = __instance != null && __instance.active; }
         // Core computer input is sent before the method runs: Enter's right/wrong event can change the screen at once.

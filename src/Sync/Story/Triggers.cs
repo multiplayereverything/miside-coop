@@ -74,6 +74,7 @@ namespace MiSideTogether
         //  9 Location14_GameQuestPlayer.ChangeDialogue(bool)  Scene 14 quest game reply (QuestGame.cs)
         // 10-14 Scenes 13/15 core computer: text field keys, Enter, folders, program stages (CoreComputer.cs)
         // 15 Location14_PlayerMobileMove.Play     Scene 14 phone character: shown on the others, run by the holder (PhoneCharacter.cs)
+        // 16-18 Scene 1 phone app: start/stop, the dialogue line, the name; host only (AppSync.cs)
         public static void Call(int entry, Component source, int arg)
         {
             if (source == null) return;
@@ -101,6 +102,7 @@ namespace MiSideTogether
                 case 9: ApplyQuestReply(target, arg); break;
                 case 10: case 11: case 12: case 13: case 14: ApplyCoreCall(entry, target, arg); break;
                 case 15: ApplyMobileShow(target); break;
+                case 16: case 17: case 18: ApplyAppCall(entry, target, arg); break;
                 case 5: case 6:
                 {
                     Trigger_DistanceCamera t = SceneKeys.Find<Trigger_DistanceCamera>(target);

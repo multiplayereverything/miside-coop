@@ -29,7 +29,6 @@ namespace MiSideTogether
             new MinigameKind { Type = typeof(CarSpace_Main), Start = new[] { "PlayRacing" }, End = new[] { "FinishRacing", "BossFinish" } },
             new MinigameKind { Type = typeof(Shooter_Main), Start = new[] { "WaveStart" }, End = new[] { "Win" } },
             new MinigameKind { Type = typeof(MakeManeken_Main), Start = new[] { "Start" }, End = new[] { "FinishGame" } },
-            new MinigameKind { Type = typeof(Tamagotchi_Main), Start = new[] { "GameStart" }, End = new[] { "GameStop" } },
             new MinigameKind { Type = typeof(Location19_Game1), Start = new[] { "OnEnable" }, End = new[] { "Finish" } },
             new MinigameKind { Type = typeof(Location19_Game3), Start = new[] { "Start" }, End = new[] { "Finish" } },
             new MinigameKind { Type = typeof(Location19_Game4), Start = new[] { "Start" }, End = new[] { "Finish" } },
@@ -66,6 +65,17 @@ namespace MiSideTogether
 
         static int KindOf(Type type) { for (int i = 0; i < MinigameKinds.Length; i++) if (MinigameKinds[i].Type == type) return i; return -1; }
 
+        // The compiled game shares one body between methods with identical code (a minigame's StartGame and a hint's
+        // SmoothDestroy, say), so a hook on one also runs for the others. Seen in Scene 1: the tutorial hint's fade made
+        // a player the "owner" of Location18_TicTacToe, and the other player's phone pickup was then blocked as watching.
+        // Only calls on the minigame's own type count.
+        static int KindOf(Component instance, MethodBase method)
+        {
+            if (instance == null || method == null) return -1;
+            int kind = KindOf(method.DeclaringType);
+            return kind >= 0 && instance.GetIl2CppType().Name == MinigameKinds[kind].Type.Name ? kind : -1;
+        }
+
         // --- Ownership -------------------------------------------------------------------------------------------
         // Only the player who starts a minigame plays it (CutsceneRules, minigame kind): a start that comes from
         // replaying someone else's click is skipped here, so nobody else is seated, moved or given the controls. The
@@ -80,7 +90,7 @@ namespace MiSideTogether
         {
             try
             {
-                if (!ReplayingInteraction || __instance == null) return true;
+                if (!ReplayingInteraction || KindOf(__instance, __originalMethod) < 0) return true;
                 CutsceneRules.Rule rule = CutsceneRules.For(CutsceneRules.Kind.Minigame, SceneKeys.Key(__instance));
                 if (rule.Who != CutsceneRules.Who.Actor) return true;
                 if (Instance != null) Instance.minigameStartsBlocked++;
@@ -96,7 +106,7 @@ namespace MiSideTogether
             {
                 TogetherRuntime rt = Instance;
                 if (rt == null || !rt.Connected || Replaying || ReplayingInteraction || __instance == null || __originalMethod == null) return;
-                int kind = KindOf(__originalMethod.DeclaringType);
+                int kind = KindOf(__instance, __originalMethod);
                 if (kind < 0) return;
                 string key = SceneKeys.Key(__instance);
                 Log("Minigame " + __originalMethod.DeclaringType.Name + " started here: " + key);
@@ -116,7 +126,7 @@ namespace MiSideTogether
             {
                 TogetherRuntime rt = Instance;
                 if (rt == null || !rt.Connected || __instance == null || __originalMethod == null) return;
-                int kind = KindOf(__originalMethod.DeclaringType);
+                int kind = KindOf(__instance, __originalMethod);
                 MinigameRun run;
                 MinigameEnding = kind >= 0 && MinigameKinds[kind].Events.Length > 0 && rt.minigames.TryGetValue(SceneKeys.Key(__instance), out run) && run.Owner == rt.SelfId;
             }
@@ -129,7 +139,7 @@ namespace MiSideTogether
             try
             {
                 TogetherRuntime rt = Instance;
-                if (rt == null || !rt.Connected || Replaying || __instance == null || __originalMethod == null) return;
+                if (rt == null || !rt.Connected || Replaying || KindOf(__instance, __originalMethod) < 0) return;
                 string key = SceneKeys.Key(__instance);
                 MinigameRun run;
                 if (!rt.minigames.TryGetValue(key, out run) || run.Owner != rt.SelfId) return;

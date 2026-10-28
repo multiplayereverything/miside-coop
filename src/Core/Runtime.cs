@@ -281,6 +281,7 @@ namespace MiSideTogether
             if (Hosting) Step("saves", HostSaveScan);
             Step("scene", UpdateSceneSync);
             if (Connected) Step("world", UpdateWorldSync);
+            if (Connected) Step("app", AppDialogueTick);
             Step("avatars", UpdateAvatars);
             // Lab diagnostics are not the mod's cost: the frame stopwatch pauses for them (they stay in steps=).
             if (LabMode)
@@ -400,6 +401,7 @@ namespace MiSideTogether
 
         public void OnGUI()
         {
+            if (LabMode) LabShotOnGui();
             Styles();
             DrawNameTags(tagStyle);
             DrawHud();
