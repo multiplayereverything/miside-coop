@@ -62,7 +62,7 @@ The full list (how each thing syncs, who is in charge and which test proves it) 
 - **Scene 19 (Glasses):** the game cannot start it cold (not even single-player from the chapter menu). Reached through the story from Scene 18, everyone moves there together.
 - **Scene 1 app mini-games:** the money and the cooking board's result are the host's; the inside of a mini-game (each cut, each move) can play out a little differently on the others' screens.
 - **Handheld Tetris:** it is each player's own and is not mirrored.
-- **Steam testing:** the Steam transport is tested in the lab with a stand-in for Steam (one account). A real two-account session is the next thing to verify.
+- **Steam testing:** three players have played together over Steam on separate PCs and accounts (before 0.3.5, whose fixes came from that session). The lab also tests the Steam transport with a stand-in for Steam.
 - **Core computer (Scenes 13 and 15):** one player sits and operates it; the others watch through their eyes. What the operator types and opens is replayed on everyone's copy.
 - **Scene 14:** the PC's point-and-click game follows the player at the PC (clicks and replies are shared). Before it, the phone's little character in the toy house is walked by whoever picked up the phone; the others see it walk.
 
