@@ -5,14 +5,15 @@ Read this first when picking the work up on another PC. Then `AGENTS.md` (archit
 ## Goal
 Co-op for MiSide (2 to 4 players). Everyone sees the others as the main character with real animations, and the game stays in sync: chapters, story, dialogue, cutscenes, Mita and the other NPCs, room state, minigames and endings. BepInEx, to match the user's Baldi Together and Spooky Together mods.
 
-## State (2026-10-28)
-- **Version:** 0.3.5 in progress (local commits, protocol `Wire.Version` 5: the carry message carries the hand bone). The last published pre-release is v0.3.4 (`de23d30`).
+## State (2026-11-06)
+- **Version:** 0.3.6, published as a pre-release (protocol `Wire.Version` 5, unchanged from 0.3.5). The last full release is v0.3.2.
 - **Online play:** Steam P2P (friends join from MULTIPLAYER in the game's menu, or Steam's Join Game / invite, `+mt_join`), LAN/VPN, or a direct address (TCP 27030). It doesn't use the Multiplayer Everything relay.
 - **This PC (2026-10-27):** the repo lives at `Desktop\AIStuff\ai-work-pc-games\Miside Multiplayer Mod`, outside the game; `scripts\game-dir.ps1` finds the game. BepInEx be.790 and the mod are installed in the game. The user's save folder is empty, as they want it.
 - **Website:** `games.json` in the website repo has the `miside` entry. The Website session updates it; don't edit it from here.
 - **Tests (lab copies on one PC, minimized):** suite 34 tours on 0.3.5 (2026-10-28; new: `safe`, `choice`, `menureturn`, `menuleave`, `roomhold`, `scene1` (all of Scene 1), `scene1end`, `scene3` (Scene 3 to Mita's walk), and `core` now types the right version and compares both screens): last full run 33 of 34, `scene19` failed when the client stuck on the first splash screen and passed on its own rerun. Pressing every interaction in every chapter: 18 of 18 chapters pass.
 - **Played by people:** the 2026-10-28 playtest had three players (the user and two friends) on separate PCs and Steam accounts, joined over Steam; their 19 reports became 0.3.5.
-- **Not tested:** 0.3.5 with friends (the fixes are lab-proven only); four real players (4-player runs are lab-only); installing through the launcher; the other player's shading seen by a person.
+- **Full suite on 0.3.6:** not run; its one code change passed its tours on 2026-10-28, and the lab could not start beside the user's own MiSide on release day. Run `scripts\lab-suite.ps1` next.
+- **Not tested:** 0.3.5 or 0.3.6 with friends (the fixes are lab-proven only); four real players (4-player runs are lab-only); the other player's shading seen by a person.
 
 ## Done in 0.3.3
 - **Lab on a fresh install:** the game's first-run LANGUAGE/VOICE picker is answered (English); lab copies start minimized as normal small windows ("MiSide lab - host"), lowest quality, 30 fps, BelowNormal priority, never focused.
@@ -40,7 +41,7 @@ Co-op for MiSide (2 to 4 players). Everyone sees the others as the main characte
 1. **Ask the user** to check the other player's shading in the game (0.3.2 change, not seen by a person yet).
 2. **Scene 1 phone: proven** (`phone` tour passes, in the suite since 2026-10-27). The gate was the tutorial's "interact" step: with quest hints on, the player clicks "Interactive TShip Tutorial", and the end of the T-shirt dialogue arms the room (`ObjectInteractiveGroup.ActivationAndDestroy`). Found with the wiring dump (`-mt-dump <scene>` also writes `private-wires-<scene>.txt`: every persistent UnityEvent call).
 3. **Scene 14 phone character: done (0.3.4, `mobile` tour).** Next: the **core computer's entry pattern** (sphere moves from raw input in `GamesCore_Main.Update`; its stage change is relayed).
-4. **Steam with real players: done** (2026-10-28 playtest, three players over Steam). Next: play 0.3.5 with friends to confirm the playtest fixes and the dialogue-choice and NavMesh guards. Logs: `BepInEx\LogOutput.log` on every PC.
+4. **Steam with real players: done** (2026-10-28 playtest, three players over Steam). Next: play 0.3.6 with friends to confirm the playtest fixes and the dialogue-choice and NavMesh guards. Logs: `BepInEx\LogOutput.log` on every PC.
 5. Trigger and puzzle relay tours, echo windows, performance.
 
 ## Release rules
