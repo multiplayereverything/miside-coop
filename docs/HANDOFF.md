@@ -13,7 +13,16 @@ Co-op for MiSide (2 to 4 players). Everyone sees the others as the main characte
 - **Tests (lab copies on one PC, minimized):** suite 34 tours on 0.3.5 (2026-10-28; new: `safe`, `choice`, `menureturn`, `menuleave`, `roomhold`, `scene1` (all of Scene 1), `scene1end`, `scene3` (Scene 3 to Mita's walk), and `core` now types the right version and compares both screens): last full run 33 of 34, `scene19` failed when the client stuck on the first splash screen and passed on its own rerun. Pressing every interaction in every chapter: 18 of 18 chapters pass.
 - **Played by people:** the 2026-10-28 playtest had three players (the user and two friends) on separate PCs and Steam accounts, joined over Steam; their 19 reports became 0.3.5.
 - **Full suite on 0.3.6:** not run; its one code change passed its tours on 2026-10-28, and the lab could not start beside the user's own MiSide on release day. Run `scripts\lab-suite.ps1` next.
-- **Not tested:** 0.3.5 or 0.3.6 with friends (the fixes are lab-proven only); four real players (4-player runs are lab-only); the other player's shading seen by a person.
+- **Played on 0.3.6 (2026-11-06, about 06:36-06:39 local):** the user hosted, a friend ("lidar") joined, both reached Scene 1. The user reports "a lot of bugs" but has not listed them yet; one screenshot so far. Host logs and the screenshot are in `private\playtests\2026-11-06\`. The friend's log was not collected.
+- **Not tested:** four real players (4-player runs are lab-only); the other player's shading confirmed by a person.
+- **Co-op Anything:** the hub's MiSide entry and write-up describe v0.3.5 (cranebeaker/coop-anything#264, merged by the maintainer by hand on 2026-10-31, so GitHub shows it closed). No hub update for 0.3.6.
+
+## Next: the user wants the mod remade (2026-11-06)
+Nothing is started: no design, no code. The user's request, in their words: "there is alot of bugs going on", "are you able to take inspiration of this thing here https://yal.cc/docs/gm/gmtogether/ for syncing the game? lets say cutscenes theres only one main character", "do take any thing possible to make the game in sync and no problems", "so lets remake the mod".
+1. **Read the GMTogether docs first.** They have not been read: the attempt was stopped by the user before it ran, so nothing here says how GMTogether works.
+2. **Ask the user for the bug list** from the 2026-11-06 session, and for lidar's `BepInEx\LogOutput.log` if it still exists.
+3. **Propose the design and get the user's OK before writing code.** Say what is kept: the current transports, lab, tours and hook knowledge in `AGENTS.md` took a long time to prove. Also decide what "only one main character" means for cutscenes, and ask if it stays unclear after reading the docs. Today's rule is in `CutsceneRules`: mirrored by default (everyone plays the animation on their own character), presser-only for held items.
+4. **Run `scripts\lab-suite.ps1` once on 0.3.6 as a baseline** while the user's game is closed; it has not been run on this build.
 
 ## Done in 0.3.3
 - **Lab on a fresh install:** the game's first-run LANGUAGE/VOICE picker is answered (English); lab copies start minimized as normal small windows ("MiSide lab - host"), lowest quality, 30 fps, BelowNormal priority, never focused.
