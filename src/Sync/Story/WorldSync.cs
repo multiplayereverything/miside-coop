@@ -74,9 +74,7 @@ namespace MiSideTogether
             DoorTargetsTick(now);
             if (now >= nextDoor) { nextDoor = now + 0.1f; Step("w.door", () => DoorTick(now)); }
             Step("w.prop", () => PropTick(now));
-            Step("w.interact", () => InteractionTick(now));
-            Step("w.give", () => GiveTick(now));
-            Step("w.dialogue", () => DialogueTick(now));
+            Step("w.interact", () => InteractionTick(now));            Step("w.dialogue", () => DialogueTick(now));
             Step("w.novella", () => NovellaTick(now));
             Step("w.room", () => WorldStateTick(now));
             if (IsClient) Step("w.anim", () => AnimatorCatchUpTick(now));

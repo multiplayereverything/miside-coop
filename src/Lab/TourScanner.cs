@@ -6,9 +6,11 @@ using Object = UnityEngine.Object;
 
 namespace MiSideTogether
 {
-    // Lab tour "scanner" (2 players, Scene 2): "Bring these to the scanner". The host starts the scanner; the client takes the
-    // Spoon, then the host the Pencil, then the client the Bowknot. Nobody clicks the scanner: in a session a taken item goes
-    // onto it by itself (2026-11-08 report: items stuck in players' hands). Every item must end up on the scanner on both PCs.
+    // Lab tour "scanner" (2 players, Scene 2): "Bring these to the scanner" (2026-11-08 report: items stuck in players' hands).
+    // The host starts the scanner; the client takes the Spoon and the Bowknot, the host the Pencil. Each player walks to the
+    // scanner with their item and puts it there with their own press, as in the game. Presses are a player's (TourScanner's
+    // LabScannerClick), not Click() from code.
+    //   scanner.waits:  (each) 5 s after the first take the item is still with the player, not on the scanner by itself
     //   scanner.placed: here, all three lie on the scanner and nothing is left in any hand
     //   scanner.same:   (client) each item is where the host has it, within 0.15 m
     public sealed partial class TogetherRuntime
@@ -135,7 +137,9 @@ namespace MiSideTogether
                 return;
             }
             float since = now - labScannerAt;
+            // What each player takes, and the scanner slot it goes to.
             string[] mine = Hosting ? new[] { "Pencil" } : new[] { "Spoon", "Bow" };
+            string[] slots = Hosting ? new[] { "Pencil" } : new[] { "Spoon", "Scrunchy" };
             switch (labScannerStep)
             {
                 case 1:
@@ -144,16 +148,30 @@ namespace MiSideTogether
                     return;
                 case 2:
                     // Each takes their items once armed here (the client after the host's button comes through the log), in turn.
-                    float wait = Hosting ? 18 : labScannerTaken == 0 ? 4 : 24;
-                    if (since > wait && LabScannerClick("ItemTake " + mine[labScannerTaken] + "/"))
-                    {
-                        labScannerAt = now;
-                        if (++labScannerTaken == mine.Length) labScannerStep = 4;
-                    }
+                    float wait = Hosting ? 18 : labScannerTaken == 0 ? 4 : 10;
+                    if (since > wait && LabScannerClick("ItemTake " + mine[labScannerTaken] + "/")) { labScannerStep = 3; labScannerAt = now; }
+                    return;
+                case 3:
+                    // The item stays with the player until they put it on the scanner themselves.
+                    if (since < 5) return;
+                    Transform item = LabScannerItem(slots[labScannerTaken]), table = LabFind<Transform>("Table MehMita/Scanner/");
+                    if (item != null && table != null && labScannerTaken == 0)
+                        CheckOnce("scanner.waits", (item.position - table.position).sqrMagnitude > 1f, slots[labScannerTaken] + " is " + (item.position - table.position).magnitude.ToString("0.00") + " m from the scanner before this player puts it there");
+                    labScannerStep = 5; labScannerAt = now;
+                    return;
+                case 5:
+                    // Walk to the scanner (about 3 m a second), then put the item down.
+                    Transform scan = LabFind<Transform>("Table MehMita/Scanner/");
+                    if (scan == null) return;
+                    Vector3 to = scan.position + (LocalPlayer.transform.position - scan.position).normalized * 1.2f; to.y = LocalPlayer.transform.position.y;
+                    if ((LocalPlayer.transform.position - to).sqrMagnitude > 0.04f) { LocalPlayer.transform.position = Vector3.MoveTowards(LocalPlayer.transform.position, to, 3f * Time.deltaTime); return; }
+                    if (!LabScannerClick("GiveItems/" + slots[labScannerTaken] + "/")) return;
+                    labScannerAt = now;
+                    labScannerStep = ++labScannerTaken == mine.Length ? 4 : 2;
                     return;
                 case 4:
                     if (since < 25) return;
-                    labScannerStep = 5;
+                    labScannerStep = 6;
                     List<string> wrong = new List<string>();
                     Transform scanner = LabFind<Transform>("Table MehMita/Scanner/");
                     foreach (string n in LabScannerItems)

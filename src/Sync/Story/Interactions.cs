@@ -361,51 +361,10 @@ namespace MiSideTogether
 
         public int animEventsApplied;
 
-        // --- Scene 2's scanner: a taken item goes onto the scanner -----------------------------------------------
-        // "Bring these to the scanner": taking an item arms its slot on the scanner (GiveItems/<item>), and the item waits
-        // in the hand for a second click there. In a session items stuck in players' hands (2026-11-08), so the taker's
-        // slot is pressed for them as soon as they are free: the game's own drop puts the item on the scanner.
-        readonly List<ObjectInteractive> pendingGives = new List<ObjectInteractive>();
-        float pendingGivesAt;
-
-        public static void NoteOwnTake(ObjectInteractive click)
-        {
-            TogetherRuntime rt = Instance;
-            if (rt == null || !rt.Connected || click.GetComponent<ObjectInteractiveItemTake>() == null) return;
-            UnityEngine.Events.UnityEventBase e = RealEvent(click.eventClick);
-            if (e == null) return;
-            for (int i = 0; i < e.GetPersistentEventCount(); i++)
-            {
-                Object target = e.GetPersistentTarget(i);
-                ObjectInteractive slot = target != null ? target.TryCast<ObjectInteractive>() : null;
-                if (slot == null || e.GetPersistentMethodName(i) != "Activation" || slot.transform.parent == null || slot.transform.parent.name != "GiveItems") continue;
-                rt.pendingGives.Add(slot);
-                rt.pendingGivesAt = Time.realtimeSinceStartup;
-            }
-        }
-
-        void GiveTick(float now)
-        {
-            if (pendingGives.Count == 0) return;
-            if (now - pendingGivesAt > 30) { Log("Scanner slot never armed here: " + pendingGives.Count + " item(s) left in hand"); pendingGives.Clear(); return; }
-            PlayerMove player = LocalPlayer;
-            // The hand reaches for the item first.
-            if (now - pendingGivesAt < 1 || player == null || player.animationRun) return;
-            for (int i = 0; i < pendingGives.Count; i++)
-            {
-                ObjectInteractive slot = pendingGives[i];
-                if (slot == null || !slot.active || !slot.isActiveAndEnabled) continue;
-                pendingGives.RemoveAt(i);
-                Log("Putting " + slot.name + " on the scanner for this player");
-                slot.Click();
-                return;
-            }
-        }
-
         void ClearInteractions()
         {
             foreach (Carried c in carried.Values) if (c.Magnet != null) c.Magnet.enabled = true;
-            carried.Clear(); carrying.Clear(); pendingWatch.Clear(); pendingGives.Clear(); actorAnimation = null; magnetList = null;
+            carried.Clear(); carrying.Clear(); pendingWatch.Clear(); actorAnimation = null; magnetList = null;
         }
     }
 }
