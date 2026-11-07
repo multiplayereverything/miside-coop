@@ -36,13 +36,43 @@ namespace MiSideTogether
             return t;
         }
 
-        // Clicks when the interactive is armed here; a client's click is a request the host's log brings back.
+        // Presses when the interactive is armed here, the way a player does: the game's own ObjectInteractive.Update reads
+        // the mouse and runs the click itself, never calling Click() (2026-11-08: no player press reached the mod's Click
+        // hook in a real session). The lab only aims at the object and holds the mouse button down for its Update.
+        static ObjectInteractive labPressTarget;
+        static bool labPressInTarget;
+        static int labPressFrames;
+        bool labPressHooked;
+
+        static void LabPressUpdatePrefix(ObjectInteractive __instance)
+        {
+            labPressInTarget = labPressFrames > 0 && labPressTarget != null && __instance.Pointer == labPressTarget.Pointer;
+            // What the player's look ray hits, as the game compares it: objectCastInteractive with the object's
+            // objectInteractive, or (hand-reach objects, interactiveIK) objectCastHandInteractive with its GameObject.
+            if (labPressInTarget && __instance.scrpm != null)
+            {
+                __instance.scrpm.objectCastInteractive = __instance.objectInteractive;
+                __instance.scrpm.objectCastHandInteractive = __instance.gameObject;
+            }
+        }
+        static void LabPressUpdatePostfix() { if (labPressInTarget) { labPressInTarget = false; labPressFrames--; } }
+        static void LabPressMousePostfix(int __0, ref bool __result) { if (labPressInTarget && __0 == 0) __result = true; }
+
         bool LabScannerClick(string pathEnd)
         {
+            if (!labPressHooked)
+            {
+                labPressHooked = true;
+                HarmonyLib.Harmony lab = new HarmonyLib.Harmony("local.misidetogether.lab.press");
+                // The held button comes first, so the mod's own hooks see it as a player's press.
+                lab.Patch(HarmonyLib.AccessTools.Method(typeof(ObjectInteractive), "Update"), new HarmonyLib.HarmonyMethod(typeof(TogetherRuntime), nameof(LabPressUpdatePrefix)), new HarmonyLib.HarmonyMethod(typeof(TogetherRuntime), nameof(LabPressUpdatePostfix)));
+                lab.Patch(HarmonyLib.AccessTools.Method(typeof(Input), "GetMouseButtonDown", new[] { typeof(int) }), null, new HarmonyLib.HarmonyMethod(typeof(TogetherRuntime), nameof(LabPressMousePostfix)) { priority = HarmonyLib.Priority.First });
+            }
             ObjectInteractive o = LabFind<ObjectInteractive>(pathEnd);
-            if (o == null || !o.active || !o.isActiveAndEnabled) return false;
-            Log("Lab: scanner tour clicks " + pathEnd);
-            o.Click();
+            // A player in an animation can't click (the game checks animationRun), so the lab waits like a player would.
+            if (o == null || !o.active || !o.isActiveAndEnabled || labPressFrames > 0 || LocalPlayer == null || LocalPlayer.animationRun) return false;
+            Log("Lab: scanner tour presses " + pathEnd + " with the mouse");
+            labPressTarget = o; labPressFrames = 1;
             return true;
         }
 

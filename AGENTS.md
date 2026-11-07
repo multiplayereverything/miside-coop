@@ -78,6 +78,7 @@ Here a test is an `MT-CHECK` in a tour, listed in that tour's `Expect` in `scrip
 | Hook | Purpose |
 | --- | --- |
 | `ObjectInteractive.Click`, `Trigger_MouseClick.Click` (prefix + postfix) | Interactions relayed by scene key; replayed with `Replaying` set (no echo). In a story-log chapter (`StoryLog.cs`) a client's press is a request: nothing runs until the host's log brings it back. The chapters on the log are listed in `LogChapter`; try another with `-mt-logalso <chapter>` before listing it. |
+| `ObjectInteractive.Update` (prefix + postfix), `Input.GetMouseButtonDown`/`GetButtonDown` (postfix) | A player's press never calls `Click`: `Update` reads the mouse and runs its own copy. In a session the press read inside `Update` is taken away and `Click` runs after it, so it reaches the hooks above. Lab tours that call `Click()` skip this path; `scanner` presses like a player. |
 | `GameController.PhotomodeActive(bool)`, `ConsoleCall.Update` (prefix) | Photo mode and the console are off during a session, since both change the local time scale (`SessionRules.cs`). |
 | `Trigger_Event.TargetEnter`/`TargetExit` (prefix + postfix), `.Restart` | Story volumes fire once per group; re-armed ones may fire again. |
 | `DialogueChanger.ClickButton(int)`, `Dialogue_3DText.SkipDialogue` | Dialogue choices and skips. |

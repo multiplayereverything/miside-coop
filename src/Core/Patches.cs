@@ -16,6 +16,9 @@ namespace MiSideTogether
             if (harmony != null) return;
             harmony = new HarmonyLib.Harmony("local.misidetogether.multiplayer");
             Patch(typeof(ObjectInteractive), "Click", "InteractPrefix", "InteractPostfix");
+            Patch(typeof(ObjectInteractive), "Update", "InteractUpdatePrefix", "InteractUpdatePostfix");
+            Patch(typeof(Input), "GetMouseButtonDown", null, "PressReadPostfix", typeof(int));
+            Patch(typeof(Input), "GetButtonDown", null, "PressReadPostfix", typeof(string));
             Patch(typeof(Trigger_MouseClick), "Click", "MouseClickPrefix", "MouseClickPostfix");
             Patch(typeof(Trigger_Event), "TargetEnter", "TriggerEnterPrefix", "TriggerEnterPostfix");
             Patch(typeof(Trigger_Event), "TargetExit", "TriggerExitPrefix", "TriggerExitPostfix");
@@ -126,6 +129,27 @@ namespace MiSideTogether
                 applied++;
             }
             catch (Exception ex) { failed++; TogetherRuntime.Log("Patch failed " + type.Name + "." + name + ": " + ex.Message); }
+        }
+
+        // A player's press never calls ObjectInteractive.Click: Update reads the mouse and runs its own copy of the click
+        // (GameAssembly: no caller of Click; Update calls GetMouseButtonDown/GetButtonDown, then eventClick.Invoke). So no
+        // press reached the Click hooks above in a real session (2026-11-08, Scene 2's scanner). In a session the press
+        // read inside Update is taken away and Click runs instead, right after: the same click, through the story log.
+        static ObjectInteractive updating, pressed;
+        static void InteractUpdatePrefix(ObjectInteractive __instance) { updating = TogetherRuntime.Instance != null && TogetherRuntime.Instance.Connected ? __instance : null; }
+        static void PressReadPostfix(ref bool __result)
+        {
+            if (updating == null || !__result) return;
+            __result = false;
+            pressed = updating;
+        }
+        static void InteractUpdatePostfix()
+        {
+            updating = null;
+            if (pressed == null) return;
+            ObjectInteractive o = pressed;
+            pressed = null;
+            Safe("Interact press", () => o.Click());
         }
 
         static bool PhotomodePrefix(bool __0) { return !__0 || TogetherRuntime.PhotoModeAllowed(); }
