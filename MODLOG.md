@@ -1,4 +1,4 @@
-﻿# MiSide Together — MODLOG
+# MiSide Together — MODLOG
 
 Journal for the MiSide co-op mod. Anything not written here is lost at the next context reset.
 
@@ -391,3 +391,9 @@ Ideas cross-checked against QuestionBlock64's MiSide-Multiplayer (it has no lice
 - The Scene 1 pilot's faster pace (from the tour speed-up) pressed app buttons again before the screen changed; each repeat made the client wait 12 s. Restored to its old pace. Real-play note: fast repeat presses in the phone app can do the same.
 - Check fixes: lighting compares only while both copies are in one chapter; the coarse NPC limit is 1.5 m (two-second samples can't judge a walk), and MT-BODY at 0.6 m does; `roomhold` keeps a room on for the client on purpose, so it skips the lighting compare.
 - Results on 0.3.11: `mitasame`, `door`, `afk`, `allhere`, `room`, `world`, `menureturn`, `gather`, `carry`, `scene2`, `scene3full` (0 lost, lighting 0%) pass; `mita`, `desync` pass on rerun (a face set 0.14 s before the client arrived; a client copy that never started). `scene1` lost one app event in one of three runs. No full suite on 0.3.11.
+
+## 0.3.12 (2026-11-08): Scene 2's scanner
+- Report (relayed from the launcher session): taken items stuck in players' hands at "Bring these to the scanner". The user asked that every taken item be put on the scanner, as the game intends, tested only for that, then released.
+- In a session, taking an item that arms a scanner slot (`GiveItems/<item>`, read from the take's own click event) presses that slot for the taker once they are free (`Interactions.cs`, `GiveTick`). The game's own drop animation then puts it on the scanner, through the story log.
+- Test first: the `scanner` tour (Scene 2; the client takes the Spoon and Bowknot, the host the Pencil, nobody clicks the scanner) failed before the fix (all three items 8.85 m from the scanner) and passes after (all on the scanner on both PCs, same place, no item in any hand). `scene2` passes. A first version of the tour, which also clicked the scanner, passed without any fix: the stuck item didn't reproduce through code clicks.
+- `ModVersion` 0.3.12, protocol unchanged (10).

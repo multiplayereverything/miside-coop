@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
@@ -34,7 +34,7 @@ namespace MiSideTogether
     // C# class avoids Il2CppInterop trying to expose every helper method to the native side.
     public sealed partial class TogetherRuntime
     {
-        public const string ModVersion = "0.3.11";
+        public const string ModVersion = "0.3.12";
         public static TogetherRuntime Instance;
         public static Action<string> Log = delegate { };
         public ITransport Network;
