@@ -57,7 +57,7 @@ namespace MiSideTogether
                 Peer gone;
                 if (peers.TryGetValue(e.Peer, out gone))
                 {
-                    DestroyAvatar(gone); peers.Remove(e.Peer);
+                    DestroyAvatar(gone); peers.Remove(e.Peer); ClosePeerLog(e.Peer);
                     if (gone.Accepted) { Tell(gone.Name + " left."); SendRoster(); }
                 }
                 return;
@@ -102,6 +102,7 @@ namespace MiSideTogether
                     Network.Send(from, Wire.Packet(Op.Welcome, w => w.Write(from)));
                     Tell(name + " joined.");
                     SendSavesTo(from);
+                    if (!RulesOff) Network.Send(from, RulesPacket());
                     // No joining in the middle of a chapter: the player waits in the menu and comes along when the host
                     // starts the next chapter (or goes back to the menu). Someone rejoining after a host migration, who is
                     // already in this chapter, carries on.
@@ -142,6 +143,7 @@ namespace MiSideTogether
                 case Op.Call:
                     ReadStoryEvent(op, reader, from);
                     break;
+                case Op.Gate: if (InLogChapter) ReadStoryEvent(op, reader, from); break;
                 case Op.Door: ApplyDoor(reader, from); break;
                 case Op.Visible: ReadVisibility(reader, from); break;
                 case Op.HandItem: ReadHandItem(reader, from); break;
@@ -151,6 +153,8 @@ namespace MiSideTogether
                 case Op.InteractionDone: ReadInteractionDone(reader, from); break;
                 case Op.AnimEvent: ReadAnimEvent(reader, from); break;
                 case Op.Novella: ReadNovella(reader, from); break;
+                case Op.SessionLog: HostSessionLog(peer, reader); break;
+                case Op.Repair: HostRepair(peer); break;
                 case Op.Notice: { string n = Wire.Text(reader, 1100); if (n == "lab-gaze") labGazeAt = Time.realtimeSinceStartup; else if (n.StartsWith("lab-hostcut:", StringComparison.Ordinal)) HostCutAsked(n.Substring(12)); break; }
                 case Op.Ping: Network.Send(from, Wire.Packet(Op.Pong, null)); break;
                 case Op.Pong: break;
@@ -184,7 +188,7 @@ namespace MiSideTogether
                 case Op.Welcome:
                     self = reader.ReadInt32();
                     rejoining = false;
-                    Tell("Connected as player " + self + ". You follow the host's story.");
+                    Tell("Connected as player " + self + ". You follow the host's story. This session's log is sent to the host to help fix bugs.");
                     break;
                 case Op.Reject:
                     string reason = Wire.Text(reader, 400);
@@ -212,6 +216,9 @@ namespace MiSideTogether
                     Peer target;
                     if (who != self && peers.TryGetValue(who, out target)) ReadPose(target, reader);
                     break;
+                case Op.Rules: ClientRules(reader); break;
+                case Op.Ordered: ClientOrdered(reader); break;
+                case Op.Check: ClientCheck(reader); break;
                 case Op.Scene: ClientScene(reader); break;
                 case Op.History: ClientHistory(reader); break;
                 case Op.Interact:
@@ -265,6 +272,8 @@ namespace MiSideTogether
                     if (notice == "lab-s3pick") { Scene3PickNotice(); break; }
                     if (notice.StartsWith("lab-pilot:", StringComparison.Ordinal)) { StoryPilotNotice(notice); break; }
                     if (notice == "lab-pilot-end") { StoryPilotEnd(); break; }
+                    if (notice.StartsWith("lab-pilotpress:", StringComparison.Ordinal)) { StoryPilotPress(notice); break; }
+                    if (notice.StartsWith("lab-logsame:", StringComparison.Ordinal)) { StoryLogSameNotice(notice); break; }
                     if (notice.StartsWith("lab-shot:", StringComparison.Ordinal)) { LabShot(notice.Substring(9) + "-" + Name); break; }
                     if (notice.StartsWith("lab-drop:", StringComparison.Ordinal)) { string[] v = notice.Substring(9).Split(','); labDrop = new Vector3(float.Parse(v[0], System.Globalization.CultureInfo.InvariantCulture), float.Parse(v[1], System.Globalization.CultureInfo.InvariantCulture), float.Parse(v[2], System.Globalization.CultureInfo.InvariantCulture)); if (v.Length > 3) labDropKey = string.Join(",", v, 3, v.Length - 3); labDropKnown = true; break; }
                     if (notice.StartsWith("lab-room:", StringComparison.Ordinal)) { labRoomNotice = notice.Substring(9); labRoomNoticeAt = Time.realtimeSinceStartup; break; }

@@ -25,6 +25,10 @@ MiSide Together connects players directly. It does **not** use the Multiplayer E
 - **LAN or VPN:** games on the same network (or a VPN such as ZeroTier or Radmin) show as **JOIN <name> (LAN)**.
 - **Direct address:** **JOIN BY ADDRESS (F5)** connects to an IP address on TCP port 27030 (the host must forward that port).
 
+**Session logs:** every session writes a log to `BepInEx\MiSideTogether-logs` to help fix bugs. It records what happens in the game, game errors, your in-game name, your game settings (language, quality, video memory) and player positions. If you join someone, your log is also sent to the host while you play, and saved on their PC. Your Windows user folder is removed from it. The last 60 logs are kept.
+
+**While you play together:** so everyone's game runs the same story, the host's voice language, date events (Halloween, Christmas) and story progress apply to everyone, and physics runs at a fixed rate. Text stays in your own language. Photo mode and the console are off. Your own saves are set aside while you're in someone else's game and come back when you leave. If your game drifts out of step with the host's, it saves a short report and a screenshot in `BepInEx\MiSideTogether-logs` and tries to repair itself. These stay on your PC.
+
 ## Two copies on one PC
 `scripts\second-instance.ps1` opens a second MiSide with the mod next to your own, to try co-op alone. It runs from its own folder
 (`private\lab-second`, links to your install), uses the installed mod build and never touches your saves.

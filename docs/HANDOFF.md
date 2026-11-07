@@ -5,8 +5,8 @@ Read this first when picking the work up on another PC. Then `AGENTS.md` (archit
 ## Goal
 Co-op for MiSide (2 to 4 players). Everyone sees the others as the main character with real animations, and the game stays in sync: chapters, story, dialogue, cutscenes, Mita and the other NPCs, room state, minigames and endings. BepInEx, to match the user's Baldi Together and Spooky Together mods.
 
-## State (2026-11-06)
-- **Version:** 0.3.6, published as a pre-release (protocol `Wire.Version` 5, unchanged from 0.3.5). The last full release is v0.3.2.
+## State (2026-11-07)
+- **Version:** 0.3.11 (protocol 10: session logs, same starting state, story log for Scenes 1 to 3, desync checks, the five opening fixes) is published as a pre-release (2026-11-07) and installed on this PC. Friends on 0.3.6 or older can't join it. The last full release is v0.3.2. The full suite was not run on 0.3.11: the user stopped it to test the build themselves.
 - **Online play:** Steam P2P (friends join from MULTIPLAYER in the game's menu, or Steam's Join Game / invite, `+mt_join`), LAN/VPN, or a direct address (TCP 27030). It doesn't use the Multiplayer Everything relay.
 - **This PC (2026-10-27):** the repo lives at `Desktop\AIStuff\ai-work-pc-games\Miside Multiplayer Mod`, outside the game; `scripts\game-dir.ps1` finds the game. BepInEx be.790 and the mod are installed in the game. The user's save folder is empty, as they want it.
 - **Website:** `games.json` in the website repo has the `miside` entry. The Website session updates it; don't edit it from here.
@@ -17,12 +17,33 @@ Co-op for MiSide (2 to 4 players). Everyone sees the others as the main characte
 - **Not tested:** four real players (4-player runs are lab-only); the other player's shading confirmed by a person.
 - **Co-op Anything:** the hub's MiSide entry and write-up describe v0.3.5 (cranebeaker/coop-anything#264, merged by the maintainer by hand on 2026-10-31, so GitHub shows it closed). No hub update for 0.3.6.
 
-## Next: the user wants the mod remade (2026-11-06)
-Nothing is started: no design, no code. The user's request, in their words: "there is alot of bugs going on", "are you able to take inspiration of this thing here https://yal.cc/docs/gm/gmtogether/ for syncing the game? lets say cutscenes theres only one main character", "do take any thing possible to make the game in sync and no problems", "so lets remake the mod".
-1. **Read the GMTogether docs first.** They have not been read: the attempt was stopped by the user before it ran, so nothing here says how GMTogether works.
-2. **Ask the user for the bug list** from the 2026-11-06 session, and for lidar's `BepInEx\LogOutput.log` if it still exists.
-3. **Propose the design and get the user's OK before writing code.** Say what is kept: the current transports, lab, tours and hook knowledge in `AGENTS.md` took a long time to prove. Also decide what "only one main character" means for cutscenes, and ask if it stays unclear after reading the docs. Today's rule is in `CutsceneRules`: mirrored by default (everyone plays the animation on their own character), presser-only for held items.
-4. **Run `scripts\lab-suite.ps1` once on 0.3.6 as a baseline** while the user's game is closed; it has not been run on this build.
+## Pick up here (2026-11-07)
+0.3.11 (protocol 10) is committed, pushed and published as a pre-release (2026-11-07). The user is testing it themselves; real players haven't tried it yet.
+
+The user played the opening with two copies on this PC (logs: `private\playtests\2026-11-07\*session-20261107-093638*`) and gave five priority fixes, for the beginning of the game. They asked for GMTogether principles, proper tests, screenshots where useful, and tests that aren't long. Rules: test first (`AGENTS.md`), run only the tours a change can affect.
+
+| # | Report | Cause | State |
+| --- | --- | --- | --- |
+| 1 | Mita in different places | The sync moved her empty parent (`MitaPerson`), not the child that walks. Her key changed when the story moved her, so clients froze. A story look (`Mita Stand`) ran on the host only | Fixed in the lab: `mitasame`, 0.09-0.14 m while she moves (was 2.75 m) |
+| 2 | Doors glitch, player walks through | Physics doors with no owner: an angle written onto a live hinge was thrown away, and a shut door's component is switched off, so its last angle wasn't sent | Fixed in the lab: `door`, 2.7-2.9 degrees apart. The test pushes with force; a real player's walk hasn't been tried |
+| 3 | Lighting changes | Doors hide rooms, and their lights, on the far side of each PC's own player (`ObjectDoor.DoorClosed`). With players on both sides each PC hid the other's room | Fixed in the lab: in a session doors set `offOptimization` and keep both sides on. `door` with players across it: 72% to 0%. Whole of Scene 3: 20% to 0% |
+| 4 | Game console opens by itself | The game's AFK easter egg (`GameController.timeAFK`) | Fixed in the lab: `afk`. Timer held in a session unless the chapter asks for the console (`needTetris`) |
+| 5 | "All players must be here" notice, for important cutscenes | New | Done for the notice: every story timeline cutscene (`Playable_Animation`, `Op.CutscenePlay`) tells every PC. `allhere` passes. Not built: teleporting people first. The cutscenes found so far put every player in place themselves, so there's no failing case to test; the gather after a cutscene still brings stragglers to the host |
+
+Also found and fixed on the way: a story look on `/Quests` or `/Acts` in a log chapter now goes through the log; a dialogue choice could stall the pilot while seated; old results could pass for a crashed verifier.
+
+**Open:**
+- `scene1` lost one phone-app event (`ButtonCloseMiniGame`) in one run of three, with the button already switched off on the client. The same family: rapid repeat presses in the app made a client wait 12 s per press. A real host pressing app buttons quickly could leave a client behind.
+- `BakesEnable` (the panel's lightmaps) isn't measured by the lighting check: `LightmapSettings.lightmaps` throws under IL2CPP.
+- Whole house always on in a session: costs some frame time, not measured on a slower PC.
+- Not tried by real players. Next: a two-copy session with the user, then the remake plan (Scene 4).
+
+Tours for these: `mitasame`, `door`, `afk`, `allhere` (each 1-2 minutes). The verifier also checks lighting (`light=` in MT-STATE, `MT-LIGHTS` on change), NPC bodies at 5 samples a second (`MT-BODY`), door angles (`MT-DOOR`) and line starts (`MT-LINE`).
+
+Don't launch anything while the user plays on another PC: every copy shows on Steam as MiSide on their account, and starts Steam if it's closed (`MiSideFull.exe` has Steam's copy protection).
+
+## Next: the remake (approved 2026-11-06)
+The plan, its reasons and the status of each step are in [REMAKE-PLAN.md](REMAKE-PLAN.md). Start there.
 
 ## Done in 0.3.3
 - **Lab on a fresh install:** the game's first-run LANGUAGE/VOICE picker is answered (English); lab copies start minimized as normal small windows ("MiSide lab - host"), lowest quality, 30 fps, BelowNormal priority, never focused.

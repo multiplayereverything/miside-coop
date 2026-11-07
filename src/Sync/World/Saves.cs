@@ -57,6 +57,7 @@ namespace MiSideTogether
             {
                 if (new FileInfo(file).Length > 16384) continue;
                 string text = File.ReadAllText(file), name = Path.GetFileName(file);
+                if (!SaveMirrored(name)) continue;
                 string hash = Wire.Hash(text).ToString();
                 string old;
                 if (saveHashes.TryGetValue(name, out old) && old == hash) continue;
@@ -78,7 +79,7 @@ namespace MiSideTogether
             int files = 0;
             foreach (string file in Directory.GetFiles(SaveDir))
             {
-                if (new FileInfo(file).Length > 16384 || files >= 64) continue;
+                if (new FileInfo(file).Length > 16384 || files >= 64 || !SaveMirrored(Path.GetFileName(file))) continue;
                 Network.Send(peer, SaveFilePacket(Path.GetFileName(file), File.ReadAllText(file)));
                 files++;
             }

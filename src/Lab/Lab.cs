@@ -32,6 +32,15 @@ namespace MiSideTogether
             {
                 if (args[i] == "-mt-lab") LabMode = true;
                 if (args[i] == "-mt-noshots") noShots = true;
+                if (args[i] == "-mt-nosessionsend") sessionNoSend = true;
+                if (args[i] == "-mt-norules") RulesOff = true;
+                if (args[i] == "-mt-nolog") LogOff = true;
+                if (args[i] == "-mt-norepair") RepairOff = true;
+                if (args[i] == "-mt-logalso" && i + 1 < args.Length) LogAlso = args[++i].Replace('_', ' ');
+                if (args[i] == "-mt-nogaterequest") GateRequestsOff = true;
+                if (args[i] == "-mt-mitacheck") LabMitaCheck = true;
+                if (args[i] == "-mt-pilotfull") labPilotFull = true;
+                if (args[i] == "-mt-pilotboth") labPilotFull = labPilotBoth = true;
                 if (args[i] == "-mt-tour" && i + 1 < args.Length) labTour = args[++i];
                 if (args[i] == "-mt-players" && i + 1 < args.Length) int.TryParse(args[++i], out labPlayers);
                 if (args[i] == "-mt-lag" && i + 2 < args.Length) { int.TryParse(args[++i], out Transport.LabDelayMs); int.TryParse(args[++i], out Transport.LabJitterMs); }
@@ -156,7 +165,7 @@ namespace MiSideTogether
             if (labFps > 0 && Application.targetFrameRate != labFps) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = labFps; }
             // Lab clients may start before the host listens; keep retrying instead of giving up.
             // A lab client that left by its own choice (menuleave tour) stays out.
-            if (autoRole == "join" && !Active && !leftByChoice && now >= labJoinRetryAt && (!LateLabJoiner || now > 90)) { labJoinRetryAt = now + 3; StartJoin(); }
+            if (autoRole == "join" && !Active && !leftByChoice && now >= labJoinRetryAt && (!LateLabJoiner || now > 90) && SameStartReadyToJoin()) { labJoinRetryAt = now + 3; StartJoin(); }
             if (now >= nextMetric)
             {
                 nextMetric = now + 10;

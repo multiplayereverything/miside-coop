@@ -32,6 +32,7 @@ namespace MiSideTogether
             float now = Time.realtimeSinceStartup;
             rt.liveLines[line.Pointer] = new KeyValuePair<Dialogue_3DText, float>(line, now);
             rt.lineStartedAt[SceneKeys.Key(line)] = now;
+            if (LabMode) Log("MT-LINE " + System.Text.RegularExpressions.Regex.Replace(SceneKeys.Key(line), "#[0-9]+", ""));
         }
 
         List<Dialogue_3DText> ActiveLines(float now)
@@ -60,6 +61,9 @@ namespace MiSideTogether
         {
             if (now < nextDialogue) return;
             nextDialogue = now + 0.2f;
+            // On the story log, line ends come through it. This relay compares keys holding a sibling number, and lines
+            // destroy themselves as they play, so it took the client's DMita 9#0 for a line the host (DMita 9#4) had finished.
+            if (InLogChapter) return;
             if (Hosting) { HostDialogue(now); return; }
             ClientDialogue(now);
         }

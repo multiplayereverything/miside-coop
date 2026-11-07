@@ -31,7 +31,15 @@ namespace MiSideTogether
         bool tourStarted, tourMoved, tourStepped;
         float tourTeleportAt;
         bool menuDumped;
-        float tourSceneAt = -1, tourChapterAt = -1, labStepAt = -1;
+        float tourSceneAt = -1, tourChapterAt = -1, labStepAt = -1, labMitaClientAt = -1;
+        // The logos and loading screens run fast in the lab. Chapters don't: at 3x a game error appeared that isn't there at 1x.
+        bool labSpedUp;
+        void LabGameSpeed(string scene)
+        {
+            bool splash = scene == "SceneAihasto" || scene == "SceneLoading";
+            if (splash) { if (Time.timeScale > 0) Time.timeScale = 4; labSpedUp = true; }
+            else if (labSpedUp) { if (Time.timeScale > 1) Time.timeScale = 1; labSpedUp = false; }
+        }
         string tourScene = "";
         int chapterIndex = -1;
         Vector3 tourStepTarget;
@@ -42,14 +50,18 @@ namespace MiSideTogether
             get
             {
                 if (!string.IsNullOrEmpty(tourChapter)) return tourChapter;
-                return labTour == "mita" ? "Scene 4 - StartSecret" : labTour == "death" ? "Scene 11 - Backrooms" : labTour == "props" ? "Scene 5 - StartHorror" : labTour == "world" ? "Scene 2 - InGame" : labTour == "carry" ? "Scene 2 - InGame" : labTour == "dialogue" ? "Scene 4 - StartSecret" : labTour == "gather" ? "Scene 2 - InGame" : labTour == "room" ? "Scene 1 - RealRoom" : labTour == "mirror" ? "Scene 2 - InGame" : labTour == "minigame" ? "Scene 4 - StartSecret" : labTour == "novella" ? "Scene 18 - 2D" : labTour == "interactions" ? "Scene 2 - InGame" : labTour == "triggers" ? "Scene 11 - Backrooms" : labTour == "hostcut" ? "Scene 1 - RealRoom" : labTour == "story" ? "Scene 2 - InGame" : "Scene 1 - RealRoom";
+                return labTour == "mita" ? "Scene 4 - StartSecret" : labTour == "death" ? "Scene 11 - Backrooms" : labTour == "props" ? "Scene 5 - StartHorror" : labTour == "world" ? "Scene 2 - InGame" : labTour == "carry" ? "Scene 2 - InGame" : labTour == "dialogue" ? "Scene 4 - StartSecret" : labTour == "gather" ? "Scene 2 - InGame" : labTour == "room" ? "Scene 1 - RealRoom" : labTour == "mirror" ? "Scene 2 - InGame" : labTour == "minigame" ? "Scene 4 - StartSecret" : labTour == "novella" ? "Scene 18 - 2D" : labTour == "interactions" ? "Scene 2 - InGame" : labTour == "triggers" ? "Scene 11 - Backrooms" : labTour == "hostcut" ? "Scene 1 - RealRoom" : labTour == "story" ? "Scene 2 - InGame" : labTour == "samestart" ? "Scene 3 - WeTogether" : "Scene 1 - RealRoom";
             }
         }
 
         void TourUpdate(float now)
         {
             string scene = ActiveSceneName;
-            if (scene != tourScene) { tourScene = scene; tourSceneAt = now; tourMoved = false; }
+            // A head start on the waits written against this clock (6 s at the menu, 25 s in a chapter): measured over a
+            // full suite they were the largest part of its 65 minutes, and most are only "let things settle".
+            if (scene != tourScene) { tourScene = scene; tourSceneAt = now - (scene == "SceneMenu" ? 4 : scene.StartsWith("Scene ", StringComparison.Ordinal) ? 15 : 0); tourMoved = false; }
+            LabGameSpeed(scene);
+            PriorityTours(now, scene);
             if (labTour.Length == 0) return;
             PanelCheck(now);
             if (scene == "SceneMenu" && !menuDumped && now - tourSceneAt > 3)
@@ -68,6 +80,11 @@ namespace MiSideTogether
             if (labTour == "survey") { SurveyTour(now, scene); return; }
             if (labTour == "inventory") { InventoryTour(now, scene); return; }
             TeleportSafeCheck(now);
+            if (labTour == "sessionlog") SessionLogTour(now);
+            if (labTour == "samestart") { SameStartTick(now, scene); return; }
+            if (labTour == "storylog") { StoryLogTour(now, scene); return; }
+            if (labTour == "inputhook") { InputHookTour(now, scene); return; }
+            if (labTour == "desync") { DesyncTour(now, scene); return; }
             if (labTour == "connect") { MenuChecks(now, scene); return; }
             if (labTour == "steam") { SteamTour(now, scene); return; }
             if (labTour == "quest") { if (Hosting) QuestHost(now, scene); return; }
@@ -147,7 +164,7 @@ namespace MiSideTogether
                 else if (now - tourSceneAt > 60) CheckOnce("mita.sent", false, "no MitaPerson in " + scene);
                 MitaPerson mita = Mitas().Count > 0 ? Mitas()[0] : null;
                 // Face: a face layer change on the host must replay on the client.
-                if (mita != null && now - tourSceneAt > 20 && !tourStepped) { tourStepped = true; mita.FaceLayer(1); Log("Lab: host set Mita face layer 1"); }
+                if (mita != null && now - tourSceneAt > 20 && !tourStepped && ClientInScene(client) && (labMitaClientAt > 0 ? now - labMitaClientAt > 3 : (labMitaClientAt = now) < 0)) { tourStepped = true; mita.FaceLayer(1); Log("Lab: host set Mita face layer 1"); }
                 // Gaze: once the client stands at Mita (see ClientTour), her "look at the player" picks the nearer client.
                 if (mita != null && mita.lookLife != null && labGazeAt > 0 && now - labGazeAt > 3 && now - labGazeAt < 40 && Time.frameCount % 30 == 0)
                 {
@@ -328,12 +345,23 @@ namespace MiSideTogether
 
         void HostCutsceneTour(float now, string scene)
         {
-            if (scene != TourChapter || labCutsceneAt >= 0 || now - tourSceneAt < 25 || LocalPlayer == null) return;
+            if (scene != TourChapter || labCutsceneAt >= 0 || now - tourSceneAt < 3) return;
+            // A shared cutscene the story itself started (Scene 1's opening) is the real case: measure that one.
+            foreach (PlayableDirector d in Directors())
+                if (Playing(d) && !(d.GetComponent<ObjectAnimationPlayer>() != null && CutsceneRules.ForInteraction(null, SceneKeys.Key(d)).Who == CutsceneRules.Who.Actor))
+                {
+                    labCutsceneAt = now; labCutsceneKey = SceneKeys.Key(d);
+                    CheckOnce("cutscene.sent", true, labCutsceneKey + " (started by the story)");
+                    return;
+                }
+            if (now - tourSceneAt < 25 || LocalPlayer == null) return;
             labCutsceneAt = now;
             PlayableDirector pick = null; double best = 0;
             foreach (PlayableDirector d in Directors())
             {
                 if (d == null || d.playableAsset == null || !d.gameObject.activeInHierarchy || Playing(d)) continue;
+                // A presser-only interaction's timeline runs on the presser alone (Cutscenes.cs): nothing to compare.
+                if (d.GetComponent<ObjectAnimationPlayer>() != null && CutsceneRules.ForInteraction(null, SceneKeys.Key(d)).Who == CutsceneRules.Who.Actor) continue;
                 double length = d.duration;
                 if (length > 4 && length < 120 && (pick == null || length > best)) { pick = d; best = length; }
             }
@@ -445,7 +473,7 @@ namespace MiSideTogether
         float labMenuOpenAt = -1;
         void MenuChecks(float now, string scene)
         {
-            if (scene != "SceneMenu" || now - tourSceneAt < 6) return;
+            if (scene != "SceneMenu" || now - tourSceneAt < 10) return;   // MenuNextLocation.Click throws if pressed 2 s in
             if (!labChecked.Contains("steam.ready") && (Steam.Ready || now - tourSceneAt > 20)) CheckOnce("steam.ready", Steam.Ready && Steam.Self != 0, Steam.Ready ? "Steam user " + Steam.Self + " (" + Steam.SelfName + "), " + Steam.FriendsInGame().Count + " friend(s) in MiSide" : Steam.Problem);
             if (!MenuBuilt) { if (now - tourSceneAt > 30) CheckOnce("ui.menu", false, "MULTIPLAYER page was not built"); return; }
             MenuNextLocation next = menuButton.GetComponent<MenuNextLocation>();
@@ -716,7 +744,7 @@ namespace MiSideTogether
                 {
                     double hostTime = double.Parse(lastCutsceneSync.Substring(seenKey.Length + 2));
                     double drift = Math.Abs(seen.time - hostTime);
-                    if (drift < 0.3 && now - tourSceneAt > 30) CheckOnce("cutscene.synced", true, "timeline within " + drift.ToString("0.000") + " s of the host (" + cutsceneCorrections + " correction(s))");
+                    if (drift < 0.3 && now - tourSceneAt > 3) CheckOnce("cutscene.synced", true, "timeline within " + drift.ToString("0.000") + " s of the host (" + cutsceneCorrections + " correction(s))");
                 }
             }
             if (labTour == "mita" && now - tourSceneAt > 15)

@@ -89,8 +89,10 @@ namespace MiSideTogether
                 if (t.frameTutorial != null && t.frameTutorial.activeInHierarchy && !labTutorialAnswered)
                 {
                     labTutorialAnswered = true;
-                    t.ChangePlayerQuest(true);
-                    t.CloseQuestHint();
+                    ButtonMouseClick yes = null;
+                    foreach (ButtonMouseClick b in t.frameTutorial.GetComponentsInChildren<ButtonMouseClick>()) if (b != null && b.name == "Button Yes") yes = b;
+                    if (InLogChapter && yes != null) { yes.PointerDown(); yes.PointerUp(); }
+                    else { t.ChangePlayerQuest(true); t.CloseQuestHint(); }
                     Log("Lab: tutorial - quest hints on (requestPlayer=" + t.requestPlayer + ", play=" + t.play + ", hint " + t.indexHint + ")");
                     return;
                 }

@@ -18,7 +18,7 @@ namespace MiSideTogether
         // Client side
         string wantedScene = "";
         int wantedSeq = -1, readySentSeq = -1, historySeq = -1;
-        float wantedSince, arrivedAt = -1, nextLoadCheck;
+        float wantedSince, arrivedAt = -1, nextLoadCheck, sceneChangedAt = -100;
         AsyncOperation followLoad;
         readonly Queue<byte[]> replayQueue = new Queue<byte[]>();
         string lastActiveScene = "";
@@ -44,6 +44,7 @@ namespace MiSideTogether
             if (active != lastActiveScene)
             {
                 Log("Scene now " + active + " (was " + lastActiveScene + ")");
+                sceneChangedAt = Time.realtimeSinceStartup;
                 lastActiveScene = active;
                 CaptureLoadStatics(active);
                 OnLocalSceneChanged();
@@ -67,6 +68,8 @@ namespace MiSideTogether
             // Players held back from the last chapter come along now.
             foreach (Peer p in peers.Values) if (p.Waiting) { p.Waiting = false; Log(p.Name + " joins at " + active); }
             history.Clear();
+            logSeq = 0;
+            if (!RulesOff) Broadcast(RulesPacket());
             Broadcast(ScenePacket());
             Log("Host scene " + sceneSeq + ": " + hostScene);
         }
@@ -138,6 +141,7 @@ namespace MiSideTogether
             // Already in this chapter (reconnecting): its start is long past, so no start barrier.
             barrierSeq = name.StartsWith("Scene ", StringComparison.Ordinal) && ActiveSceneName != name ? seq : -1; barrierSince = -1;
             historySeq = -1; replayQueue.Clear();
+            logQueue.Clear(); logNext = 0; logBlockedSince = -1; ownRequests.Clear();
             Log("Host is in " + name + " (scene " + seq + ")");
         }
 
@@ -164,7 +168,9 @@ namespace MiSideTogether
             {
                 if (followLoad != null && !followLoad.isDone) return;
                 // Grace period: the same story event usually loads the scene on this machine too.
-                if (now - wantedSince < 3f || now < nextLoadCheck) return;
+                // And after a change here: the story can bring this copy into a chapter just before the host's word of it
+                // arrives, and following the old word took it back to the chapter both had left (Scene 3 to 4, 24 ms apart).
+                if (now - wantedSince < 3f || now - sceneChangedAt < 3f || now < nextLoadCheck) return;
                 if (LocalLoadInProgress(active)) { nextLoadCheck = now + 1; return; }
                 nextLoadCheck = now + 10;
                 Tell("Following the host to " + wantedScene + "...");
@@ -259,7 +265,7 @@ namespace MiSideTogether
             using (BinaryReader reader = new BinaryReader(new MemoryStream(packet)))
             {
                 Op op = (Op)reader.ReadByte();
-                ApplyStoryEvent(op, reader);
+                if (op == Op.Ordered) ClientOrdered(reader); else ApplyStoryEvent(op, reader);
             }
             if (replayQueue.Count == 0) Tell("Caught up with the host.");
         }

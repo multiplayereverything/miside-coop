@@ -28,6 +28,16 @@ namespace MiSideTogether
         public static bool BeforePlayerAnimation(ObjectAnimationPlayer scr)
         {
             TogetherRuntime rt = Instance;
+            // In a chapter on the story log every moment has one Main Character, the same on every PC.
+            if (rt != null && rt.Connected && rt.InLogChapter)
+            {
+                if (rt.momentMine) return true;
+                string own = scr != null ? SceneKeys.Key(scr) : null;
+                if (own != null) rt.pendingWatch[own] = scr;
+                lastHeldBackAt = Time.realtimeSinceStartup;
+                if (LabMode) Log("MT-HOLD " + own + ": the Main Character's");
+                return false;
+            }
             // Interactions often start their animation a moment after the click (through the game's timed events), so
             // besides the replayed click itself: an interaction animation this player did not trigger, while another
             // player is acting, belongs to that player.
@@ -91,6 +101,7 @@ namespace MiSideTogether
                 // By this machine's own key: the host's can differ where siblings are ordered differently (Scene 17).
                 if (animationStartedAt.TryGetValue(SceneKeys.Key(scr), out float at) && at > c.At - 2f) continue;   // started here by itself
                 string click = Time.realtimeSinceStartup - lastReplayedClickAt < 5 ? lastReplayedClick : null;
+                if (InLogChapter && (click != null || c.Key.StartsWith("DontDestroyOnLoad", StringComparison.Ordinal))) continue;   // the Main Character's, or the host's own idle animation
                 if (CutsceneRules.ForInteraction(click, c.Key).Who == CutsceneRules.Who.Actor) continue;   // the presser's own
                 Replaying = true;
                 try
@@ -116,11 +127,25 @@ namespace MiSideTogether
             TogetherRuntime rt = Instance;
             if (rt == null || !rt.Connected || scr == null) return;
             rt.NoteAnimationStarted(scr, variant, rt.LocalPlayer != null && rt.LocalPlayer.animationRun);
-            if (Replaying || ReplayingInteraction) return;
+            // A client's own press comes back through the log, so Replaying alone doesn't mean it's someone else's.
+            bool ownPress = rt.InLogChapter && Replaying && !ReplayingInteraction && rt.momentMine;
+            if ((Replaying && !ownPress) || ReplayingInteraction) return;
             // Skipped as someone else's (BeforePlayerAnimation): this player is not the actor.
             if (rt.LocalPlayer != null && !rt.LocalPlayer.animationRun) return;
             rt.actorAnimation = SceneKeys.Key(scr);
             rt.actorAnimationAt = Time.realtimeSinceStartup;
+            if (rt.IsClient && rt.InLogChapter) rt.ownBody.Add(scr.Pointer);
+        }
+
+        // Player_Position walks and locks the player for a moment (Scene 3's glasses): only the one performing it.
+        public static bool SkipScriptedMove(Player_Position move)
+        {
+            TogetherRuntime rt = Instance;
+            if (rt == null || !rt.Connected || !rt.InLogChapter || rt.momentMine || move == null) return false;
+            PlayerMove player = rt.LocalPlayer;
+            if (player == null || (move.playerTarget != null && move.playerTarget != player.transform)) return false;
+            if (LabMode) Log("MT-HOLD scripted move " + SceneKeys.Key(move) + ": the Main Character's");
+            return true;
         }
 
         // How MiSide wires a held item (seen on Scene 1's phone): the Transform_Magnet sits on the interaction's object;
@@ -155,7 +180,7 @@ namespace MiSideTogether
             return CutsceneRules.ForInteraction(click, actorAnimation);
         }
 
-        bool ActorOnly { get { CutsceneRules.Rule r = ActorRule(); return r != null && r.Who == CutsceneRules.Who.Actor; } }
+        bool ActorOnly { get { CutsceneRules.Rule r = ActorRule(); return r != null && (r.Who == CutsceneRules.Who.Actor || InLogChapter); } }
 
         void InteractionTick(float now)
         {
@@ -167,7 +192,8 @@ namespace MiSideTogether
                 string key = actorAnimation;
                 bool relay = ActorOnly;
                 actorAnimation = null;
-                if (relay) Broadcast(Wire.Packet(Op.InteractionDone, w => Wire.Text(w, key)));
+                // In a chapter on the story log the finish goes through its stand-in (StoryLog.cs).
+                if (relay && !InLogChapter) Broadcast(Wire.Packet(Op.InteractionDone, w => Wire.Text(w, key)));
             }
             if (actorAnimation != null && !ActorOnly && carrying.Count == 0) return;
             if (now < nextCarry) return;
@@ -312,7 +338,7 @@ namespace MiSideTogether
         public static void AfterAnimEvent(int index)
         {
             TogetherRuntime rt = Instance;
-            if (rt == null || !rt.Connected || Replaying || rt.actorAnimation == null) return;
+            if (rt == null || !rt.Connected || Replaying || rt.actorAnimation == null || rt.InLogChapter) return;
             // Only for actor-only interactions; mirrored ones fire their own events on every machine.
             if (!rt.ActorOnly) return;
             string key = rt.actorAnimation;

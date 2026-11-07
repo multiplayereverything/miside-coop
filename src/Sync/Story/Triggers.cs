@@ -37,6 +37,24 @@ namespace MiSideTogether
             Story(Op.DistanceTrigger, t, t.targetInside ? 1 : 2);
         }
 
+        // A look on a chapter's story objects can start the story (Scene 3: Mita Stand's look starts her free roam), and left
+        // to one PC it split them. Hover effects elsewhere stay local.
+        public static bool StoryLook(Trigger_MouseEvent t)
+        {
+            TogetherRuntime rt = Instance;
+            if (rt == null || !rt.InLogChapter) return false;
+            string path = SceneKeys.Key(t);
+            return path.Contains("/Quests#") || path.Contains("/Acts#");
+        }
+
+        // Standing still opens the game's Tetris console. In a session players often wait for each other, so that timer
+        // doesn't run. A chapter that asks for the console itself (needTetris) still gets it.
+        public static void HoldIdleConsole(GameController c)
+        {
+            TogetherRuntime rt = Instance;
+            if (rt != null && rt.Connected && c != null && !c.needTetris && c.timeAFK > 0) c.timeAFK = 0;
+        }
+
         void ApplyLookTrigger(string key, int arg)
         {
             Trigger_MouseEvent t = SceneKeys.Find<Trigger_MouseEvent>(key);
@@ -74,6 +92,7 @@ namespace MiSideTogether
         //  9 Location14_GameQuestPlayer.ChangeDialogue(bool)  Scene 14 quest game reply (QuestGame.cs)
         // 10-14 Scenes 13/15 core computer: text field keys, Enter, folders, program stages (CoreComputer.cs)
         // 15 Location14_PlayerMobileMove.Play     Scene 14 phone character: shown on the others, run by the holder (PhoneCharacter.cs)
+        // 99 lab only: the storylog tour's test event (TourStoryLog.cs)
         // 16-23 Scene 1 phone app: start/stop, the dialogue line, the name, its buttons, the cooking result; host only (AppSync.cs)
         public static void Call(int entry, Component source, int arg)
         {
@@ -97,6 +116,7 @@ namespace MiSideTogether
                     if (entry == 1) keys.AddKey(((char)arg).ToString()); else if (entry == 2) keys.RemoveKey(); else if (entry == 3) keys.ButtonEnter(); else keys.ButtonUpper();
                     break;
                 }
+                case 99: if (LabMode) ApplyLabOrdered(target); break;
                 case 7: QueueAnimationCatchUp(target, arg); break;
                 case 8: ApplyQuestMove(target); break;
                 case 9: ApplyQuestReply(target, arg); break;

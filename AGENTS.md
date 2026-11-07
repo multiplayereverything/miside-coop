@@ -9,6 +9,36 @@ Every agent on this repo follows these. They favour care over speed; use judgeme
 3. **Surgical changes.** Every changed line traces to the task. Match the surrounding style and line endings (most files are CRLF, some have a BOM). Don't reformat or refactor neighbouring code; mention unrelated problems instead of fixing them. Remove what your own change left unused, including temporary lab logging.
 4. **Goal-driven execution.** Turn the task into a check that can fail: a tour with `MT-CHECK`s, then a mutation run proving the check fails without the fix. Loop until it passes. Report only what was observed (`/results-table`: ✅ with evidence, ⚠️ when not verified).
 
+## Test-driven development (`test-driven-development`)
+Use this for every feature, bug fix, refactor and behaviour change, before writing the code it covers. The only exceptions are throwaway prototypes, generated code and configuration files; anything else needs the user's permission.
+
+**The rule: no production code without a failing test first.** If you didn't watch the test fail, you don't know it tests the right thing. Code written before its test gets deleted and rewritten from the test: don't keep it as a reference or adapt it. "Just this once", "too simple", "I already tried it by hand", "I'll test after" and "this case is different" all mean stop and start over.
+
+Here a test is an `MT-CHECK` in a tour, listed in that tour's `Expect` in `scripts/run-tour.ps1`, or a check in `tests/verify-lab.py`. It runs in real game copies, so a mock is the last resort (`SteamMock.cs` exists because the lab has one Steam account).
+
+1. **Red: write one failing test.** It covers one behaviour, under a name that says what should happen. Before writing it, name the production change that would make it fail.
+2. **Watch it fail.** Never skip this. Run the tour with `scripts/run-tour.ps1 -Tour <tour>` and read the log. It must fail on the expected `MT-CHECK` because the behaviour is missing, not because of a typo, a stuck lab copy or a busy PC. If it passes at once, it's testing what already exists: fix the test. If it errors, fix that and run it again.
+3. **Green: write the least code that passes.** Add no options, and don't improve anything else on the way.
+4. **Watch it pass.** The `MT-CHECK` passes, the other affected tours still pass, and the logs show no new `MT-MODERROR` or `own event threw`. If it fails, fix the code, not the test.
+5. **Refactor, only when green.** Remove duplication and improve names, adding no behaviour, and stay green.
+6. **Repeat** with the next failing test.
+
+**Bugs:** every bug starts as a failing test that reproduces it. Never fix one without a test. A bug found in a real session gets a tour or a new `MT-CHECK` too. If it can't be reproduced in the lab, say so instead of reporting it fixed.
+
+**Honest tests:**
+- Assert what really happened in the game, never that a mock or the mod's own flag was set.
+- Keep test-only code in `src/Lab`, out of the sync code.
+- Understand what a game call does (`-mt-dump`, the decompiled code) before faking or stubbing it.
+- A test that needs a huge setup usually means the design needs simplifying.
+
+**Running tests:** while working, run the tours a change can affect, or `scripts/lab-suite.ps1 -Quick`. Before a milestone or release, run the full `scripts/lab-suite.ps1`. Report every failure by name, including ones you didn't cause, and say which tours you didn't run.
+
+**Before calling work done:**
+- Every new behaviour has a check, and you watched each one fail for the expected reason.
+- You wrote only enough code to pass.
+- All affected tours pass with clean logs.
+- Edge cases and errors are covered, or named as not covered.
+
 ## Repository
 - **GitHub:** https://github.com/multiplayereverything/miside-coop (public, branch `main`). This folder is the repo (anywhere on disk; `scripts/game-dir.ps1` finds the game); `.gitignore` keeps out `artifacts/` (builds, test logs, the generated dialogue script), `private/` (lab copies, backups), `graphify-out/` and `obj/`.
 - **Online play:** Steam P2P (the game's own `steam_api64`), LAN/VPN, or an address. This mod does not use the Multiplayer Everything global relay.
@@ -47,7 +77,8 @@ Every agent on this repo follows these. They favour care over speed; use judgeme
 ## How the mod hooks the game (all in `src/Patches.cs`, minigames in `Minigames.InstallMinigamePatches`)
 | Hook | Purpose |
 | --- | --- |
-| `ObjectInteractive.Click`, `Trigger_MouseClick.Click` (postfix) | Interactions relayed by scene key; replayed with `Replaying` set (no echo). |
+| `ObjectInteractive.Click`, `Trigger_MouseClick.Click` (prefix + postfix) | Interactions relayed by scene key; replayed with `Replaying` set (no echo). In a story-log chapter (`StoryLog.cs`) a client's press is a request: nothing runs until the host's log brings it back. The chapters on the log are listed in `LogChapter`; try another with `-mt-logalso <chapter>` before listing it. |
+| `GameController.PhotomodeActive(bool)`, `ConsoleCall.Update` (prefix) | Photo mode and the console are off during a session, since both change the local time scale (`SessionRules.cs`). |
 | `Trigger_Event.TargetEnter`/`TargetExit` (prefix + postfix), `.Restart` | Story volumes fire once per group; re-armed ones may fire again. |
 | `DialogueChanger.ClickButton(int)`, `Dialogue_3DText.SkipDialogue` | Dialogue choices and skips. |
 | `Scene_Load.StartLoad` | Chapter transitions: everyone runs the game's own `Scene_Load`. |
@@ -117,6 +148,7 @@ Every agent on this repo follows these. They favour care over speed; use judgeme
   - A fresh install stops in `SceneLoading` on the game's LANGUAGE/VOICE picker; lab copies answer it with English (`FirstRunLanguageTick`, Lab.cs).
   - The user's save folder is backed up and restored per run, and the lab refuses to start beside the user's own MiSide.
   - Steam with one account: `run-tour.ps1 -Tour steam` uses the lab Steam mock (`src/Network/SteamMock.cs`, `-mt-steam-mock`, `-mt-steam-fail`): fake accounts, rich presence through `private/steam-mock`, sessions held until accepted, failed sends.
+- **Real play logs:** every session writes `BepInEx/MiSideTogether-logs/session-*.log` (`src/Core/SessionLog.cs`: `MT-SESSION` header, everything `Log()` says, `MT-ERROR`, `MT-STATE` every 2 s), and clients stream theirs to the host as `*-from-<name>-<id>.log`. Always run `scripts/collect-logs.ps1` after a real session and read the result.
 - **Evidence:** `private/lab-*/misidetogether-lab.log` (`MT-CHECK`, `MT-METRIC` with `modmax` worst frame, `MT-STATE` every 2 s, `MT-ERROR`, `MT-MODERROR`). Kept per tour in `artifacts/tests/logs/<tour>/`, with Unity error excerpts.
 - **Latency runs:** `run-tour.ps1 -Lag 120 -Jitter 40 -JoinAddress <LAN IP>` simulates internet latency (`-mt-lag`, lab only).
 - **Control runs:** `run-tour.ps1 -ExtraHostArgs "-mt-nopatch" -Players 1` loads the mod without any game hook, to tell game-side failures from the mod's.

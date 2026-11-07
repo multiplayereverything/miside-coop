@@ -29,7 +29,7 @@ namespace MiSideTogether
             ClearHeld();
             firedEnter.Clear(); firedExit.Clear(); missingLogged.Clear(); storyRetries.Clear();
             mitaTargets.Clear(); mitaAnim.Clear();
-            doorLast.Clear(); doorAppliedAt.Clear();
+            doorLast.Clear(); doorTargets.Clear();
             coreOperatorHere = false; coreStageAt.Clear(); mobileHolder = 0;
             Replaying = false;
         }
@@ -39,6 +39,8 @@ namespace MiSideTogether
         void OnLocalSceneChanged()
         {
             ResetWorldState();
+            ChapterLogDone();
+            ResetStoryCheck();
             ClearDialogue();
             ClearNovella();
             ClearTriggers();
@@ -50,7 +52,7 @@ namespace MiSideTogether
             SceneKeys.Invalidate();
             HeldItems.Clear();
             firedEnter.Clear(); firedExit.Clear(); missingLogged.Clear(); storyRetries.Clear(); cutscenesStartedHere.Clear(); animationStartedAt.Clear(); animationCatchUps.Clear();
-            mitaTargets.Clear(); mitaAnim.Clear(); doorLast.Clear(); doorAppliedAt.Clear(); npcResolved.Clear();
+            mitaTargets.Clear(); mitaAnim.Clear(); doorLast.Clear(); doorTargets.Clear(); npcResolved.Clear();
             cutsceneList = null; npcList = null; propList = null; propAppliedAt.Clear(); mitaList = null; doorList = null;
         }
 
@@ -61,10 +63,15 @@ namespace MiSideTogether
             if (!itemsRegistered && LocalPlayer != null) { itemsRegistered = true; SceneKeys.RegisterItems(); }
             // Each feature is its own step: timed separately in the lab (steps=), and one failing does not stop the rest.
             if (IsClient) Step("w.replay", ReplayTick);
+            Step("w.gates", BuildGates);
+            if (IsClient) Step("w.log", () => StoryLogTick(now));
+            if (Hosting) Step("w.check", () => HostCheckTick(now)); else Step("w.check", () => ClientCheckTick(now));
+            if (hostRequests.Count > 0) Step("w.requests", () => HostRequestTick(now));
             if (storyRetries.Count > 0) Step("w.retry", () => StoryRetryTick(now));
             if (pendingGo != null) Step("w.go", () => GoTick(now));
             if (Hosting && now >= nextMita) { nextMita = now + 1f / 15f; Step("w.mita", SendMitas); }
             if (Hosting) Step("w.cutscene", () => HostCutsceneTick(now));
+            DoorTargetsTick(now);
             if (now >= nextDoor) { nextDoor = now + 0.1f; Step("w.door", () => DoorTick(now)); }
             Step("w.prop", () => PropTick(now));
             Step("w.interact", () => InteractionTick(now));
@@ -125,6 +132,8 @@ namespace MiSideTogether
             if (MinigameEnding) { Log("MT-STORY held (minigame end event) " + op + " " + key); return; }
             Log("MT-STORY local " + op + " " + key + (arg != 0 ? " " + arg : ""));
             if (op == Op.Interact || op == Op.MouseClick) NoteLocalClick(key);
+            if (op == Op.CutscenePlay && rt.Hosting) rt.AllPlayersHere();
+            if (rt.Hosting && rt.InLogChapter) { rt.HostLog(op, key, arg); return; }
             byte[] packet = Wire.Packet(op, w => { Wire.Text(w, key); w.Write(arg); });
             if (rt.Hosting) { rt.RecordHistory(packet); rt.Broadcast(packet); }
             else rt.SendToHost(packet);
@@ -133,6 +142,7 @@ namespace MiSideTogether
         void ReadStoryEvent(Op op, BinaryReader reader, int from)
         {
             long start = reader.BaseStream.Position;
+            if (Hosting && InLogChapter) { HostRequest(op, reader, from); return; }
             if (Hosting)
             {
                 byte[] packet = new byte[reader.BaseStream.Length - start + 1];
@@ -180,10 +190,16 @@ namespace MiSideTogether
                 {
                     case Op.Interact:
                         ObjectInteractive interactive = SceneKeys.Find<ObjectInteractive>(key);
+                        if (Missing(interactive, key)) return;
+                        // In a chapter on the story log the press has already counted, whatever this copy thinks of the object:
+                        // Scene 3's hall objects stayed off on a client, and the click was lost after waiting for them.
+                        if (InLogChapter) { interactive.active = true; momentMine = ownRequest; }
                         // Not armed here yet (ObjectInteractive.active): Click would do nothing, so wait for the story to arm it.
-                        if (Missing(interactive, key) || Inactive(interactive, key, interactive.active)) return;
+                        if (Inactive(interactive, key, interactive.active)) return;
                         // Someone else's interaction: its animation is theirs (Interactions.cs).
-                        ReplayingInteraction = true; ReplayingInteractionKey = key; NoteReplayedClick(key); NoteCoreOperator(key, false);
+                        ReplayingInteraction = !ownRequest; ReplayingInteractionKey = ownRequest ? null : key;
+                        if (ownRequest) NoteLocalClick(key); else NoteReplayedClick(key);
+                        NoteCoreOperator(key, false);
                         try { interactive.Click(); } finally { ReplayingInteraction = false; ReplayingInteractionKey = null; }
                         break;
                     case Op.MouseClick:
@@ -207,6 +223,7 @@ namespace MiSideTogether
                     case Op.LookTrigger: ApplyLookTrigger(key, arg); break;
                     case Op.DistanceTrigger: ApplyDistanceTrigger(key, arg); break;
                     case Op.Call: ApplyCall(key, arg); break;
+                    case Op.Gate: ApplyGate(key); break;
                     case Op.SceneLoad:
                         // The game's own transition component, with the same settings it has on the sender's machine.
                         Scene_Load load = SceneKeys.Find<Scene_Load>(key);
@@ -234,6 +251,7 @@ namespace MiSideTogether
                         // playing only counts when its Play ran here (a timeline can play on awake without it).
                         if (Missing(cutscene, key) || Inactive(cutscene, key) || !NeedsStart(cutscene)) return;
                         cutscene.Play();
+                        AllPlayersHere();
                         break;
                     case Op.DialogueChoice:
                         DialogueChanger dialogue = SceneKeys.Find<DialogueChanger>(key);
@@ -324,6 +342,16 @@ namespace MiSideTogether
             rt.firedEnter.Remove(key); rt.firedExit.Remove(key);
         }
 
+        // A story cutscene (a timeline: Scene 1's days) changes the place for everyone, so everyone is told. The ones seen so
+        // far put every player in position themselves; the gather afterwards brings anyone left elsewhere.
+        float allHereToldAt = -100;
+        void AllPlayersHere()
+        {
+            if (!Connected || Time.realtimeSinceStartup - allHereToldAt < 10) return;
+            allHereToldAt = Time.realtimeSinceStartup;
+            Tell("All players must be here for this cutscene.");
+        }
+
         // --- NPCs (host-authoritative puppets on clients) --------------------------------------------
         // Story characters move and animate on the host and are mirrored on clients. Chasers (Mita Killer, mannequins,
         // lift and bacteria enemies) are deliberately left to each machine's own AI: they hunt that machine's player,
@@ -337,6 +365,9 @@ namespace MiSideTogether
         float npcListAt, nextMita;
         readonly AnimFrame mitaFrame = new AnimFrame();
         public const byte KindMita = 1, KindChibi = 2, KindFollow = 3, KindBoss = 4;
+
+        // MitaPerson sits on an empty parent; what walks and plays her animations is the child with the Animator and the NavMeshAgent.
+        static Transform MitaBody(MitaPerson m) { return m.animMita != null ? m.animMita.transform : m.transform; }
 
         List<MitaPerson> Mitas()
         {
@@ -355,7 +386,7 @@ namespace MiSideTogether
             {
                 if (m == null || chasers.Contains(m.gameObject.Pointer)) continue;
                 mitaList.Add(m);
-                npcList.Add(new NpcRef { Owner = m, Root = m.transform, Anim = m.animMita, Agent = m.nma, Kind = KindMita });
+                npcList.Add(new NpcRef { Owner = m, Root = MitaBody(m), Anim = m.animMita, Agent = m.nma, Kind = KindMita });
             }
             foreach (Mob_ChibiMita c in Object.FindObjectsOfType<Mob_ChibiMita>())
                 if (c != null) npcList.Add(new NpcRef { Owner = c, Root = c.transform, Anim = c.anim, Agent = c.nma, Kind = KindChibi });
@@ -371,7 +402,7 @@ namespace MiSideTogether
         {
             switch (kind)
             {
-                case KindMita: { MitaPerson m = SceneKeys.Find<MitaPerson>(key); return m == null ? null : new NpcRef { Owner = m, Root = m.transform, Anim = m.animMita, Agent = m.nma, Kind = kind }; }
+                case KindMita: { MitaPerson m = SceneKeys.Find<MitaPerson>(key); return m == null ? null : new NpcRef { Owner = m, Root = MitaBody(m), Anim = m.animMita, Agent = m.nma, Kind = kind }; }
                 case KindChibi: { Mob_ChibiMita c = SceneKeys.Find<Mob_ChibiMita>(key); return c == null ? null : new NpcRef { Owner = c, Root = c.transform, Anim = c.anim, Agent = c.nma, Kind = kind }; }
                 case KindFollow: { Location5_MitaFollowPlayer f = SceneKeys.Find<Location5_MitaFollowPlayer>(key); return f == null ? null : new NpcRef { Owner = f, Root = f.transform, Anim = f.anim, Kind = kind }; }
                 case KindBoss: { FightBoss_Person b = SceneKeys.Find<FightBoss_Person>(key); return b == null ? null : new NpcRef { Owner = b, Root = b.transform, Anim = b.anim, Kind = kind }; }
@@ -471,7 +502,34 @@ namespace MiSideTogether
         List<ObjectDoor> doorList;
         float doorListAt, nextDoor;
         readonly Dictionary<string, Quaternion> doorLast = new Dictionary<string, Quaternion>();
-        readonly Dictionary<string, float> doorAppliedAt = new Dictionary<string, float>();
+        // A door another player is moving: its physics is paused here and it glides to their angle. Written onto a live
+        // hinge, the angle was thrown away by the next physics step: the door stayed shut, or snapped back and forth.
+        sealed class DoorTarget { public ObjectDoor Door; public Quaternion Rotation; public float At; }
+        readonly Dictionary<string, DoorTarget> doorTargets = new Dictionary<string, DoorTarget>();
+        const float DoorReleaseSeconds = 0.5f;
+
+        void DoorTargetsTick(float now)
+        {
+            if (doorTargets.Count == 0) return;
+            float k = 1f - Mathf.Exp(-16f * Time.unscaledDeltaTime);
+            List<string> done = null;
+            foreach (KeyValuePair<string, DoorTarget> pair in doorTargets)
+            {
+                DoorTarget t = pair.Value;
+                if (t.Door == null) { (done ?? (done = new List<string>())).Add(pair.Key); continue; }
+                if (now - t.At > DoorReleaseSeconds)
+                {
+                    t.Door.transform.localRotation = t.Rotation;
+                    if (t.Door.rb != null) t.Door.rb.isKinematic = t.Door.lockDoor;
+                    doorLast[pair.Key] = t.Rotation;
+                    (done ?? (done = new List<string>())).Add(pair.Key);
+                    continue;
+                }
+                t.Door.transform.localRotation = Quaternion.Slerp(t.Door.transform.localRotation, t.Rotation, k);
+            }
+            if (done != null) foreach (string key in done) doorTargets.Remove(key);
+        }
+
 
         void DoorTick(float now)
         {
@@ -480,20 +538,24 @@ namespace MiSideTogether
                 doorListAt = now;
                 doorList = new List<ObjectDoor>();
                 foreach (ObjectDoor d in Object.FindObjectsOfType<ObjectDoor>()) if (d != null) doorList.Add(d);
+                // A shut door hides the rooms (and their lights) on the far side of this PC's own player
+                // (ObjectDoor.DoorClosed). With players on both sides, each PC hid the other player's room. In a
+                // session the house stays whole: both sides on, and no hiding.
+                foreach (ObjectDoor d in doorList)
+                    if (!d.offOptimization) { d.offOptimization = true; d.OptimizationObjectsActivation(); }
             }
             if (IsClient && !ClientStoryLive) return;
             int sent = 0;
             foreach (ObjectDoor door in doorList)
             {
-                if (door == null || !door.isActiveAndEnabled || sent >= 32) continue;
+                // Shut, the game switches the door component off (OptimizationObjectsActivation): its last angle still goes out.
+                if (door == null || !door.gameObject.activeInHierarchy || sent >= 32) continue;
                 string key = SceneKeys.Key(door);
+                if (doorTargets.ContainsKey(key)) continue;   // another player has it: not ours to report
                 Quaternion rot = door.transform.localRotation;
                 Quaternion last;
                 if (!doorLast.TryGetValue(key, out last)) { doorLast[key] = rot; continue; }
                 if (Quaternion.Angle(rot, last) < 0.75f) continue;
-                float applied;
-                // A door the network just moved is not echoed back while it settles.
-                if (doorAppliedAt.TryGetValue(key, out applied) && now - applied < 0.6f) { doorLast[key] = rot; continue; }
                 doorLast[key] = rot;
                 sent++;
                 Broadcast(Wire.Packet(Op.Door, w => { Wire.Text(w, key); w.Write(rot.x); w.Write(rot.y); w.Write(rot.z); w.Write(rot.w); w.Write(door.open); }));
@@ -516,11 +578,12 @@ namespace MiSideTogether
             }
             ObjectDoor door = SceneKeys.Find<ObjectDoor>(key);
             if (door == null) return;
-            door.transform.localRotation = rot;
             door.open = open;
-            if (door.rb != null && !door.rb.isKinematic) door.rb.angularVelocity = Vector3.zero;
-            doorLast[key] = rot;
-            doorAppliedAt[key] = Time.realtimeSinceStartup;
+            if (door.rb != null) door.rb.isKinematic = true;
+            DoorTarget target;
+            if (!doorTargets.TryGetValue(key, out target)) doorTargets[key] = target = new DoorTarget { Door = door };
+            target.Rotation = rot;
+            target.At = Time.realtimeSinceStartup;
         }
     }
 
@@ -550,6 +613,8 @@ namespace MiSideTogether
                 if (take.transform.parent != null) RegisterStable(take.transform.parent.gameObject);
                 foreach (Transform t in take.GetComponentsInChildren<Transform>(true)) RegisterStable(t.gameObject);
             }
+            // Mita gets moved around the hierarchy by the story; a key that changed left clients' Mita standing still.
+            foreach (MitaPerson m in Object.FindObjectsOfType<MitaPerson>(true)) if (m != null) RegisterStable(m.gameObject);
             // Objects the game magnets onto the player (the toy plane...) keep their chapter-start identity.
             foreach (Transform_Magnet magnet in Object.FindObjectsOfType<Transform_Magnet>(true)) if (magnet != null) RegisterStable(magnet.gameObject);
             foreach (ObjectItem item in Object.FindObjectsOfType<ObjectItem>(true))

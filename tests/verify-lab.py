@@ -107,6 +107,127 @@ def compare_anims(host, client):
             "npc_anim_missed": round(missed / total, 2) if total else None, "npc_anim_early": early}
 
 
+LINE = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d+) MT-LINE (.*)")
+
+
+def line_starts(path):
+    """When each dialogue line first started on this copy, from its log."""
+    out = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        m = LINE.match(line)
+        if m:
+            out.setdefault(m.group(5), int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)) + float("0." + m.group(4)))
+    return out
+
+
+DOOR = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d+) MT-DOOR \S.* (-?[\d.]+)$")
+
+
+def door_angles(path):
+    out = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        m = DOOR.match(line)
+        if m:
+            out.append((int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)) + float("0." + m.group(4)), float(m.group(5))))
+    return out
+
+
+LIGHT = re.compile(r"^(\d\d):(\d\d):(\d\d)\.\d+ MT-STATE .*scene=(\S+) .* light=(\S+) ")
+
+
+def lights(path):
+    out = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        m = LIGHT.match(line)
+        if m:
+            out.append((int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)), m.group(4), m.group(5)))
+    return out
+
+
+def light_compare(host, client):
+    """Share of samples where no host sample within 3 s shows the same lighting."""
+    same = [c for c in client if c[1].startswith("Scene_")]
+    if len(same) < 5:
+        return None
+    # Only where the host was in the same chapter then: a client left behind (or loading) isn't a lighting difference.
+    both = [c for c in same if any(h[1] == c[1] and abs(h[0] - c[0]) <= 3 for h in host)]
+    if len(both) < 5:
+        return None
+    return round(sum(not any(h[1] == c[1] and h[2] == c[2] and abs(h[0] - c[0]) <= 3 for h in host) for c in both) / len(both), 2)
+
+
+def door_compare(host, client):
+    """p90 of the angle difference at the same moment, and how often the client's door turned back on itself."""
+    if len(host) < 10 or len(client) < 10:
+        return None
+    diffs = []
+    for t, a in client:
+        near = min(host, key=lambda h: abs(h[0] - t))
+        # Only while the door is off its rest position on either copy: it is shut most of the time, which hid any gap.
+        if abs(near[0] - t) <= 0.25 and max(a, near[1]) > 5:
+            earlier = [h[1] for h in host if -0.2 <= t - h[0] <= 0.6]
+            later = [h[1] for h in host if -0.6 <= t - h[0] <= 0.2]
+            diffs.append(min(abs(a - x) for x in (earlier + later + [near[1]])))
+    flips, last = 0, 0
+    for i in range(1, len(client)):
+        step = (client[i][1] - client[i - 1][1] + 180) % 360 - 180
+        if abs(step) < 1.5:
+            continue
+        if last and (step > 0) != (last > 0):
+            flips += 1
+        last = step
+    return round(sorted(diffs)[int(len(diffs) * 0.9)], 1) if diffs else None, flips, round(max(abs((a - client[0][1] + 180) % 360 - 180) for _, a in client), 1)
+
+
+BODY = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d+) MT-BODY (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)$")
+
+
+def bodies(path):
+    out = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        m = BODY.match(line)
+        if m:
+            out.append((int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)) + float("0." + m.group(4)), float(m.group(5)), float(m.group(6)), float(m.group(7))))
+    return out
+
+
+def body_compare(host, client):
+    """Mita's body on the client against the host's a moment earlier (the stream takes time to arrive), judged only
+    around the moments she moves: standing still most of the time, she hid 2 m gaps in a p90 of everything."""
+    if len(host) < 20 or len(client) < 20:
+        return None
+    dist = lambda a, b: sum((a[i] - b[i]) ** 2 for i in (1, 2, 3)) ** 0.5
+    moving, gaps = [], []
+    for i in range(5, len(host)):
+        moving.append((host[i][0], dist(host[i], host[i - 5]) > 0.3))
+    active = [t for t, m in moving if m]
+    if len(active) < 10:
+        return None
+    for c in client:
+        if not any(abs(c[0] - t) <= 0.6 for t in active):
+            continue
+        near = [h for h in host if -0.2 <= c[0] - h[0] <= 0.8]
+        if near:
+            gaps.append(min(dist(c, h) for h in near))
+    if not gaps:
+        return None
+    gaps.sort()
+    return round(gaps[int(len(gaps) * 0.9)], 2), round(gaps[-1], 2), len(gaps)
+
+
+def line_mismatch(host, client):
+    """Share of lines missing on the client or more than 1 s from the host's start. MT-STATE samples can't say this in
+    a talky chapter: taken every 2 s on each copy's own clock, they often land on different short lines (46% of samples
+    differed in Scene 3 with 182 of 190 lines starting within 0.5 s). None when there are too few lines to judge."""
+    if len(client) < 5:
+        return None
+    first, last = min(client.values()), max(client.values())
+    expected = {k: t for k, t in host.items() if first - 1 <= t <= last + 1}
+    if not expected:
+        return None
+    return sum(k not in client or abs(client[k] - t) > 1 for k, t in expected.items()) / len(expected)
+
+
 def parse(path):
     metrics, checks, moderrors, states, anims = [], [], [], [], []
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -148,6 +269,8 @@ def main():
     busy = None                 # other games were running beside the lab: frame cost is reported, not judged
     npc_lag_limit = 1.0         # p90 seconds an NPC animation may start after the host's (--npc-lag-limit per tour)
     client_leaves = False       # the tour has a client leave the game on purpose (menuleave): it ends elsewhere
+    cutscene_differs = False    # the tour forces a cutscene on the host alone (gather)
+    light_differs = False       # the tour keeps a room on for the client only (roomhold)
     i = 0
     while i < len(args):
         if args[i] == "--expect":
@@ -156,6 +279,10 @@ def main():
             allow_game_errors = True; i += 1
         elif args[i] == "--client-leaves":
             client_leaves = True; i += 1
+        elif args[i] == "--cutscene-differs":
+            cutscene_differs = True; i += 1
+        elif args[i] == "--light-differs":
+            light_differs = True; i += 1
         elif args[i] == "--npc-lag-limit":
             npc_lag_limit = float(args[i + 1]); i += 2
         elif args[i] == "--busy":
@@ -245,6 +372,10 @@ def main():
             desync = [float(m["mitadesync"]) for m in metrics if float(m.get("mitadesync", -1)) >= 0]
             if desync:
                 info["mitadesync_max"] = max(desync)
+        info["_lines"] = line_starts(path)
+        info["_doors"] = door_angles(path)
+        info["_lights"] = lights(path)
+        info["_bodies"] = bodies(path)
         results[role] = info
     if not results:
         failures.append("no lab logs found")
@@ -253,19 +384,48 @@ def main():
         if role != "host" and host_states and info.get("_states"):
             sync = compare(host_states, info["_states"])
             sync.update(compare_anims(results["host"]["_anims"], info["_anims"]))
+            walk = body_compare(results["host"]["_bodies"], info["_bodies"])
+            if walk:
+                sync["mita_walk_m_p90"], sync["mita_walk_m_max"], sync["mita_walk_samples"] = walk
+                if walk[0] > 0.6:
+                    failures.append(f"{role}: Mita {walk[0]} m from the host's while she moves (p90 of {walk[2]}, worst {walk[1]})")
+            light = light_compare(results["host"]["_lights"], info["_lights"])
+            if light is not None:
+                sync["light_mismatch"] = light
+                if light > 0.1 and not light_differs:
+                    failures.append(f"{role}: lighting differs from the host's in {light:.0%} of samples")
+            doors = door_compare(results["host"]["_doors"], info["_doors"])
+            if doors:
+                sync["door_deg_p90"], sync["door_flips"], sync["door_swing"] = doors
+                if (doors[0] or 0) > 15:
+                    failures.append(f"{role}: doors {doors[0]} degrees apart from the host's (p90)")
+                if doors[1] > 3:
+                    failures.append(f"{role}: door turned back on itself {doors[1]} times")
+                if doors[2] < 15:
+                    failures.append(f"{role}: door barely moved here ({doors[2]} degrees)")
+            by_start = line_mismatch(results["host"]["_lines"], info["_lines"])
+            if by_start is not None:
+                sync["dialogue_mismatch"] = round(by_start, 2)
             info["sync"] = sync
             if sync["npc_anim_changes"] >= 5 and (sync["npc_anim_start_s_p90"] or 0) > npc_lag_limit:
                 failures.append(f"{role}: NPC animations start {sync['npc_anim_start_s_p90']:.2f} s after the host's (p90)")
             if sync["samples"] >= 5:
+                # Two-second samples up to 1 s apart: a walking NPC is ~1 m off by timing alone. MT-BODY judges the walk itself.
+                if (sync["npc_m_p90"] or 0) > 1.5:
+                    failures.append(f"{role}: NPC bodies {sync['npc_m_p90']:.2f} m apart from the host's (p90)")
                 if (sync["dialogue_mismatch"] or 0) > 0.4:
                     failures.append(f"{role}: dialogue lines differ from the host's in {sync['dialogue_mismatch']:.0%} of samples")
-                if (sync["cutscene_mismatch"] or 0) > 0.3:
+                if (sync["cutscene_mismatch"] or 0) > 0.3 and not cutscene_differs:
                     failures.append(f"{role}: cutscene mode differs from the host's in {sync['cutscene_mismatch']:.0%} of samples")
                 if (sync["timeline_s_p90"] or 0) > 1.0:
                     failures.append(f"{role}: timelines {sync['timeline_s_p90']:.2f} s apart (p90)")
     for info in results.values():
         info.pop("_states", None)
         info.pop("_anims", None)
+        info.pop("_lines", None)
+        info.pop("_doors", None)
+        info.pop("_lights", None)
+        info.pop("_bodies", None)
     host_scene = results.get("host", {}).get("scene_end")
     for role, info in results.items():
         if role != "host" and not client_leaves and host_scene and info.get("scene_end") and info["scene_end"] != host_scene \

@@ -61,6 +61,7 @@ namespace MiSideTogether
 
         static bool WalkEvent(UnityEventBase e, int depth, HashSet<IntPtr> seen)
         {
+            e = TogetherRuntime.RealEvent(e);
             if (e == null) return false;
             int count = e.GetPersistentEventCount();
             for (int i = 0; i < count; i++)

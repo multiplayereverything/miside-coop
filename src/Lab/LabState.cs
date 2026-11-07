@@ -6,8 +6,8 @@ using UnityEngine.Playables;
 
 namespace MiSideTogether
 {
-    // Lab-only: every 2 s each machine logs what it shows, so tests/verify-lab.py can line machines up by wall clock and
-    // measure the real desync (players, Mitas, dialogue lines, timelines, cutscene mode):
+    // Every 2 s each machine logs what it shows (in the lab, and in real sessions for the session log), so tests/verify-lab.py
+    // can line machines up by wall clock and measure the real desync (players, Mitas, dialogue lines, timelines, cutscene mode):
     //   MT-STATE role=host scene=.. me=x,y,z,yaw,anim free=1 cut=0 peers=id:x,y,z,shown;.. npc=key#:x,y,z,state;..
     //            lines=hash;.. tl=hash:time;.. lag=max/mean
     // And every animation state change as it happens (scripted cutscene start times, compared across machines):
@@ -46,7 +46,7 @@ namespace MiSideTogether
 
         void StateTick(float now)
         {
-            if (!LabMode || now < nextState || ActiveSceneName == "SceneMenu") return;
+            if (now < nextState || ActiveSceneName == "SceneMenu") return;
             nextState = now + 2;
             StringBuilder s = new StringBuilder("MT-STATE role=").Append(Hosting ? "host" : "client").Append(" scene=").Append(ActiveSceneName.Replace(' ', '_'));
             PlayerMove player = LocalPlayer;
@@ -62,9 +62,11 @@ namespace MiSideTogether
             s.Append(" npc=");
             foreach (NpcRef n in Npcs())
                 if (n != null && n.Root != null && n.Root.gameObject.activeInHierarchy)
-                    s.Append(Wire.Hash(n.Key).ToString("x8")).Append(':').Append(P(n.Root.position)).Append(',').Append(n.Anim != null && n.Anim.isActiveAndEnabled ? n.Anim.GetCurrentAnimatorStateInfo(0).shortNameHash : 0).Append(';');
+                    s.Append(Wire.Hash(System.Text.RegularExpressions.Regex.Replace(n.Key, "#[0-9]+", "")).ToString("x8")).Append(':').Append(P(NpcBody(n))).Append(',').Append(n.Anim != null && n.Anim.isActiveAndEnabled ? n.Anim.GetCurrentAnimatorStateInfo(0).shortNameHash : 0).Append(';');
+            s.Append(" light=").Append(LightPrint());
             s.Append(" lines=");
-            foreach (Dialogue_3DText d in ActiveLines(now)) s.Append(Wire.Hash(SceneKeys.Key(d)).ToString("x8")).Append(';');
+            // By name: a sibling number moves when anything beside it is destroyed, and that isn't a different line.
+            foreach (Dialogue_3DText d in ActiveLines(now)) s.Append(Wire.Hash(System.Text.RegularExpressions.Regex.Replace(SceneKeys.Key(d), "#[0-9]+", "")).ToString("x8")).Append(';');
             s.Append(" tl=");
             foreach (PlayableDirector d in Directors())
                 if (d != null && d.state == PlayState.Playing) s.Append(Wire.Hash(SceneKeys.Key(d)).ToString("x8")).Append(':').Append(d.time.ToString("0.00")).Append(';');

@@ -47,7 +47,9 @@ This is the master list. The per-chapter detail (every game script type in every
 ## Testing and logs
 
 - **Run a tour:** `scripts/run-tour.ps1 -Tour <name>` (2 to 4 players, hidden windows, stops as soon as its checks pass).
-- **Run everything:** `scripts/lab-suite.ps1`. Only one tour runs at a time (`private/tour.lock`).
+- **Run everything:** `scripts/lab-suite.ps1`, about 45 minutes. Only one tour runs at a time (`private/tour.lock`).
+- **While working:** `scripts/lab-suite.ps1 -Quick`, 8 tours in about 8 minutes, or only the tours a change can affect. Each tour prints its time.
+- **A chapter on the story log:** `scene1` and `scene2` play the whole chapter and check both copies stay on the same quests. Gate kinds and what's still unproven: `docs/REMAKE-PLAN.md`, "Step 5 notes".
 - **Checks:** `MT-CHECK <name> PASS|FAIL <detail>`, the tour's own assertions.
 - **Health every 10 s (`MT-METRIC`):** fps, mod ms per frame (with the 4 most expensive subsystems), heap, errors, Mita desync.
 - **State every 2 s per machine (`MT-STATE`):**

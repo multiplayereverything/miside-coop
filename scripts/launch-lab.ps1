@@ -82,7 +82,7 @@ foreach ($lab in $labs) {
             Start-Sleep -Milliseconds 100
         }
     }
-    if ($lab.Name -eq 'host') { Start-Sleep 4 }
+    if ($lab.Name -eq 'host') { Start-Sleep 2 }
 }
 Set-Content (Join-Path $modRoot 'private/lab-pids.txt') (($started | ForEach-Object Id) -join "`n")
 Write-Output ("started " + (($started | ForEach-Object { $_.Id }) -join ', '))

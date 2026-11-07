@@ -51,7 +51,10 @@ namespace MiSideTogether
         // A press on the app's interface (not the game's menus, which use the same button class).
         public static bool IsAppButton(Component b)
         {
-            return b != null && ActiveSceneName == "Scene 1 - RealRoom" && SceneKeys.Key(b).Contains("/Tamagotchi#");
+            if (b == null || ActiveSceneName != "Scene 1 - RealRoom") return false;
+            string key = SceneKeys.Key(b);
+            // The tutorial's yes/no is the host's too: it decides what switches on, and the story log waits on that.
+            return key.Contains("/Tamagotchi#") || key.Contains("/Frame EnterTutorial#");
         }
 
         public static void AppClicked(UnityEngine.UI.Button b)
@@ -163,6 +166,15 @@ namespace MiSideTogether
             finally { Replaying = was; }
         }
 
+        // The style question only shows in Russian, so this player may still be on it when the host answers the next one.
+        static void SkipOwnStyleFrame()
+        {
+            Location1Tutorial t = Object.FindObjectOfType<Location1Tutorial>();
+            if (t == null || t.frameStyle == null || t.frameTutorial == null || !t.frameStyle.activeInHierarchy) return;
+            t.frameStyle.SetActive(false);
+            t.frameTutorial.SetActive(true);
+        }
+
         void ApplyAppCallCore(int entry, string target, int arg)
         {
             if (entry == 16)
@@ -176,7 +188,10 @@ namespace MiSideTogether
             if (entry == 19)
             {
                 ButtonMouseClick b = SceneKeys.Find<ButtonMouseClick>(target);
-                if (Missing(b, target) || Inactive(b, target)) return;
+                if (Missing(b, target)) return;
+                if (!b.gameObject.activeInHierarchy && target.Contains("/Frame EnterTutorial#")) SkipOwnStyleFrame();
+                // A press often hides its own button, and the release is what opens the next panel: it never waits.
+                if (arg != 1 && Inactive(b, target)) return;
                 if (arg == 1) b.PointerUp(); else b.PointerDown();
                 appCallsApplied++;
                 return;

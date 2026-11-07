@@ -3,44 +3,61 @@
 param([Parameter(Mandatory)][string]$Tour, [int]$Players = 2, [int]$Seconds = 0, [string]$Chapter = '', [switch]$Visible, [string]$ExtraHostArgs = '', [string]$ExtraClientArgs = '', [int]$Lag = 0, [int]$Jitter = 0, [string]$JoinAddress = '127.0.0.1')
 $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path $PSScriptRoot -Parent
+$tourStarted = Get-Date
 $tours = @{
-    'connect'  = @{ Seconds = 60;   Expect = @('ui.panel', 'connect.handshake', 'connect.roster', 'steam.ready', 'ui.menu', 'ui.menu.open') }
-    'core'     = @{ Seconds = 300;  Expect = @('chapter.loaded@host', 'core.driven@host', 'client.core.followed', 'core.answered@host', 'client.core.same') }
-    'quest'    = @{ Seconds = 360;  Expect = @('chapter.loaded@host', 'quest.clicked@host', 'client.quest.moved') }
+    # sessionlog: the tour itself logs one game error, to prove game errors reach the host.
+    'sessionlog' = @{ Seconds = 120; AllowGameErrors = $true; Expect = @('sessionlog.own@host', 'sessionlog.received@host', 'client.sessionlog.file') }
+    'samestart' = @{ Seconds = 120; Expect = @('samestart.sent@host', 'client.samestart.flags', 'client.samestart.objects', 'client.samestart.saves', 'client.samestart.photo') }
+    'storylog' = @{ Seconds = 200; Expect = @('storylog.sent@host', 'client.storylog.order', 'client.storylog.gated', 'client.storylog.same', 'client.storylog.request') }
+    'inputhook' = @{ Seconds = 150; Players = 1; Expect = @('inputhook.control@host', 'inputhook.forced@host') }
+    'desync'   = @{ Seconds = 186; Expect = @('chapter.loaded@host', 'client.desync.detected', 'client.desync.repaired') }
+    'connect'  = @{ Seconds = 60;  Expect = @('ui.panel', 'connect.handshake', 'connect.roster', 'steam.ready', 'ui.menu', 'ui.menu.open') }
+    'core'     = @{ Seconds = 174;  Expect = @('chapter.loaded@host', 'core.driven@host', 'client.core.followed', 'core.answered@host', 'client.core.same') }
+    'quest'    = @{ Seconds = 216;  Expect = @('chapter.loaded@host', 'quest.clicked@host', 'client.quest.moved') }
     # scene1: the app's Mita follows the host's steps (name, tidy-up), about 1 s late at a step; normal play is held to 1 s by 'mita'.
-    'scene1'   = @{ Seconds = 1500; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived') }
-    'choice'   = @{ Seconds = 240;  AllowGameErrors = $true; Expect = @('choice.picked@host', 'client.choice.applied', 'client.choice.navmesh') }
-    'scene1end' = @{ Seconds = 420; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived') }
-    'scene3'   = @{ Seconds = 480; AllowGameErrors = $true; Expect = @('s3.walk@host', 'client.s3.walk', 'client.s3.navmesh', 'client.s3.choice') }
+    'scene1'   = @{ Seconds = 880; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived', 'client.log.clean') }
+    'choice'   = @{ Seconds = 154;  AllowGameErrors = $true; Expect = @('choice.picked@host', 'client.choice.applied', 'client.choice.navmesh') }
+    'scene1end' = @{ Seconds = 306; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived', 'client.log.clean') }
+    'scene3'   = @{ Seconds = 326; AllowGameErrors = $true; Expect = @('s3.walk@host', 'client.s3.walk', 'client.s3.navmesh', 'client.s3.choice') }
     'storypilot' = @{ Seconds = 420; Expect = @('pilot.acted@host', 'client.pilot.same') }
-    'roomhold' = @{ Seconds = 200; Expect = @('room.off@host', 'client.room.kept') }
-    'menuleave' = @{ Seconds = 200; ClientLeaves = $true; Expect = @('leave.seen@host', 'client.leave.left') }
-    'menureturn' = @{ Seconds = 200; Expect = @('menu.back@host', 'client.menu.clean') }
-    'safe'     = @{ Seconds = 300;  Expect = @('safe.typed@host', 'client.safe.followed') }
-    'mobile'   = @{ Seconds = 300;  Expect = @('mobile.walked@host', 'client.mobile.seen', 'client.mobile.done') }
+    # scene2: the story autopilot through the whole chapter, the client pressing every second object.
+    # scene3full: as scene2, all of Scene 3. The other whole-chapter tours (scene1, scene1end) allow 1.5 s too.
+    'scene3full' = @{ Seconds = 800; NpcLagLimit = 1.5; LabTour = 'storypilot'; Chapter = 'Scene 3 - WeTogether'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.log.clean') }
+    # mitasame: Mita's real body in the same place on both copies, measured while she walks in Scene 3 (screenshots in the lab shots folders).
+    'afk'      = @{ Seconds = 90; Chapter = 'Scene 2 - InGame'; Expect = @('afk.console@host', 'client.afk.console') }
+    'door'     = @{ Seconds = 100; Chapter = 'Scene 3 - WeTogether'; Expect = @('door.pushed@host', 'client.door.pushed') }
+    'allhere'  = @{ Seconds = 120; Chapter = 'Scene 1 - RealRoom'; Expect = @('allhere.played@host', 'client.allhere.notice', 'client.allhere.brought') }
+    'mitasame' = @{ Seconds = 240; LabTour = 'storypilot'; Chapter = 'Scene 3 - WeTogether'; PlayerArgs = '-mt-pilotboth -mt-mitacheck'; Expect = @('mita.moved@host') }
+    'scene2'   = @{ Seconds = 500; LabTour = 'storypilot'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.log.clean') }
+    # roomhold: the client keeps a room the host's story switched off, so its lights differ on purpose.
+    'roomhold' = @{ Seconds = 162; LightDiffers = $true; Expect = @('room.off@host', 'client.room.kept') }
+    'menuleave' = @{ Seconds = 166; ClientLeaves = $true; Expect = @('leave.seen@host', 'client.leave.left') }
+    'menureturn' = @{ Seconds = 166; Expect = @('menu.back@host', 'client.menu.clean') }
+    'safe'     = @{ Seconds = 134;  Expect = @('safe.typed@host', 'client.safe.followed') }
+    'mobile'   = @{ Seconds = 182;  Expect = @('mobile.walked@host', 'client.mobile.seen', 'client.mobile.done') }
     'steam'    = @{ Seconds = 80;   SteamMock = $true; Expect = @('connect.handshake', 'connect.roster', 'steam.ready', 'client.steam.joined', 'client.steam.order') }
-    'avatars'  = @{ Seconds = 200;  Expect = @('ui.panel', 'chapter.loaded@host', 'client.follow.scene', 'client.follow.player', 'avatar.model', 'avatar.props', 'avatar.bones', 'avatar.near', 'avatar.anim', 'avatar.params', 'client.avatar.follows') }
-    'story'    = @{ Seconds = 200;  Expect = @('chapter.loaded@host', 'story.sent@host', 'client.story.applied', 'story.received@host') }
-    'mita'     = @{ Seconds = 240;  Expect = @('chapter.loaded@host', 'mita.sent@host', 'client.mita.synced', 'client.mita.face', 'mita.gaze@host', 'client.teleport.safe') }
-    'cutscene' = @{ Seconds = 240;  Expect = @('chapter.loaded@host', 'cutscene.sent@host', 'client.cutscene.started', 'client.cutscene.synced', 'cutscene.visibility') }
-    'world'    = @{ Seconds = 220;  Expect = @('chapter.loaded@host', 'items.hand.sent@host', 'items.key.sent@host', 'client.items.key', 'client.seed.match') }
+    'avatars'  = @{ Seconds = 134;  Expect = @('ui.panel', 'chapter.loaded@host', 'client.follow.scene', 'client.follow.player', 'avatar.model', 'avatar.props', 'avatar.bones', 'avatar.near', 'avatar.anim', 'avatar.params', 'client.avatar.follows') }
+    'story'    = @{ Seconds = 120;  Expect = @('chapter.loaded@host', 'story.sent@host', 'client.story.applied', 'story.received@host') }
+    'mita'     = @{ Seconds = 142;  Expect = @('chapter.loaded@host', 'mita.sent@host', 'client.mita.synced', 'client.mita.face', 'mita.gaze@host', 'client.teleport.safe') }
+    'cutscene' = @{ Seconds = 134;  Expect = @('chapter.loaded@host', 'cutscene.sent@host', 'client.cutscene.started', 'client.cutscene.synced', 'cutscene.visibility') }
+    'world'    = @{ Seconds = 122;  Expect = @('chapter.loaded@host', 'items.hand.sent@host', 'items.key.sent@host', 'client.items.key', 'client.seed.match') }
     'props'    = @{ Seconds = 200;  Expect = @('chapter.loaded@host', 'props.sent@host', 'client.props.synced') }
-    'minigame' = @{ Seconds = 220;  Expect = @('chapter.loaded@host', 'minigame.started@host', 'minigame.owned@host', 'client.minigame.watch', 'client.minigame.end') }
+    'minigame' = @{ Seconds = 166;  Expect = @('chapter.loaded@host', 'minigame.started@host', 'minigame.owned@host', 'client.minigame.watch', 'client.minigame.end') }
     'carry'    = @{ Seconds = 240;  Expect = @('chapter.loaded@host', 'carry.acted@host', 'client.carry.still', 'client.carry.finished', 'carry.sent@host', 'client.carry.mirrored', 'client.carry.released') }
-    'dialogue' = @{ Seconds = 200;  Expect = @('chapter.loaded@host', 'dialogue.sent@host', 'client.dialogue.started', 'client.dialogue.lag') }
-    'gather'   = @{ Seconds = 200;  Expect = @('chapter.loaded@host', 'gather.cutscene@host', 'client.gather.done', 'client.teleport.safe') }
-    'room'     = @{ Seconds = 200;  Expect = @('chapter.loaded@host', 'room.changed@host', 'client.room.active', 'client.room.place', 'client.room.light') }
-    'mirror'   = @{ Seconds = 420;  Expect = @('chapter.loaded@host', 'mirror.acted@host', 'client.mirror.played', 'client.mirror.placed', 'client.mirror.end') }
-    'interactions' = @{ Seconds = 480; Expect = @('interactions.pressed@host', 'client.interactions.mirrored', 'client.interactions.placed', 'client.interactions.free') }
-    'triggers' = @{ Seconds = 300;  Expect = @('triggers.distance@host', 'triggers.hold@host', 'client.triggers.distance', 'client.triggers.hold') }
-    'scene19'  = @{ Seconds = 420;  AllowGameErrors = $true; Expect = @('scene19.followed@host', 'client.scene19.followed') }
-    'hostcut'  = @{ Seconds = 200;  Expect = @('client.hostcut.requested', 'hostcut.ran@host', 'client.hostcut.played') }
-    'held'     = @{ Seconds = 200;  Expect = @('held.plane@host', 'held.door@host') }
-    'phone'    = @{ Seconds = 480;  Expect = @('phone.taken@host', 'phone.held@host', 'client.phone.still', 'client.phone.seen', 'client.phone.gone') }
-    'novella'  = @{ Seconds = 240;  Expect = @('novella.read@host', 'client.novella.synced', 'novella.clientclick@host') }
-    'lobby'    = @{ Seconds = 300;  Players = 4; Expect = @('lobby.held@host', 'lobby.waited@c3', 'lobby.together@host', 'lobby.arrived@c1', 'lobby.arrived@c2', 'lobby.arrived@c3') }
-    'migrate'  = @{ Seconds = 240;  Players = 3; Expect = @('migrate.hostleft@host', 'migrate.host@c1', 'migrate.joined@c2', 'migrate.scene@c1', 'migrate.scene@c2') }
-    'death'    = @{ Seconds = 220;  Expect = @('chapter.loaded@host', 'death.sent@host', 'client.death.restart') }
+    'dialogue' = @{ Seconds = 122;  PlayerArgs = '-mt-nolog'; Expect = @('chapter.loaded@host', 'dialogue.sent@host', 'client.dialogue.started', 'client.dialogue.lag') }
+    'gather'   = @{ Seconds = 154;  CutsceneDiffers = $true; Expect = @('chapter.loaded@host', 'gather.cutscene@host', 'client.gather.done', 'client.teleport.safe') }
+    'room'     = @{ Seconds = 134;  Expect = @('chapter.loaded@host', 'room.changed@host', 'client.room.active', 'client.room.place', 'client.room.light') }
+    'mirror'   = @{ Seconds = 122;  PlayerArgs = '-mt-nolog'; Expect = @('chapter.loaded@host', 'mirror.acted@host', 'client.mirror.played', 'client.mirror.placed', 'client.mirror.end') }
+    'interactions' = @{ Seconds = 164; Expect = @('interactions.pressed@host', 'client.interactions.mirrored', 'client.interactions.placed', 'client.interactions.free') }
+    'triggers' = @{ Seconds = 186;  Expect = @('triggers.distance@host', 'triggers.hold@host', 'client.triggers.distance', 'client.triggers.hold') }
+    'scene19'  = @{ Seconds = 206;  AllowGameErrors = $true; Expect = @('scene19.followed@host', 'client.scene19.followed') }
+    'hostcut'  = @{ Seconds = 146;  Expect = @('client.hostcut.requested', 'hostcut.ran@host', 'client.hostcut.played') }
+    'held'     = @{ Seconds = 166;  Expect = @('held.plane@host', 'held.door@host') }
+    'phone'    = @{ Seconds = 178;  Expect = @('phone.taken@host', 'phone.held@host', 'client.phone.still', 'client.phone.seen', 'client.phone.gone') }
+    'novella'  = @{ Seconds = 162;  Expect = @('novella.read@host', 'client.novella.synced', 'novella.clientclick@host') }
+    'lobby'    = @{ Seconds = 238;  Players = 4; Expect = @('lobby.held@host', 'lobby.waited@c3', 'lobby.together@host', 'lobby.arrived@c1', 'lobby.arrived@c2', 'lobby.arrived@c3') }
+    'migrate'  = @{ Seconds = 142;  Players = 3; Expect = @('migrate.hostleft@host', 'migrate.host@c1', 'migrate.joined@c2', 'migrate.scene@c1', 'migrate.scene@c2') }
+    'death'    = @{ Seconds = 144;  Expect = @('chapter.loaded@host', 'death.sent@host', 'client.death.restart') }
     'inventory' = @{ Seconds = 1200; Players = 1; Expect = @('inventory.done@host') }
     'survey'   = @{ Seconds = 900;  Expect = @('survey.done@host') }
     'chapters' = @{ Seconds = 2400; Expect = @('chapters.done@host', 'client.teleport.safe') }
@@ -68,7 +85,9 @@ foreach ($log in Get-ChildItem $labRoot -Filter 'misidetogether-lab.log' -Recurs
     }
 }
 $hostArgs = ''
-if ($Chapter) { $hostArgs += ' -mt-chapter ' + ($Chapter -replace ' ', '_') }
+$labChapter = if ($Chapter) { $Chapter } else { $spec.Chapter }
+if ($labChapter) { $hostArgs += ' -mt-chapter ' + ($labChapter -replace ' ', '_') }
+if ($spec.PlayerArgs) { $hostArgs += ' ' + $spec.PlayerArgs; $ExtraClientArgs = "$($spec.PlayerArgs) $ExtraClientArgs" }
 if ($ExtraHostArgs) { $hostArgs += ' ' + $ExtraHostArgs }
 # Lab copies share the user's MiSide save folder: back it up for the run and put it back afterwards.
 $saveDir = Join-Path $env:USERPROFILE 'AppData\LocalLow\AIHASTO\MiSideFull\Save'
@@ -86,25 +105,38 @@ if ((Test-Path $saveDir) -and (Get-ChildItem $saveDir -File -ErrorAction Silentl
 }
 if ($spec.Players) { $Players = $spec.Players }
 $lagArgs = if ($Lag -gt 0) { "-mt-lag $Lag $Jitter" } else { '' }
-& (Join-Path $PSScriptRoot 'launch-lab.ps1') -Players $Players -HostArgs "$hostArgs $lagArgs" -ClientArgs "$lagArgs $ExtraClientArgs" -JoinAddress $JoinAddress -Tour $Tour -Visible:$Visible -SteamMock:([bool]$spec.SteamMock)
+& (Join-Path $PSScriptRoot 'launch-lab.ps1') -Players $Players -HostArgs "$hostArgs $lagArgs" -ClientArgs "$lagArgs $ExtraClientArgs" -JoinAddress $JoinAddress -Tour $(if ($spec.LabTour) { $spec.LabTour } else { $Tour }) -Visible:$Visible -SteamMock:([bool]$spec.SteamMock)
 
 # Every tour stops as soon as all its expected checks have passed (or one failed), or at its time limit.
 $deadline = (Get-Date).AddSeconds($Seconds)
 $probe = Join-Path $labRoot 'tour-probe.json'
+Remove-Item $probe -ErrorAction SilentlyContinue
+$labPids = Get-Content (Join-Path $labRoot 'lab-pids.txt') | ForEach-Object { [int]$_ }
 $probeArgs = @((Join-Path $modRoot 'tests/verify-lab.py'), $modRoot, '--out', $probe)
 if ($spec.AllowGameErrors) { $probeArgs += '--allow-game-errors' }
 if ($spec.NpcLagLimit) { $probeArgs += @('--npc-lag-limit', [string]$spec.NpcLagLimit) }
 if ($spec.ClientLeaves) { $probeArgs += '--client-leaves' }
 foreach ($e in $spec.Expect) { $probeArgs += @('--expect', $e) }
 do {
-    Start-Sleep 5
+    Start-Sleep 1
     python -I @probeArgs | Out-Null
     $probeResult = Get-Content $probe -Raw | ConvertFrom-Json
     $waiting = @($probeResult.failures | Where-Object { $_ -match 'not seen|no client passed|no lab logs' }).Count
     $failedCheck = @($probeResult.failures | Where-Object { $_ -match 'check .* failed' }).Count
+    # A copy that has gone can't finish the tour: don't wait out the time limit. (ClientLeaves tours and migrate can end a copy on purpose.)
+    $gone = @($labPids | Where-Object { -not (Get-Process -Id $_ -ErrorAction SilentlyContinue) })
+    if ($gone.Count -gt 0 -and -not $spec.ClientLeaves -and $Tour -ne 'migrate') { Write-Output "lab copy gone early (PID $($gone -join ', '))"; break }
+    # A copy can hang on the logo screen (seen twice, cause unknown): that run has nothing to tell, and its time limit is minutes away.
+    $copies = @($probeResult.instances.PSObject.Properties | ForEach-Object { $_.Value })
+    if (((Get-Date) - $tourStarted).TotalSeconds -gt 60 -and ($copies.Count -lt $Players -or @($copies | Where-Object { $_.scene_end -eq 'SceneAihasto' }).Count -gt 0)) { Write-Output "lab copy stuck at the start: stopping"; break }
 } while (($waiting -gt 0) -and ($failedCheck -eq 0) -and ((Get-Date) -lt $deadline))
-# A few more seconds so error and memory samples cover the end of the tour.
-Start-Sleep 10
+# A moment more so error samples cover the end of the tour, and longer only while a client is still following the host.
+Start-Sleep 3
+for ($try = 0; $try -lt 10; $try++) {
+    python -I @probeArgs | Out-Null
+    if (-not ((Get-Content $probe -Raw | ConvertFrom-Json).failures -match 'ended in')) { break }
+    Start-Sleep 1
+}
 $pids = Get-Content (Join-Path $labRoot 'lab-pids.txt') | ForEach-Object { [int]$_ }
 foreach ($id in $pids) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }
 foreach ($id in $pids) { Wait-Process -Id $id -Timeout 15 -ErrorAction SilentlyContinue }
@@ -117,10 +149,14 @@ Write-Output 'restored the user''s saves'
 $name = if ($Chapter) { "$Tour-" + ($Chapter -replace '[^A-Za-z0-9]+', '_') } else { $Tour }
 $out = Join-Path $modRoot "artifacts/tests/$name-results.json"
 New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
+# Old results must not stand in for this run if the verifier fails.
+Remove-Item $out -ErrorAction SilentlyContinue
 $verify = @((Join-Path $modRoot 'tests/verify-lab.py'), $modRoot, '--out', $out)
 if ($spec.AllowGameErrors) { $verify += '--allow-game-errors' }
 if ($spec.NpcLagLimit) { $verify += @('--npc-lag-limit', [string]$spec.NpcLagLimit) }
 if ($spec.ClientLeaves) { $verify += '--client-leaves' }
+if ($spec.CutsceneDiffers) { $verify += '--cutscene-differs' }
+if ($spec.LightDiffers) { $verify += '--light-differs' }
 # Other games running beside the lab (another mod's lab copies) slow every copy down: frame cost is then not the mod's.
 $busyGames = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.WorkingSet64 -gt 300MB -and $_.Path -and $_.Path -notlike "$labRoot*" -and ($_.Path -like '*steamapps*' -or $_.ProcessName -match 'Unity|BALDI') })
 if ($busyGames.Count -gt 0) { $verify += @('--busy', (($busyGames | ForEach-Object ProcessName | Sort-Object -Unique) -join ',')) }
@@ -139,7 +175,7 @@ foreach ($u in Get-ChildItem (Join-Path $labRoot 'lab-logs') -Filter '*.log' -Er
     if ($errs) { $errs | ForEach-Object { $_.Line; $_.Context.PostContext } | Set-Content (Join-Path $keep ("unity-" + $u.BaseName + "-errors.txt")) }
 }
 $result = Get-Content $out -Raw | ConvertFrom-Json
-Write-Output ("{0}: {1}" -f $name, $(if ($result.pass) { 'PASS' } else { 'FAIL' }))
+Write-Output ("{0}: {1} in {2:0} s" -f $name, $(if ($result.pass) { 'PASS' } else { 'FAIL' }), ((Get-Date) - $tourStarted).TotalSeconds)
 foreach ($f in $result.failures) { Write-Output "  - $f" }
 foreach ($p in $result.instances.PSObject.Properties) {
     $i = $p.Value

@@ -16,7 +16,7 @@ namespace MiSideTogether
             if (harmony != null) return;
             harmony = new HarmonyLib.Harmony("local.misidetogether.multiplayer");
             Patch(typeof(ObjectInteractive), "Click", "InteractPrefix", "InteractPostfix");
-            Patch(typeof(Trigger_MouseClick), "Click", null, "MouseClickPostfix");
+            Patch(typeof(Trigger_MouseClick), "Click", "MouseClickPrefix", "MouseClickPostfix");
             Patch(typeof(Trigger_Event), "TargetEnter", "TriggerEnterPrefix", "TriggerEnterPostfix");
             Patch(typeof(Trigger_Event), "TargetExit", "TriggerExitPrefix", "TriggerExitPostfix");
             Patch(typeof(Trigger_Event), "Restart", null, "TriggerRestartPostfix");
@@ -28,6 +28,14 @@ namespace MiSideTogether
             Patch(typeof(PlayerMove), "AnimationPlay", "PlayerAnimationPrefix", null);
             Patch(typeof(PlayerPerson), "EventKey", null, "AnimEventPostfix", typeof(int));
             Patch(typeof(PlayerMove), "AnimationHandPlay", "PlayerHandAnimationPrefix", null);
+            Patch(typeof(GameController), "Update", "ControllerUpdatePrefix", null);
+            Patch(typeof(Location3CutCarrot), "CutStart", "MainCharacterOnlyPrefix", null);
+            Patch(typeof(Location3WalkToToilet), "Start", "MainCharacterOnlyPrefix", null);
+            Patch(typeof(Location3WalkToToilet), "LateUpdate", "MainCharacterOnlyPrefix", null);
+            Patch(typeof(Location34_Communication), "TakeEventWhenReadyWalk", "ReadyEventPrefix", null);
+            Patch(typeof(Location34_Communication), "TakeEventWhenReadyWalkIgnoryAnimation", "ReadyEventPrefix", null);
+            Patch(typeof(Player_Position), "Play", "ScriptedMovePrefix", null);
+            Patch(typeof(Player_Position), "Stop", "ScriptedMovePrefix", null);
             Patch(typeof(ObjectAnimationPlayer), "AnimationPlay", null, "ObjectAnimationPostfix");
             Patch(typeof(ObjectAnimationPlayer), "AnimationPlayFast", null, "ObjectAnimationFastPostfix");
             Patch(typeof(ObjectAnimationPlayer), "AnimationPlayOnPlayer", null, "ObjectAnimationOnPlayerPostfix");
@@ -100,6 +108,8 @@ namespace MiSideTogether
             Patch(typeof(Character_Look), "PriorityLookOnPlayer", "PriorityLookOnPlayerPrefix", null);
             Patch(typeof(Character_Look), "LookRotatePriorityOnPlayer", "PriorityLookAndOnPlayerPrefix", null);
             Patch(typeof(Character_Look), "PriorityLookAndOnPlayer", "PriorityLookAndOnPlayerPrefix", null);
+            Patch(typeof(GameController), "PhotomodeActive", "PhotomodePrefix", null, typeof(bool));
+            Patch(typeof(ConsoleCall), "Update", "ConsoleUpdatePrefix", null);
             applied += TogetherRuntime.InstallMinigamePatches(harmony);
             TogetherRuntime.Log("Harmony patches applied: " + applied + ", failed: " + failed);
         }
@@ -118,6 +128,9 @@ namespace MiSideTogether
             catch (Exception ex) { failed++; TogetherRuntime.Log("Patch failed " + type.Name + "." + name + ": " + ex.Message); }
         }
 
+        static bool PhotomodePrefix(bool __0) { return !__0 || TogetherRuntime.PhotoModeAllowed(); }
+        static bool ConsoleUpdatePrefix() { return TogetherRuntime.ConsoleAllowed(); }
+
         // Exceptions must never escape into the game's native frames.
         static void Safe(string where, Action action)
         {
@@ -134,15 +147,25 @@ namespace MiSideTogether
             // animation at once, and without the note the animation counted as another player's (it was held back when
             // the other player happened to be animating too).
             if (__state && !TogetherRuntime.Replaying && !TogetherRuntime.ReplayingInteraction)
-                try { TogetherRuntime.NoteLocalClick(SceneKeys.Key(__instance)); } catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook Interact note: " + ex.Message); }
+                try { TogetherRuntime.NoteLocalClick(SceneKeys.Key(__instance)); TogetherRuntime.NoteHostPress(); } catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook Interact note: " + ex.Message); }
             bool hostOnly = false;
             try { hostOnly = TogetherRuntime.HostOnlyClick(__instance); } catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook Interact: " + ex.Message); }
-            if (hostOnly) __state = false;
-            return !hostOnly;
+            if (hostOnly) { __state = false; return false; }
+            bool request = false;
+            if (__state && !TogetherRuntime.ReplayingInteraction)
+                try { request = TogetherRuntime.RequestInstead(Op.Interact, __instance); } catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook Interact request: " + ex.Message); }
+            if (request) __state = false;
+            return !request;
         }
         static void InteractPostfix(ObjectInteractive __instance, bool __state) { if (__state) Safe("Interact", () => TogetherRuntime.Story(Op.Interact, __instance, 0)); }
 
-        static void MouseClickPostfix(Trigger_MouseClick __instance) { Safe("MouseClick", () => TogetherRuntime.Story(Op.MouseClick, __instance, 0)); }
+        static bool MouseClickPrefix(Trigger_MouseClick __instance, out bool __state)
+        {
+            __state = true;
+            try { __state = !TogetherRuntime.RequestInstead(Op.MouseClick, __instance); } catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook MouseClick: " + ex.Message); }
+            return __state;
+        }
+        static void MouseClickPostfix(Trigger_MouseClick __instance, bool __state) { if (__state) Safe("MouseClick", () => TogetherRuntime.Story(Op.MouseClick, __instance, 0)); }
 
         static bool TriggerEnterPrefix(Trigger_Event __instance)
         {
@@ -223,7 +246,7 @@ namespace MiSideTogether
         static void RemoveItemPostfix(PlayerMove __instance) { Safe("RemoveItem", () => TogetherRuntime.AfterRemoveItem(__instance, removing, removingKey)); }
 
         // Only story looks (one-shot or self-destroying); plain hover effects stay local.
-        static void LookEnterPostfix(Trigger_MouseEvent __instance) { Safe("LookEnter", () => { if (__instance != null && (__instance.oneTime || __instance.destroyEnterMouse)) TogetherRuntime.Story(Op.LookTrigger, __instance, 1); }); }
+        static void LookEnterPostfix(Trigger_MouseEvent __instance) { Safe("LookEnter", () => { if (__instance != null && (__instance.oneTime || __instance.destroyEnterMouse || TogetherRuntime.StoryLook(__instance))) TogetherRuntime.Story(Op.LookTrigger, __instance, 1); }); }
         static void LookUpdatePrefix(Trigger_MouseEvent __instance) { Safe("LookBefore", () => TogetherRuntime.LookBefore(__instance)); }
         static void LookUpdatePostfix(Trigger_MouseEvent __instance) { Safe("LookAfter", () => TogetherRuntime.LookAfter(__instance)); }
         static void DistancePrefix(Trigger_DistanceCircle __instance) { Safe("DistanceBefore", () => TogetherRuntime.DistanceBefore(__instance)); }
@@ -322,6 +345,14 @@ namespace MiSideTogether
                 return CutsceneRules.ForInteraction(TogetherRuntime.ReplayingInteractionKey, null).Who == CutsceneRules.Who.Everyone;
             }
             catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook PlayerHandAnimation: " + ex.Message); return false; }
+        }
+        static void ControllerUpdatePrefix(GameController __instance) { TogetherRuntime.HoldIdleConsole(__instance); }
+        static bool MainCharacterOnlyPrefix() { return !TogetherRuntime.NotMyMoment; }
+        static void ReadyEventPrefix(Events_Data __0) { Safe("ReadyEvent", () => TogetherRuntime.GateReadyEvent(__0)); }
+        static bool ScriptedMovePrefix(Player_Position __instance)
+        {
+            try { return !TogetherRuntime.SkipScriptedMove(__instance); }
+            catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook ScriptedMove: " + ex.Message); return true; }
         }
         static void AnimEventPostfix(int __0) { Safe("AnimEvent", () => TogetherRuntime.AfterAnimEvent(__0)); }
         static void ObjectAnimationPostfix(ObjectAnimationPlayer __instance) { Safe("ObjectAnimation", () => TogetherRuntime.AfterObjectAnimation(__instance, 0)); }

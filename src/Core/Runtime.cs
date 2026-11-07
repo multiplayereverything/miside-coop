@@ -34,7 +34,7 @@ namespace MiSideTogether
     // C# class avoids Il2CppInterop trying to expose every helper method to the native side.
     public sealed partial class TogetherRuntime
     {
-        public const string ModVersion = "0.3.6";
+        public const string ModVersion = "0.3.11";
         public static TogetherRuntime Instance;
         public static Action<string> Log = delegate { };
         public ITransport Network;
@@ -86,6 +86,7 @@ namespace MiSideTogether
             RestoreSaves();
             string[] args = Environment.GetCommandLineArgs();
             InitLab(args);
+            InstallSessionLog();
             for (int i = 0; i < args.Length; i++)
             {
                 if (args[i] == "-mt-host") autoRole = "host";
@@ -167,6 +168,8 @@ namespace MiSideTogether
             catch (Exception ex) { Log("Steam hosting unavailable: " + ex.Message); }
             if (how.Length == 0) { host.Dispose(); Tell("Could not host: no network available."); return; }
             Network = host;
+            OpenSessionLog();
+            EnterRules();
             ResetSession();
             UpdatePresence(true);
             Tell("Hosting on " + how + ". Friends join from the Multiplayer menu. You lead: they follow your chapter.");
@@ -179,6 +182,8 @@ namespace MiSideTogether
             leftOnPurpose = false;
             Transport tcp = new Transport();
             Network = tcp;
+            OpenSessionLog();
+            EnterRules();
             ResetSession();
             tcp.Join(Address, Port);
             Tell("Connecting to " + Address + ":" + Port + "...");
@@ -193,6 +198,8 @@ namespace MiSideTogether
                 SteamTransport steam = new SteamTransport();
                 steam.Join(host);
                 Network = steam;
+                OpenSessionLog();
+                EnterRules();
                 ResetSession();
                 Tell("Joining " + name + " through Steam...");
             }
@@ -228,7 +235,7 @@ namespace MiSideTogether
         {
             if (Network != null)
             {
-                try { if (Connected) Broadcast(Wire.Packet(Op.Leave, null)); } catch { }
+                try { if (Connected) { SendSessionLines(ChunksPerSend); Broadcast(Wire.Packet(Op.Leave, null)); } } catch { }
                 Network.Dispose();
             }
             Network = null;
@@ -238,12 +245,14 @@ namespace MiSideTogether
             peers.Clear();
             self = -1;
             ResetSession();
+            if (!migrating) { CloseSessionLog(); LeaveRules(); }
         }
 
         void ResetSession()
         {
             ResetSceneSync();
             ResetWorldSync();
+            ResetStoryLog();
         }
 
         public void OnApplicationQuit() { Shutdown(); ShutdownLanDiscovery(); }
@@ -257,7 +266,7 @@ namespace MiSideTogether
 
         void UpdateCore()
         {
-            if (!started) { started = true; if (autoRole == "host") StartHost(); if (autoRole == "join" && !LateLabJoiner) StartJoin(); }
+            if (!started) { started = true; if (autoRole == "host") StartHost(); if (autoRole == "join" && !LateLabJoiner && labTour != "samestart") StartJoin(); }
             // The second copy (-mt-join) keeps trying until the main game hosts, unless the player left on purpose.
             if (SecondCopy && autoRole == "join" && !Active && !leftOnPurpose && Time.realtimeSinceStartup >= secondJoinAt) { secondJoinAt = Time.realtimeSinceStartup + 3; StartJoin(); }
             if (Input.GetKeyDown(KeyCode.F5)) SetPanel(!show);
@@ -283,6 +292,9 @@ namespace MiSideTogether
             if (Connected) Step("world", UpdateWorldSync);
             if (Connected) Step("app", AppDialogueTick);
             Step("avatars", UpdateAvatars);
+            if (Connected) Step("session-log", SessionLogTick);
+            if (Connected) Step("rules", RulesTick);
+            if (Connected && !LabMode) Step("session-state", () => StateTick(Time.realtimeSinceStartup));
             // Lab diagnostics are not the mod's cost: the frame stopwatch pauses for them (they stay in steps=).
             if (LabMode)
             {
