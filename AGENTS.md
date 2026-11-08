@@ -114,6 +114,8 @@ Here a test is an `MT-CHECK` in a tour, listed in that tour's `Expect` in `scrip
 - **Saves:**
   - `<persistentDataPath>/Save` (the `Continue` file and friends): the host scans it every 2 s and mirrors changes; clients back up their own saves first.
   - `GlobalGame.dataFiles` is the Data folder (languages and voices), not the saves. Redirecting it breaks voice loading.
+- **Scene keys:** every object's key is recorded when the chapter loads (`SceneKeys.RegisterItems`), the same on every PC. A key computed later can drift (sibling numbers change as the story spawns and destroys objects).
+- **Debug page:** F5, "Debug page" (`src/UI/DebugPage.cs`, `Op.Status`): each player's chapter, quests, story position, what they wait on, ping; skip a stuck step; save a bug report on every PC.
 - **Native menu:**
   - MULTIPLAYER is cloned from `Button Settings`; the page is cloned from `Location MainOptions`, with rows cloned from `Button Option Game`.
   - After changing a page's `objects`, call `MenuLocation.Start()` again; otherwise `MenuLocation.Update` throws ArgumentOutOfRange every frame.
@@ -144,6 +146,7 @@ Here a test is an `MT-CHECK` in a tour, listed in that tour's `Expect` in `scrip
 ## Rules
 - **Build and test:** build with `scripts/build.ps1`. Test with `scripts/run-tour.ps1 -Tour <tour>` or `scripts/lab-suite.ps1`.
   - Lab copies start minimized as normal 480x270 windows titled "MiSide lab - <name>" (lowest quality, 30 fps via `-mt-fps`, BelowNormal priority). Restoring one from the taskbar brings it up small at the right edge of the primary monitor; the launcher sets that once and never moves, re-minimizes or focuses a window afterwards (`launch-lab.ps1 -Hidden` hides them instead). The mod keeps `Application.runInBackground` on, so minimized copies keep running. The user's PC is shared with other mods' labs: one tour at a time, and never send keys or clicks to the desktop.
+  - Presses in tours go through `LabPress(o)` (`src/Lab/LabPress.cs`), never `o.Click()`: a player's press never calls `Click`, so a tour calling it tests a path real play doesn't take.
   - Screenshots: `LabShot("label")` / `LabShotAll("label")` write `shots/<label>.rgb` next to the lab game (encoders are stripped); `python tools/shots_to_png.py private/lab-host/shots private/lab-client/shots` makes PNGs to compare what each player sees.
   - `-mt-dump <scene>` (scene name with `_` for spaces) writes the hierarchy and, in `private-wires-<scene>.txt`, every persistent UnityEvent call (`source [Type].field -> target [Type].Method`). To find what arms or starts something, search the wiring for its name and walk backwards.
   - A fresh install stops in `SceneLoading` on the game's LANGUAGE/VOICE picker; lab copies answer it with English (`FirstRunLanguageTick`, Lab.cs).
