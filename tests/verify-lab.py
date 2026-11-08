@@ -261,6 +261,47 @@ def slope(values):
     return sum((x - mx) * (y - my) for x, y in zip(range(n), values)) / den if den else 0.0
 
 
+def log_flood(path):
+    """The most times one story-log entry (MT-LOG <seq> <op> <key>) was logged within one second, if more than 10:
+    a game event the game fires every frame (Scene 5's BloodFloor ToiletDoor, an Animator_OneTimeDestroy kept alive by
+    dontDeleteThis) must not go to every client 30 times a second."""
+    seen = {}
+    worst = (0, "")
+    pattern = re.compile(r"^(\d\d):(\d\d):(\d\d)\.(\d+) MT-LOG \d+ (.+)$")
+    with open(path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            m = pattern.match(line)
+            if not m:
+                continue
+            t = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + int(m.group(3)) + float("0." + m.group(4))
+            times = seen.setdefault(m.group(5), [])
+            times.append(t)
+            while times and t - times[0] > 1.0:
+                times.pop(0)
+            if len(times) > worst[0]:
+                worst = (len(times), m.group(5))
+    return worst if worst[0] > 10 else None
+
+
+def beside_gates(path):
+    """Chapter scenes the story used beside the one the client started in (Scene 5 loads Scene 6 additively) whose
+    events never came through the story log here: presses there were applied but no gated event (timers, line ends,
+    animation events) was. Returns those scene names."""
+    first, presses, gates = None, set(), set()
+    pattern = re.compile(r"MT-STORY applied (\w+) (?:\S+@\d+:)?(Scene \d+ - [^/]+)/")
+    with open(path, encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if first is None:
+                m = re.search(r"Scene now (Scene \d+ - \S+)", line)
+                if m:
+                    first = m.group(1)
+            m = pattern.search(line)
+            if m:
+                (gates if m.group(1) == "Gate" else presses).add(m.group(2))
+    # No gate at all: this chapter was not on the story log, so nothing could come through it.
+    return sorted(s for s in presses - gates if s != first) if first and gates else []
+
+
 def main():
     root = Path(sys.argv[1])
     args = sys.argv[2:]
@@ -301,6 +342,11 @@ def main():
         for n, p, d in checks:
             if not p:
                 failures.append(f"{role}: check {n} failed: {d}")
+        for scene in beside_gates(path):
+            failures.append(f"{role}: {scene} was played beside the chapter, but none of its story events came through the log here")
+        flood = log_flood(path)
+        if flood:
+            failures.append(f"{role}: the story log repeats one entry {flood[0]} times within a second: {flood[1]}")
         if moderrors:
             failures.append(f"{role}: {len(moderrors)} mod errors, first: {moderrors[0]}")
         if metrics:

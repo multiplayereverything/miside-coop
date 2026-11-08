@@ -45,6 +45,10 @@ namespace MiSideTogether
             Patch(typeof(GameController), "AddKeyItem", "KeyItemPrefix", "KeyAddPostfix", typeof(GameObject));
             Patch(typeof(GameController), "RemoveKeyItem", "KeyItemPrefix", "KeyRemovePostfix", typeof(GameObject));
             Patch(typeof(PlayerMove), "TakeItem", "TakeItemPrefix", "TakeItemPostfix", typeof(GameObject));
+            Patch(typeof(ObjectInteractiveItemTake), "Take", "ItemTakePrefix", null);
+            Patch(typeof(ObjectInteractiveItemTake), "TakeDestroy", null, "TakeDestroyPostfix");
+            Patch(typeof(Scene_Load), "UnloadScene", null, "SceneUnloadPostfix", typeof(string));
+            Patch(typeof(LampBox), "Update", "LampPrefix", null);
             Patch(typeof(PlayerMove), "RemoveItem", "RemoveItemPrefix", "RemoveItemPostfix");
             Patch(typeof(Dialogue_3DText), "SkipDialogue", null, "SkipDialoguePostfix");
             Patch(typeof(Dialogue_3DText), "Start", null, "DialogueStartPostfix");
@@ -71,6 +75,7 @@ namespace MiSideTogether
             Patch(typeof(ButtonMouseClick), "PointerDown", "AppButtonPrefix", "AppButtonDownPostfix");
             Patch(typeof(ButtonMouseClick), "PointerUp", "AppButtonPrefix", "AppButtonUpPostfix");
             Patch(typeof(TamagotchiGame_Cooking), "Ready", null, "AppCookedPostfix");
+            Patch(typeof(TamagotchiGame_Cooking), "Cut", null, "AppCutPostfix");
             Patch(typeof(UnityEngine.UI.Button), "Press", "AppUiButtonPrefix", "AppUiButtonPostfix");
             Patch(typeof(Location14_PlayerMobileMove), "Update", "MobileRunPrefix", null);
             Patch(typeof(Location14_PlayerMobileMove), "FixedUpdate", "MobileRunPrefix", null);
@@ -191,21 +196,28 @@ namespace MiSideTogether
         }
         static void MouseClickPostfix(Trigger_MouseClick __instance, bool __state) { if (__state) Safe("MouseClick", () => TogetherRuntime.Story(Op.MouseClick, __instance, 0)); }
 
-        static bool TriggerEnterPrefix(Trigger_Event __instance)
+        // Only what the trigger really does is relayed. Harmony runs a postfix even when the prefix skipped the method, and
+        // the game's own TargetEnter/TargetExit do nothing in some states (disassembly: enter needs !triggerActive &&
+        // !enterTime; exit needs triggerActive && !exitTime, then destroys the trigger if destroyOnExit). Relaying those
+        // no-ops made Scene 5's toilet trigger log 12 exits, and the host's no-op exit hid the client's real one, so the
+        // client's copy was destroyed and the host's wasn't.
+        static bool TriggerEnterPrefix(Trigger_Event __instance, out bool __state)
         {
-            try { return TogetherRuntime.BeforeTriggerEnter(__instance); }
+            __state = false;
+            try { bool run = TogetherRuntime.BeforeTriggerEnter(__instance); __state = run && !__instance.triggerActive && !__instance.enterTime; return run; }
             catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook TriggerEnter: " + ex.Message); return true; }
         }
 
-        static void TriggerEnterPostfix(Trigger_Event __instance) { Safe("TriggerEnter", () => TogetherRuntime.AfterTriggerEnter(__instance)); }
+        static void TriggerEnterPostfix(Trigger_Event __instance, bool __state) { if (__state) Safe("TriggerEnter", () => TogetherRuntime.AfterTriggerEnter(__instance)); }
 
-        static bool TriggerExitPrefix(Trigger_Event __instance)
+        static bool TriggerExitPrefix(Trigger_Event __instance, out bool __state)
         {
-            try { return TogetherRuntime.BeforeTriggerExit(__instance); }
+            __state = false;
+            try { bool run = TogetherRuntime.BeforeTriggerExit(__instance); __state = run && __instance.triggerActive && !__instance.exitTime; return run; }
             catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook TriggerExit: " + ex.Message); return true; }
         }
 
-        static void TriggerExitPostfix(Trigger_Event __instance) { Safe("TriggerExit", () => TogetherRuntime.AfterTriggerExit(__instance)); }
+        static void TriggerExitPostfix(Trigger_Event __instance, bool __state) { if (__state) Safe("TriggerExit", () => TogetherRuntime.AfterTriggerExit(__instance)); }
 
         static void TriggerRestartPostfix(Trigger_Event __instance) { Safe("TriggerRestart", () => TogetherRuntime.AfterTriggerRestart(__instance)); }
 
@@ -259,8 +271,54 @@ namespace MiSideTogether
 
         // Key items: the scene key is taken before the game moves the item into the inventory.
         static void KeyItemPrefix(GameObject __0, out string __state) { __state = null; try { if (__0 != null) __state = SceneKeys.Key(__0); } catch { } }
-        static void KeyAddPostfix(GameObject __0, string __state) { Safe("KeyAdd", () => { if (__state != null && __0 != null) TogetherRuntime.Story(Op.KeyAdd, __state, 0); }); }
-        static void KeyRemovePostfix(GameObject __0, string __state) { Safe("KeyRemove", () => { if (__state != null && __0 != null) TogetherRuntime.Story(Op.KeyRemove, __state, 0); }); }
+        // On the story log every PC runs the story that adds or uses the key, so a relay would count it twice (Scene 5's
+        // basement key: the host held 2 and, after the door, 1 while the client held none).
+        static void KeyAddPostfix(GameObject __0, string __state) { Safe("KeyAdd", () => KeyChanged(Op.KeyAdd, __0, __state)); }
+        static void KeyRemovePostfix(GameObject __0, string __state) { Safe("KeyRemove", () => KeyChanged(Op.KeyRemove, __0, __state)); }
+        static void KeyChanged(Op op, GameObject item, string key)
+        {
+            if (key == null || item == null) return;
+            if (TogetherRuntime.InStoryLog) { TogetherRuntime.Log("MT-STORY " + op + " here (on the story log, not relayed): " + key); return; }
+            TogetherRuntime.Story(op, key, 0);
+        }
+
+        // Another player's take, replayed here from the story log: the game would send this PC's own hand out for the
+        // item (PlayerPersonIK.TakeItemPocket), and the take, with what its eventTake sets off, ends only when that hand
+        // arrives (TakeItemPocketEnd -> TakeDestroy). A player busy or across the house never got there (Scene 6's key
+        // stayed on the table here). The hand is the taker's: here the take waits for theirs to arrive, which comes
+        // through the log (TakeDestroyPostfix, Op.Call 25), so the next step opens on every PC in the same order.
+        // Takes whose hand went out on this PC: theirs to report when it arrives (the moment may have moved on by then).
+        static readonly System.Collections.Generic.HashSet<IntPtr> takesHere = new System.Collections.Generic.HashSet<IntPtr>();
+
+        static bool ItemTakePrefix(ObjectInteractiveItemTake __instance)
+        {
+            if (__instance == null) return true;
+            if (TogetherRuntime.NotMyMoment && !TogetherRuntime.TakeShortcutOff) { TogetherRuntime.NoteWatchedTake(__instance); return false; }
+            takesHere.Add(__instance.Pointer);
+            return true;
+        }
+
+        static void TakeDestroyPostfix(ObjectInteractiveItemTake __instance)
+        {
+            Safe("TakeDone", () => { if (__instance != null && takesHere.Remove(__instance.Pointer) && TogetherRuntime.InStoryLog && !TogetherRuntime.TakeShortcutOff) TogetherRuntime.Call(25, __instance, 0); });
+        }
+
+        static void LampPrefix(LampBox __instance) { if (Is<LampBox>(__instance)) Safe("Lamp", () => TogetherRuntime.LampSeesPlayers(__instance)); }
+
+        // A chapter scene unloaded mid-play (Scene 6 unloads Scene 5 as the players go down into its basement, and the
+        // other one then plays on in Scene 6): every PC unloads it, whichever set it off and even inside a replay (seen:
+        // only the client unloaded it, the host stayed in Scene 5).
+        static void SceneUnloadPostfix(string __0)
+        {
+            Safe("SceneUnload", () =>
+            {
+                if (string.IsNullOrEmpty(__0) || TogetherRuntime.ApplyingUnload) return;
+                TogetherRuntime.Log("MT-STORY scene unloaded here: " + __0);
+                bool was = TogetherRuntime.Replaying;
+                TogetherRuntime.Replaying = false;
+                try { TogetherRuntime.Story(Op.Call, "26:" + __0, 0); } finally { TogetherRuntime.Replaying = was; }
+            });
+        }
 
         // Hand items.
         static void TakeItemPrefix(GameObject __0, out string __state) { __state = null; try { if (__0 != null) __state = SceneKeys.Key(__0); } catch { } }
@@ -307,7 +365,7 @@ namespace MiSideTogether
         static bool AppNamePrefix(Location1_InputNamePlayer __instance) { return !TogetherRuntime.AppViewer || !Is<Location1_InputNamePlayer>(__instance); }
         static bool AppButtonPrefix(ButtonMouseClick __instance)
         {
-            try { return !TogetherRuntime.AppViewer || !Is<ButtonMouseClick>(__instance) || !TogetherRuntime.IsAppButton(__instance); }
+            try { return !TogetherRuntime.AppViewer || !Is<ButtonMouseClick>(__instance) || !TogetherRuntime.IsAppButton(__instance) || TogetherRuntime.SharedAppButton(__instance); }
             catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook AppButton: " + ex.Message); return true; }
         }
         static void AppButtonDownPostfix(ButtonMouseClick __instance) { if (Is<ButtonMouseClick>(__instance)) Safe("AppButton", () => TogetherRuntime.AppPressed(__instance, false)); }
@@ -319,6 +377,7 @@ namespace MiSideTogether
         }
         static void AppUiButtonPostfix(UnityEngine.UI.Button __instance) { Safe("AppUiButton", () => TogetherRuntime.AppClicked(__instance)); }
         static void AppCookedPostfix(TamagotchiGame_Cooking __instance) { if (Is<TamagotchiGame_Cooking>(__instance)) Safe("AppCooked", () => TogetherRuntime.AppCooked(__instance)); }
+        static void AppCutPostfix(TamagotchiGame_Cooking __instance) { if (Is<TamagotchiGame_Cooking>(__instance)) Safe("AppCut", () => TogetherRuntime.AppCut(__instance)); }
         static void AppNamePostfix(Location1_InputNamePlayer __instance) { if (Is<Location1_InputNamePlayer>(__instance)) Safe("AppName", () => TogetherRuntime.AppNamed(__instance)); }
         static void QuestMovePostfix(Location14_PlayerQuest __instance, Vector3 _pos, UnityEngine.Events.UnityEvent _event) { Safe("QuestMove", () => TogetherRuntime.QuestMoved(__instance, _pos, _event)); }
         static void QuestReplyPrefix(Location14_ButtonChangeDialogue __instance, out bool __state) { __state = __instance != null && __instance.active; }

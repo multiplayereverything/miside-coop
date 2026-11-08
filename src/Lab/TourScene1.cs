@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -31,6 +32,43 @@ namespace MiSideTogether
 
         string OwningOrWatching() { foreach (MinigameRun r in minigames.Values) return r.Owner == SelfId ? "playing" : "watching " + r.Owner; return "-"; }
 
+        // User report (2026-11-08): "mita didnt appear on the other player screen" in the phone app.
+        //   app.lines: (host) every conversation in the app ends on the same line on both PCs, with Mita's camera showing her
+        //              (its far clip opens to 5) on both. Each PC's n-th conversation is compared when both have ended.
+        const int AppLinesNeeded = 5;
+        bool labAppOpen;
+        int labAppLine, labAppEnded;
+        float labAppFar;
+        readonly List<string> labAppMine = new List<string>(), labAppTheirs = new List<string>();
+
+        void LabAppEnded(string result)
+        {
+            labAppMine.Add(result);
+            Log("MT-APPEND " + labAppMine.Count + " " + result);
+            if (Hosting) LabAppCompare();
+            else SendToHost(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-appline:" + result)));
+        }
+
+        public void LabAppLineNotice(string result) { labAppTheirs.Add(result); LabAppCompare(); }
+
+        void LabAppCompare()
+        {
+            int n = Mathf.Min(labAppMine.Count, labAppTheirs.Count);
+            for (int i = 0; i < n; i++)
+                if (labAppMine[i] != labAppTheirs[i]) { CheckOnce("app.lines", false, "conversation " + (i + 1) + ": host " + labAppMine[i] + " / client " + labAppTheirs[i]); return; }
+            if (n >= AppLinesNeeded) CheckOnce("app.lines", true, n + " conversations ended alike; last " + labAppMine[n - 1]);
+        }
+
+        void LabAppMitaTrace()
+        {
+            if (appWindows != null) foreach (Tamagotchi_Dialogue w0 in appWindows) if (w0 != null)
+            {
+                if (w0.enableDialogue) { labAppOpen = true; labAppLine = w0.dialogueIndex; if (w0.mitaCamera != null && w0.mitaCamera.activeInHierarchy && w0.mitaCameraCam != null) labAppFar = Mathf.Max(labAppFar, w0.mitaCameraCam.farClipPlane); }
+                else if (labAppOpen) { labAppOpen = false; LabAppEnded("line " + labAppLine + (labAppFar >= 4 ? " mita shown" : " no mita")); labAppFar = 0; }
+                break;
+            }
+        }
+
         void Scene1Host(float now, string scene)
         {
             GlobalGame.hintScreen = false;
@@ -42,7 +80,10 @@ namespace MiSideTogether
             if (scene != "Scene 1 - RealRoom" || (LocalPlayer == null && !inApp)) return;
             LabScene1Tutorial(now);   // also types the name in the app, where there is no player object
             Scene1State(now);
-            if (now - tourSceneAt > 20 && now >= labS1ShotAt) { labS1ShotAt = now + 15; LabShotAll("s1-" + (labS1Shots++).ToString("00")); }
+            LabPropsInHandTick(now);
+            LabAppMitaTrace();
+            // Every 5 s while the phone app is up (a missing Mita there was seen by the user, between 15 s shots), else 15 s.
+            if (now - tourSceneAt > 20 && now >= labS1ShotAt) { labS1ShotAt = now + (inApp ? 5 : 15); LabShotAll("s1-" + (labS1Shots++).ToString("00")); }
             if (now < labS1StepAt || now - tourSceneAt < 25) return;
             labS1StepAt = now + 2;
             if (!labS1Took)
@@ -93,12 +134,67 @@ namespace MiSideTogether
         bool labS1CutDown, labS1MenuShot, labS1Jumped;
         float labS1EndAt = -1;
 
+        // The phone app's cooking board is one shared board: any player takes a vegetable and holds the knife (the user's
+        // request, 2026-11-08). The client plays it first, as a player would, for CookClientSeconds.
+        //   cook.client: (host) the host's board moved from the client's presses alone
+        //   cook.same:   (host) both boards then show the same cut and food
+        const float CookClientSeconds = 22;
+        float labS1CookAt = -1, labS1CookStepAt, labS1CookHeldAt = -1;
+        string labS1CookClient;
+        bool labS1CookSent;
+        public void LabCookNotice(string state) { labS1CookClient = state; }
+
+        // A held knife is dragged with the mouse (TamagotchiGame_Cooking.LateUpdate, disassembly: a downward Input.GetAxis
+        // grows the slider; past its mark the game calls Cut). The lab's mouse moves down while it holds the knife.
+        static bool labInCook, labCookDrag;
+        bool labCookHooked;
+        static void LabCookLatePrefix() { labInCook = true; }
+        static void LabCookLatePostfix() { labInCook = false; }
+        static void LabCookAxisPostfix(ref float __result) { if (labInCook && labCookDrag) __result = -3f; }
+
+        void Scene1CookClient(float now, string scene)
+        {
+            if (!labCookHooked)
+            {
+                labCookHooked = true;
+                HarmonyLib.Harmony lab = new HarmonyLib.Harmony("local.misidetogether.lab.cook");
+                lab.Patch(HarmonyLib.AccessTools.Method(typeof(TamagotchiGame_Cooking), "LateUpdate"), new HarmonyLib.HarmonyMethod(typeof(TogetherRuntime), nameof(LabCookLatePrefix)), new HarmonyLib.HarmonyMethod(typeof(TogetherRuntime), nameof(LabCookLatePostfix)));
+                lab.Patch(HarmonyLib.AccessTools.Method(typeof(Input), "GetAxis", new[] { typeof(string) }), null, new HarmonyLib.HarmonyMethod(typeof(TogetherRuntime), nameof(LabCookAxisPostfix)) { priority = HarmonyLib.Priority.First });
+            }
+            labCookDrag = labS1CookHeldAt >= 0;
+            if (!IsClient || scene != "Scene 1 - RealRoom" || labS1CookSent || now < labS1CookStepAt) return;
+            TamagotchiGame_Cooking cooking = Object.FindObjectOfType<TamagotchiGame_Cooking>();
+            if (cooking == null || !cooking.isActiveAndEnabled || cooking.ready) return;
+            if (labS1CookAt < 0) labS1CookAt = now;
+            labS1CookStepAt = now + 0.3f;
+            ButtonMouseClick knife = AppButton("InterfaceCut/Pointer");
+            if (now - labS1CookAt >= CookClientSeconds)
+            {
+                labS1CookSent = true;
+                if (labS1CookHeldAt >= 0 && knife != null) knife.PointerUp();
+                string s = "lab-cook:" + cooking.indexCut + "," + cooking.indexCutFood;
+                Log("Lab: scene1 client's turn at the board ends: " + s);
+                SendToHost(Wire.Packet(Op.Notice, w => Wire.Text(w, s)));
+                return;
+            }
+            if (cooking.foodTakeNow == null)
+            {
+                foreach (Trigger_MouseClick c in Object.FindObjectsOfType<Trigger_MouseClick>())
+                    if (c != null && c.isActiveAndEnabled && (c.name == "Carrot" || c.name == "Potato")) { Log("Lab: scene1 client takes the " + c.name); c.Click(); labS1CookStepAt = now + 1.5f; return; }
+                return;
+            }
+            if (knife == null) return;
+            if (labS1CookHeldAt >= 0) { if (now - labS1CookHeldAt > 1.2f) { Log("Lab: scene1 client lets go of the knife (cut " + cooking.indexCut + ")"); knife.PointerUp(); labS1CookHeldAt = -1; labS1CookStepAt = now + 0.8f; } return; }
+            if (cooking.canCut) { Log("Lab: scene1 client holds the knife"); knife.PointerDown(); labS1CookHeldAt = now; }
+        }
+
         // scene1end: after the last day the game loads Scene 2 (Scene_Load.GoScene); everyone must arrive with a player.
         void Scene1EndTick(float now, string scene)
         {
             if (scene != "Scene 2 - InGame") return;
             if (labS1EndAt < 0) labS1EndAt = now;
             if (LocalPlayer != null && now - labS1EndAt > 15 && now - labS1EndAt < 16) LabShot("end-" + Name);
+            if (LocalPlayer != null && now - labS1EndAt > 20) LabPropsInHandCheck();
             if (LocalPlayer != null && now - labS1EndAt > 20) CheckOnce("end.arrived", true, "in Scene 2 with a player, camera " + (Camera.main != null ? Camera.main.name : "none"));
             else if (now - labS1EndAt > 90) CheckOnce("end.arrived", false, "in Scene 2 for 90 s without a player");
         }
@@ -130,6 +226,14 @@ namespace MiSideTogether
             TamagotchiGame_Cooking cooking = Object.FindObjectOfType<TamagotchiGame_Cooking>();
             if (cooking != null && cooking.isActiveAndEnabled && !cooking.ready)
             {
+                // The client cooks first, with the host's hands off (Scene1CookClient).
+                if (labS1CookAt < 0) labS1CookAt = now;
+                if (now - labS1CookAt < CookClientSeconds + 3) return true;
+                if (AcceptedCount > 0)
+                {
+                    CheckOnce("cook.client", cooking.indexCut > 0 || cooking.indexCutFood > 0, "the host's board after the client's turn: cut " + cooking.indexCut + ", food " + cooking.indexCutFood + ", holding " + (cooking.foodTakeNow != null ? cooking.foodTakeNow.name : "nothing"));
+                    if (labS1CookClient != null) CheckOnce("cook.same", labS1CookClient == cooking.indexCut + "," + cooking.indexCutFood, "client " + labS1CookClient + " / host " + cooking.indexCut + "," + cooking.indexCutFood);
+                }
                 ButtonMouseClick knife = AppButton("InterfaceCut/Pointer");
                 // A well-timed release cuts (the game's own Cut, which the release calls when the slider is in place).
                 if (labS1CutDown && knife != null) { cooking.Cut(); knife.PointerUp(); labS1CutDown = false; Log("Lab: scene1 host cuts (cut " + cooking.indexCut + ", food " + cooking.indexCutFood + ")"); return true; }
@@ -239,6 +343,8 @@ namespace MiSideTogether
             if (scene != "Scene 1 - RealRoom") return;
             LabScene1Tutorial(now);   // also types the name in the app, where there is no player object
             Scene1State(now);
+            LabPropsInHandTick(now);
+            LabAppMitaTrace();
         }
     }
 }

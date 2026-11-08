@@ -15,7 +15,7 @@ $tours = @{
     'core'     = @{ Seconds = 174;  Expect = @('chapter.loaded@host', 'core.driven@host', 'client.core.followed', 'core.answered@host', 'client.core.same') }
     'quest'    = @{ Seconds = 216;  Expect = @('chapter.loaded@host', 'quest.clicked@host', 'client.quest.moved') }
     # scene1: the app's Mita follows the host's steps (name, tidy-up), about 1 s late at a step; normal play is held to 1 s by 'mita'.
-    'scene1'   = @{ Seconds = 880; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived', 'client.log.clean') }
+    'scene1'   = @{ Seconds = 880; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived', 'client.log.clean', 'client.props.inhand', 'cook.client@host', 'cook.same@host', 'app.lines@host') }
     'choice'   = @{ Seconds = 154;  AllowGameErrors = $true; Expect = @('choice.picked@host', 'client.choice.applied', 'client.choice.navmesh') }
     'scene1end' = @{ Seconds = 306; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived', 'client.log.clean') }
     'scene3'   = @{ Seconds = 326; AllowGameErrors = $true; Expect = @('s3.walk@host', 'client.s3.walk', 'client.s3.navmesh', 'client.s3.choice') }
@@ -30,7 +30,10 @@ $tours = @{
     'debug'    = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('debug.rows@host', 'debug.waiting@host', 'client.debug.skip', 'client.debug.refused', 'client.debug.report') }
     'scanner'  = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('scanner.waits@host', 'client.scanner.waits', 'scanner.placed@host', 'client.scanner.placed', 'client.scanner.same') }
     'mitasame' = @{ Seconds = 240; LabTour = 'storypilot'; Chapter = 'Scene 3 - WeTogether'; PlayerArgs = '-mt-pilotboth -mt-mitacheck'; Expect = @('mita.moved@host') }
-    'scene4'   = @{ Seconds = 1500; LabTour = 'storypilot'; Chapter = 'Scene 4 - StartSecret'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'tv.oneplays@host', 'client.tv.oneplays', 'tv.story@host', 'tv.mirror@host', 'cards.oneplays@host', 'client.cards.oneplays', 'cards.done@host', 'client.hold.same') }
+    # scene4: the game's own Audio_BlendShapeVoice errors after Scene 4 hands over to Scene 5 (jump45 with -mt-nopatch shows them without the mod).
+    'scene4'   = @{ Seconds = 1500; AllowGameErrors = $true; LabTour = 'storypilot'; Chapter = 'Scene 4 - StartSecret'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'tv.oneplays@host', 'client.tv.oneplays', 'tv.story@host', 'tv.mirror@host', 'cards.oneplays@host', 'client.cards.oneplays', 'cards.done@host', 'client.hold.same') }
+    'scene5'   = @{ Seconds = 1500; LabTour = 'storypilot'; Chapter = 'Scene 5 - StartHorror'; PlayerArgs = '-mt-pilotboth -mt-logalso Scene_5_-_StartHorror'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'pilot.pressable@host') }
+    'lamp'     = @{ Seconds = 100; Chapter = 'Scene 6 - BasementFirst'; Expect = @('lamp.shared@host') }
     'jump45'   = @{ Seconds = 150; Chapter = 'Scene 4 - StartSecret'; Expect = @('jump.clean@host') }
     'scene2'   = @{ Seconds = 500; LabTour = 'storypilot'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     # roomhold: the client keeps a room the host's story switched off, so its lights differ on purpose.
@@ -44,7 +47,7 @@ $tours = @{
     'story'    = @{ Seconds = 120;  Expect = @('chapter.loaded@host', 'story.sent@host', 'client.story.applied', 'story.received@host') }
     'mita'     = @{ Seconds = 142;  Expect = @('chapter.loaded@host', 'mita.sent@host', 'client.mita.synced', 'client.mita.face', 'mita.gaze@host', 'client.teleport.safe') }
     'cutscene' = @{ Seconds = 134;  Expect = @('chapter.loaded@host', 'cutscene.sent@host', 'client.cutscene.started', 'client.cutscene.synced', 'cutscene.visibility') }
-    'world'    = @{ Seconds = 122;  Expect = @('chapter.loaded@host', 'items.hand.sent@host', 'items.key.sent@host', 'client.items.key', 'client.seed.match') }
+    'world'    = @{ Seconds = 122;  PlayerArgs = '-mt-nolog'; Expect = @('chapter.loaded@host', 'items.hand.sent@host', 'items.key.sent@host', 'client.items.key', 'client.seed.match') }
     'props'    = @{ Seconds = 200;  Expect = @('chapter.loaded@host', 'props.sent@host', 'client.props.synced') }
     'minigame' = @{ Seconds = 166;  Expect = @('chapter.loaded@host', 'minigame.started@host', 'minigame.owned@host', 'client.minigame.watch', 'client.minigame.end') }
     'carry'    = @{ Seconds = 240;  Expect = @('chapter.loaded@host', 'carry.acted@host', 'client.carry.still', 'client.carry.finished', 'carry.sent@host', 'client.carry.mirrored', 'client.carry.released') }

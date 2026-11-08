@@ -22,6 +22,7 @@ namespace MiSideTogether
     {
         public static bool LogOff;   // -mt-nolog: the old relay, the lab's proof that the storylog tour can fail
         public static bool GateRequestsOff;   // -mt-nogaterequest: the lab's proof that a client Main Character's run can fail
+        public static bool TakeShortcutOff;   // -mt-notake: another player's take sends this PC's hand out, the proof that pilot.pressable can fail
         public static bool HoldGatesOff;   // -mt-nohold: holds' events stay local, the lab's proof that hold.same can fail
         public static string LogAlso = "";   // -mt-logalso <chapter>: tries a chapter on the log before it joins the list
         const float LogStuckSeconds = 12;
@@ -44,7 +45,8 @@ namespace MiSideTogether
 
         public static bool LogChapter(string scene) { return !LogOff && (scene == "Scene 1 - RealRoom" || scene == "Scene 2 - InGame" || scene == "Scene 3 - WeTogether" || scene == "Scene 4 - StartSecret" || scene == LogAlso); }
 
-        bool InLogChapter { get { return Connected && LogChapter(ActiveSceneName); } }
+        bool InLogChapter { get { string s = ActiveSceneName; return Connected && (LogChapter(s) || s == logContinuation); } }
+        public static bool InStoryLog { get { TogetherRuntime rt = Instance; return rt != null && rt.InLogChapter; } }
 
         void ResetStoryLog()
         {
@@ -114,7 +116,7 @@ namespace MiSideTogether
         {
             if (logApplied > 0 || gateFired > 0) Log("MT-LOG chapter done: applied " + logApplied + ", waited " + logWaited + ", lost " + logLost + ", timers swallowed " + gateSwallowed + ", host fired " + gateFired);
             if (LabMode && logApplied > 0) CheckOnce("log.clean", logLost == 0, "applied " + logApplied + ", waited " + logWaited + ", lost " + logLost + ", swallowed " + gateSwallowed);
-            gatesBuilt = false; gatesScene = ""; gatedEvents.Clear(); gateActions.Clear(); hostRequests.Clear(); gateKinds.Clear(); gateSources.Clear(); realOfStandIn.Clear(); gateOwners.Clear(); gatePressedAt.Clear(); ownBody.Clear();
+            gatesBuilt = false; gatesScene = ""; gatedScenes.Clear(); gatedEvents.Clear(); gateActions.Clear(); hostRequests.Clear(); gateKinds.Clear(); gateSources.Clear(); realOfStandIn.Clear(); gateOwners.Clear(); gatePressedAt.Clear(); ownBody.Clear();
             logApplied = 0; logWaited = 0; logLost = 0; gateSwallowed = 0; gateFired = 0;
         }
 
@@ -185,14 +187,34 @@ namespace MiSideTogether
         }
 
         // --- Stand-ins ----------------------------------------------------------------------------
+        // Chapter scenes whose events have stand-ins: the active one, and any the story loaded beside it (Scene 5 loads
+        // Scene 6 additively and the players go on into its basement while Scene 5 stays the active scene).
+        readonly HashSet<string> gatedScenes = new HashSet<string>();
+        string gatingScene;
+
         void BuildGates()
         {
             string scene = ActiveSceneName;
-            if (gatesBuilt && gatesScene == scene) return;
-            if (!InLogChapter || (IsClient && wantedScene != scene)) return;
-            gatesBuilt = true; gatesScene = scene;
-            momentMine = Hosting;
-            gatedEvents.Clear(); gateActions.Clear();
+            if (!gatesBuilt || gatesScene != scene)
+            {
+                if (!InLogChapter || (IsClient && wantedScene != scene)) return;
+                gatesBuilt = true; gatesScene = scene;
+                momentMine = Hosting;
+                gatedEvents.Clear(); gateActions.Clear(); gatedScenes.Clear();
+                BuildGatesIn(scene);
+                return;
+            }
+            for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)
+            {
+                UnityEngine.SceneManagement.Scene s = UnityEngine.SceneManagement.SceneManager.GetSceneAt(i);
+                if (s.isLoaded && s.name.StartsWith("Scene ", StringComparison.Ordinal) && !gatedScenes.Contains(s.name)) BuildGatesIn(s.name);
+            }
+        }
+
+        void BuildGatesIn(string scene)
+        {
+            gatingScene = scene; gatedScenes.Add(scene);
+            int before = gatedEvents.Count;
             foreach (Time_Events t in Object.FindObjectsOfType<Time_Events>(true))
             {
                 if (t == null || t.EventsOnTime == null || SceneKeys.Key(t).Contains("/Mimic Back")) continue;   // the mirror scare is each player's own
@@ -215,17 +237,14 @@ namespace MiSideTogether
                 a.eventFinish = Gate(a, "bodyend", a.eventFinish, GateKind.Body);
                 if (a.eventsPlayer != null) for (int i = 0; i < a.eventsPlayer.Count; i++) a.eventsPlayer[i] = Gate(a, "body" + i, a.eventsPlayer[i], GateKind.Body);
             }
-            // A hold (Scene 4's scarf) reads the holder's key in its own Update: its events are the holder's, like the
-            // animation it belongs to (the source is that animation, so a client holding asks the host).
+            // A hold (Scene 4's scarf) reads the holder's key in its own Update: its end (eventReady) is the holder's, like
+            // the animation it belongs to (the source is that animation, so a client holding asks the host). Its other
+            // events fire every frame while held and nothing in the story listens to them, so they stay local.
             if (!HoldGatesOff)
             foreach (ObjectAnimationPlayerHold h in Object.FindObjectsOfType<ObjectAnimationPlayerHold>(true))
             {
                 ObjectAnimationPlayer body = h == null ? null : h.scroap != null ? h.scroap : h.GetComponent<ObjectAnimationPlayer>();
-                if (body == null) continue;
-                h.eventReady = Gate(body, "holdready", h.eventReady, GateKind.Body);
-                h.eventHold = Gate(body, "holdon", h.eventHold, GateKind.Body);
-                h.eventStopHold = Gate(body, "holdoff", h.eventStopHold, GateKind.Body);
-                h.eventDown = Gate(body, "holddown", h.eventDown, GateKind.Body);
+                if (body != null) h.eventReady = Gate(body, "holdready", h.eventReady, GateKind.Body);
             }
             foreach (Player_Look l in Object.FindObjectsOfType<Player_Look>(true)) if (l != null) l.eventEnd = Gate(l, "look", l.eventEnd);
             foreach (Animator_Functions f in Object.FindObjectsOfType<Animator_Functions>(true))
@@ -249,7 +268,8 @@ namespace MiSideTogether
                 m.eventAnimationZoomStop = Gate(m, "zoomstop", m.eventAnimationZoomStop);
             }
             KeepRealEventsFound();
-            Log("MT-LOG " + gatedEvents.Count + " story events gated in " + scene);
+            gatingScene = null;
+            Log("MT-LOG " + (gatedEvents.Count - before) + " story events gated in " + scene + (scene != gatesScene ? " (loaded beside " + gatesScene + ")" : ""));
         }
 
         // Who may set off a stand-in's event:
@@ -273,7 +293,9 @@ namespace MiSideTogether
         {
             if (real == null) return null;
             // The player's own things (the idle Tetris, say) outlive the chapter and aren't the story.
-            if (source.gameObject.scene.name != gatesScene) return real;
+            // While a scene is being built only its own components; later (GateReadyEvent) any gated scene's.
+            string sceneName = source.gameObject.scene.name;
+            if (gatingScene != null ? sceneName != gatingScene : !gatedScenes.Contains(sceneName)) return real;
             // An object can carry two of the same script, so the component's place is part of the key.
             // Built late, the sibling numbers in a key may already differ between the copies, so that key goes by name alone.
             string path = SceneKeys.Key(source);
@@ -350,6 +372,19 @@ namespace MiSideTogether
         // A prompt belongs to whoever the moment has hold of: in an animation, or locked in place by Player_Position (Scene 3's glasses).
         bool MayAnswerPrompt { get { PlayerMove p = LocalPlayer; return p != null && (p.animationRun || p.dontMove); } }
 
+        // Some game events fire every frame (Scene 5's BloodFloor ToiletDoor: an Animator_OneTimeDestroy kept alive by
+        // dontDeleteThis calls Finish each frame). A repeat within RepeatSeconds runs here only: it isn't logged again
+        // or asked for, so it can't send 30 entries a second to every client. Prompts keep their own 2 s rule.
+        const float RepeatSeconds = 0.5f;
+        readonly Dictionary<string, float> gateLastFired = new Dictionary<string, float>();
+        bool GateRepeat(string key)
+        {
+            float now = Time.realtimeSinceStartup, at;
+            bool repeat = gateLastFired.TryGetValue(key, out at) && now - at < RepeatSeconds;
+            gateLastFired[key] = now;
+            return repeat;
+        }
+
         void GateFired(string key, GateKind kind, IntPtr source)
         {
             try
@@ -357,6 +392,7 @@ namespace MiSideTogether
                 if (IsClient && Connected) { ClientGateFired(key, kind, source); return; }
                 UnityEvent real;
                 if (!gatedEvents.TryGetValue(key, out real)) return;
+                if (Connected && (kind == GateKind.Host || kind == GateKind.First) && GateRepeat(key)) { try { real.Invoke(); } catch (Exception ex) { Log("MT-LOG the game's own event threw: " + key + ": " + ex.Message); } return; }
                 if (Connected)
                 {
                     if (kind == GateKind.Press && !MayAnswerPrompt) return;
@@ -378,7 +414,7 @@ namespace MiSideTogether
                 : kind == GateKind.Press ? MayAnswerPrompt
                 : kind == GateKind.Moment ? momentMine
                 : kind == GateKind.First;
-            if (!ask || GateRequestsOff) { gateSwallowed++; return; }
+            if (!ask || GateRequestsOff || GateRepeat(key)) { gateSwallowed++; return; }
             if (kind == GateKind.Press) ownRequests.Add(key);
             Log("MT-LOG request Gate " + key);
             SendToHost(Wire.Packet(Op.Gate, w => { Wire.Text(w, key); w.Write(0); }));

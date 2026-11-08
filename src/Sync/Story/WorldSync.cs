@@ -57,11 +57,17 @@ namespace MiSideTogether
             cutsceneList = null; npcList = null; propList = null; propAppliedAt.Clear(); mitaList = null; doorList = null;
         }
 
+        int keyedScenes;
+        static int LoadedScenes() { int n = 0; for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++) if (UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).isLoaded) n++; return n; }
+
         void UpdateWorldSync()
         {
             float now = Time.realtimeSinceStartup;
             // Once the chapter's objects exist (the player is in), record the original keys of its items.
-            if (!itemsRegistered && LocalPlayer != null) { itemsRegistered = true; SceneKeys.RegisterItems(); }
+            if (!itemsRegistered && LocalPlayer != null) { itemsRegistered = true; keyedScenes = LoadedScenes(); SceneKeys.RegisterItems(); }
+            // A chapter scene the story loads beside this one (Scene 5 loads Scene 6) gets its keys as it arrives, the same
+            // on every PC; objects already recorded keep theirs.
+            else if (itemsRegistered && LoadedScenes() != keyedScenes) { keyedScenes = LoadedScenes(); SceneKeys.RegisterItems(); }
             // Each feature is its own step: timed separately in the lab (steps=), and one failing does not stop the rest.
             if (IsClient) Step("w.replay", ReplayTick);
             Step("w.gates", BuildGates);
@@ -70,6 +76,7 @@ namespace MiSideTogether
             Step("w.debug", () => DebugTick(now));
             if (InLogChapter) Step("w.console", ConsoleReplyTick);
             if (minigames.Count > 0) { Step("w.screen", () => ScreenSendTick(now)); Step("w.minigame-over", MinigameOverTick); }
+            if (watchedTakes.Count > 0) Step("w.takes", () => WatchedTakeTick(now));
             if (hostRequests.Count > 0) Step("w.requests", () => HostRequestTick(now));
             if (storyRetries.Count > 0) Step("w.retry", () => StoryRetryTick(now));
             if (pendingGo != null) Step("w.go", () => GoTick(now));
@@ -220,6 +227,9 @@ namespace MiSideTogether
                         break;
                     case Op.TriggerExit:
                         Trigger_Event exit = SceneKeys.Find<Trigger_Event>(key);
+                        // A trigger already destroyed here can't run an exit, and waiting won't bring it back (Scene 6's
+                        // hide-and-seek trigger, gone with its enter before the host's player walked out).
+                        if (exit == null && SceneKeys.WasRecorded(key)) { if (missingLogged.Add(key)) Log("MT-STORY trigger gone here, its exit skipped: " + key); return; }
                         if (Missing(exit, key)) return;
                         if (!exit.loop && !firedExit.Add(key)) return;
                         exit.TargetExit();
@@ -624,13 +634,20 @@ namespace MiSideTogether
         // the identity they had when the chapter loaded, on every machine.
         static readonly Dictionary<IntPtr, string> stable = new Dictionary<IntPtr, string>();
 
-        public static void Invalidate() { byType.Clear(); scannedAt.Clear(); stable.Clear(); }
+        static readonly HashSet<string> recorded = new HashSet<string>();
+
+        public static void Invalidate() { byType.Clear(); scannedAt.Clear(); stable.Clear(); recorded.Clear(); }
 
         public static void RegisterStable(GameObject go)
         {
             if (go == null || stable.ContainsKey(go.Pointer)) return;
-            stable[go.Pointer] = Compute(go);
+            string key = Compute(go);
+            stable[go.Pointer] = key;
+            recorded.Add(key);
         }
+
+        // A key recorded as its scene loaded: the object existed then, so if it can't be found now it was destroyed.
+        public static bool WasRecorded(string key) { return recorded.Contains(key); }
 
         public static void RegisterItems()
         {

@@ -85,7 +85,9 @@ namespace MiSideTogether
 
         void QueueAnimationCatchUp(string key, int variant)
         {
-            if (!IsClient) return;
+            // On the story log every start arrives in order and the host's own animation is its moment: caught up here, the
+            // client's player was pulled into the host's hold (Scene 6's HoldButton) and stayed locked in it.
+            if (!IsClient || InLogChapter) return;
             animationCatchUps.Add(new AnimationCatchUp { Key = key, Variant = variant, At = Time.realtimeSinceStartup });
         }
 
@@ -280,9 +282,18 @@ namespace MiSideTogether
                 string key = Wire.Text(reader, 1024);
                 Vector3 lp; Quaternion lr; ReadTransform(reader, out lp, out lr);
                 Carried c;
-                if (!carried.TryGetValue(key, out c))
+                carried.TryGetValue(key, out c);
+                Transform_Magnet held = c != null ? c.Magnet : SceneKeys.Find<Transform_Magnet>(key);
+                // A mirrored animation puts this PC's one copy in this player's hand too: each hand keeps its own. Placing it
+                // on the other body as well made the two PCs chase each other's numbers (the phone ended up 50 m away).
+                if (held != null && LocalPlayer != null && Moved(held).IsChildOf(LocalPlayer.transform))
                 {
-                    Transform_Magnet m = SceneKeys.Find<Transform_Magnet>(key);
+                    if (c != null) { carried.Remove(key); held.enabled = true; }
+                    continue;
+                }
+                if (c == null)
+                {
+                    Transform_Magnet m = held;
                     if (m == null) continue;
                     // The local magnet would pull the object back to this machine's own targets; pause it while carried.
                     m.enabled = false;

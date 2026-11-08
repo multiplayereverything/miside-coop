@@ -38,11 +38,30 @@ namespace MiSideTogether
             followLoad = null; replayQueue.Clear();
         }
 
+        // Chapter scenes loaded last frame. A chapter can go on into the next one without a load: Scene 5 loads Scene 6
+        // beside it, the players walk down into its basement, and looking down there unloads Scene 5 (Scene_Load.
+        // UnloadScene), so Scene 6 becomes the active scene. That isn't a new chapter: nothing is reset, nobody reloads.
+        readonly HashSet<string> chapterScenesLoaded = new HashSet<string>();
+        public string logContinuation = "";
+
         void UpdateSceneSync()
         {
             string active = ActiveSceneName;
+            if (active != lastActiveScene && chapterScenesLoaded.Contains(active) && lastActiveScene.StartsWith("Scene ", StringComparison.Ordinal))
+            {
+                Log("Scene now " + active + " (continues " + lastActiveScene + ", loaded beside it)");
+                ContinueChapter(lastActiveScene, active);
+                lastActiveScene = active;
+            }
+            chapterScenesLoaded.Clear();
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene s = SceneManager.GetSceneAt(i);
+                if (s.isLoaded && s.name.StartsWith("Scene ", StringComparison.Ordinal)) chapterScenesLoaded.Add(s.name);
+            }
             if (active != lastActiveScene)
             {
+                logContinuation = "";
                 Log("Scene now " + active + " (was " + lastActiveScene + ")");
                 sceneChangedAt = Time.realtimeSinceStartup;
                 lastActiveScene = active;
@@ -54,6 +73,17 @@ namespace MiSideTogether
             StartBarrierTick(Time.realtimeSinceStartup);
             if (Hosting) { HostSceneTick(active); return; }
             ClientSceneTick(active);
+        }
+
+        // The chapter goes on in the scene loaded beside it: the story log, its numbering and history, the gates and the
+        // recorded keys carry on; lists of the old scene's objects are found again.
+        void ContinueChapter(string from, string to)
+        {
+            if (LogChapter(from) || from == logContinuation) logContinuation = to;
+            gatesScene = to; gatedScenes.Remove(from);
+            if (Hosting && hostScene == from) hostScene = to;
+            if (IsClient && wantedScene == from) wantedScene = to;
+            cutsceneList = null; npcList = null; propList = null; mitaList = null; doorList = null; npcResolved.Clear();
         }
 
         void HostSceneTick(string active)

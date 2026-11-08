@@ -21,6 +21,7 @@ namespace MiSideTogether
     //   21 a click on one of the app's standard UI buttons (UnityEngine.UI.Button.Press: "you bought ..." popups)
     //   22/23 the app's money / energy (Tamagotchi_Main.money, energy): the host's, so buying works the same everywhere
     //      (mini-games that pay can play out differently on each copy)
+    //   27 TamagotchiGame_Cooking.Cut, from any player: the board is shared, each player drags their own knife
     // On clients the player's own reading on (Space) and name check do nothing; the host's do.
     public sealed partial class TogetherRuntime
     {
@@ -64,10 +65,14 @@ namespace MiSideTogether
             Call(21, b, 0);
         }
 
+        // The cooking board's knife is every player's own: holding it, this PC's mouse drags its slider (LateUpdate reads
+        // Input.GetAxis), so a press is neither blocked on a client nor relayed.
+        public static bool SharedAppButton(Component b) { return b != null && SceneKeys.Key(b).Contains("/MiniGame Cooking#"); }
+
         public static void AppPressed(ButtonMouseClick b, bool up)
         {
             TogetherRuntime rt = Instance;
-            if (rt == null || !rt.Hosting || Replaying || !IsAppButton(b)) return;
+            if (rt == null || !rt.Hosting || Replaying || !IsAppButton(b) || SharedAppButton(b)) return;
             Call(19, b, up ? 1 : 0);
         }
 
@@ -76,6 +81,13 @@ namespace MiSideTogether
             TogetherRuntime rt = Instance;
             if (rt == null || !rt.Hosting || Replaying || cooking == null) return;
             Call(20, cooking, 0);
+        }
+
+        // Whoever's knife came down: the slice is made on every board.
+        public static void AppCut(TamagotchiGame_Cooking cooking)
+        {
+            if (Replaying || cooking == null) return;
+            Call(27, cooking, 0);
         }
 
         public static void AppNamed(Location1_InputNamePlayer input)
@@ -112,7 +124,7 @@ namespace MiSideTogether
             if (main != null && main.money != appMoneySent) { appMoneySent = main.money; Call(22, main, main.money); }
             if (main != null && main.energy != appEnergySent) { appEnergySent = main.energy; Call(23, main, main.energy); }
             Tamagotchi_Dialogue d = AppDialogue();
-            string run = d != null && d.dialogueRun != null ? RunKey(d.dialogueRun) : null;
+            string run = Running(d) ? RunKey(d.dialogueRun) : null;
             int index = run != null ? d.dialogueIndex : -1;
             if (run == null && appDialogueSent == null) return;
             if (run == appDialogueSent && index == appIndexSent) return;
@@ -128,9 +140,14 @@ namespace MiSideTogether
             return null;
         }
 
+        // A line can switch on the next day's quest, which destroys the quest holding this conversation while it still
+        // runs: the game reads on from the destroyed object, so "is one running" asks for the reference, not Unity's null
+        // (which says destroyed), and the key is the one recorded while it was alive.
+        static bool Running(Tamagotchi_Dialogue d) { return d != null && (object)d.dialogueRun != null; }
+
         string RunKey(Tamagotchi_Dialogue_Mob mob)
         {
-            if (mob.Pointer != appRunPointer) { appRunPointer = mob.Pointer; appRunKey = SceneKeys.Key(mob); }
+            if (mob.Pointer != appRunPointer) { appRunPointer = mob.Pointer; appRunKey = mob != null ? SceneKeys.Key(mob) : null; }
             return appRunKey;
         }
 
@@ -138,7 +155,7 @@ namespace MiSideTogether
         {
             if (appTarget == null || Time.realtimeSinceStartup < appStepAt) return;
             Tamagotchi_Dialogue d = AppDialogue();
-            if (d == null || d.dialogueRun == null || RunKey(d.dialogueRun) != appTarget) return;   // not open here (yet), or another one
+            if (!Running(d) || RunKey(d.dialogueRun) != appTarget) return;   // not open here (yet), or another one
             if (appTargetIndex >= 0 && d.dialogueIndex >= appTargetIndex) return;                         // already there
             // Behind the host while this line still types out: show it in full now (the typing then ends by itself) and
             // step next time, so Mita's line animations here start close to the host's (they lagged over a second).
@@ -181,6 +198,8 @@ namespace MiSideTogether
             {
                 Tamagotchi_Main app = SceneKeys.Find<Tamagotchi_Main>(target);
                 if (Missing(app, target)) return;
+                // The host's last line can close the app before this PC has stepped past it: the window must not reopen with it.
+                if (arg == 0) foreach (Tamagotchi_Dialogue w in app.GetComponentsInChildren<Tamagotchi_Dialogue>(true)) if (w.enableDialogue) w.FastCloseDialoue();
                 if (arg == 1 && !app.play) app.GameStart(); else if (arg == 0 && app.play) app.GameStop();
                 appCallsApplied++;
                 return;
@@ -218,6 +237,14 @@ namespace MiSideTogether
                 TamagotchiGame_Cooking cooking = SceneKeys.Find<TamagotchiGame_Cooking>(target);
                 if (Missing(cooking, target)) return;
                 if (!cooking.ready) cooking.Ready();
+                appCallsApplied++;
+                return;
+            }
+            if (entry == 27)
+            {
+                TamagotchiGame_Cooking cooking = SceneKeys.Find<TamagotchiGame_Cooking>(target);
+                if (Missing(cooking, target)) return;
+                cooking.Cut();
                 appCallsApplied++;
                 return;
             }

@@ -40,6 +40,7 @@ namespace MiSideTogether
                 if (args[i] == "-mt-nogaterequest") GateRequestsOff = true;
                 if (args[i] == "-mt-nolive") LiveOff = true;
                 if (args[i] == "-mt-nohold") HoldGatesOff = true;
+                if (args[i] == "-mt-notake") TakeShortcutOff = true;
                 if (args[i] == "-mt-mitacheck") LabMitaCheck = true;
                 if (args[i] == "-mt-pilotfull") labPilotFull = true;
                 if (args[i] == "-mt-pilotboth") labPilotFull = labPilotBoth = true;

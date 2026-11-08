@@ -72,7 +72,7 @@ namespace MiSideTogether
             if (!labPilotFull || LocalPlayer == null || (LocalPlayer.animationRun ? !LocalPlayer.animationLoopRun : !LocalPlayer.dontMove)) return false;
             Interface_KeyHint_Key pick = null; int least = int.MaxValue, n;
             foreach (Interface_KeyHint_Key k in Object.FindObjectsOfType<Interface_KeyHint_Key>())
-                if (k != null && k.isActiveAndEnabled && !k.hide && k.gameObject.scene.name == ActiveSceneName && (labPromptPresses.TryGetValue(k.Pointer, out n) ? n : 0) < least)
+                if (k != null && k.isActiveAndEnabled && !k.hide && ChapterScene(k.gameObject) && (labPromptPresses.TryGetValue(k.Pointer, out n) ? n : 0) < least)
                 { pick = k; least = labPromptPresses.TryGetValue(k.Pointer, out n) ? n : 0; }
             if (pick == null) return false;
             labPromptPresses[pick.Pointer] = least + 1;
@@ -106,6 +106,7 @@ namespace MiSideTogether
             if (PilotAnswersPrompt()) { labPilotClientAt = now + 2; return; }
             if (labPilotClientPress.Length == 0) return;
             ObjectInteractive o = SceneKeys.Find<ObjectInteractive>(labPilotClientPress);
+            PilotStepTo(o);
             if (LabPress(o))
             {
                 Log("Lab: pilot (client) presses " + labPilotClientPress);
@@ -114,8 +115,11 @@ namespace MiSideTogether
             else if (now > labPilotClientUntil) { Log("Lab: pilot (client) gave up on " + labPilotClientPress); labPilotClientPress = ""; }
         }
 
+        // A chapter's scene: the one active, or one the story loaded beside it (Scene 5 loads Scene 6 additively).
+        static bool ChapterScene(GameObject g) { return g.scene.name != null && g.scene.name.StartsWith("Scene ", System.StringComparison.Ordinal); }
+
         // The story's own objects: quests and acts (not the house's ambient triggers).
-        static bool StoryPath(Transform t) { string p = PathOf(t); return p.Contains("/Quests/") || p.Contains("/Acts/"); }
+        static bool StoryPath(Transform t) { string p = PathOf(t); return p.Contains("/Quests/") || p.Contains("/Acts/") || p.Contains("/Act/"); }
 
         // What the pilot compares between copies: the quests on, and the shared key inventory (Scene 2's batteries).
         string PilotState()
@@ -141,7 +145,9 @@ namespace MiSideTogether
         {
             GlobalGame.hintScreen = false;
             string chapter = TourChapter;
-            if (labPilotFull) { PilotKeepsCutting(); PilotFights(now); PilotPlaysCards(now); PilotHolds(now); }            MitaCheckTick(now);
+            if (labPilotFull) { PilotKeepsCutting(); PilotFights(now); PilotPlaysCards(now); PilotHolds(now); }
+            LabPropsInHandTick(now);
+            MitaCheckTick(now);
             if (IsClient && labPilotFull) PilotClientTick(now, scene);
             if (Hosting && !tourStarted && scene == "SceneMenu" && now - tourSceneAt > 6) { tourStarted = true; LoadThroughGame(chapter); return; }
             // The verdict at 360 s, wherever the story has taken the host by then (it may be the next chapter).
@@ -150,11 +156,11 @@ namespace MiSideTogether
             // A minigame being played is progress too: its rounds log nothing until they end.
             if (progress != labPilotProgressSeq || minigames.Count > 0) { labPilotProgressSeq = progress; labPilotProgressAt = now; }
             bool stalled = labPilotFull && now - labPilotProgressAt > PilotStallSeconds;
-            if (stalled && labPilotStart > 0 && !labChecked.Contains("pilot.acted")) Log("Lab: pilot stalled, no story event for " + PilotStallSeconds + " s");
+            if (stalled && labPilotStart > 0 && !labChecked.Contains("pilot.acted")) { Log("Lab: pilot stalled, no story event for " + PilotStallSeconds + " s"); LogPressable(); Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-pressable"))); }
             bool pilotOver = labPilotStart > 0 && (labPilotFull ? stalled || (scene != chapter && scene != "SceneMenu" && now - tourSceneAt > 15) || now - labPilotStart > 1400 : now - labPilotStart > 360);
             if (Hosting && tourStarted && pilotOver && !labChecked.Contains("pilot.acted"))
             {
-                LabTvChecks();
+                LabTvChecks(); LabPropsInHandCheck();
                 CheckOnce("pilot.acted",labPilotActions >= 3 && (!labPilotFull || scene != chapter),labPilotActions + " story actions; quests now " + ActiveQuests() + "; scene " + scene);
                 Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-pilot-end")));
                 return;
@@ -188,9 +194,10 @@ namespace MiSideTogether
                 Log("Lab: the client didn't press it, pilot presses " + PathOf(left.transform)); return;
             }
             foreach (ObjectInteractive o in Object.FindObjectsOfType<ObjectInteractive>())
-                if (o != null && o.active && o.isActiveAndEnabled && !labPilotDone.Contains(o.Pointer))
+                if (o != null && o.active && o.isActiveAndEnabled && !labPilotDone.Contains(o.Pointer) && ChapterScene(o.gameObject))
                 {
                     bool toClient = labPilotBoth && !labPilotTurn && AcceptedCount > 0;
+                    if (!toClient) PilotStepTo(o);
                     if (!toClient && !LabPress(o)) return;   // the press happens in that object's next Update
                     labPilotDone.Add(o.Pointer); labPilotActions++;
                     labPilotTurn = !labPilotTurn;
@@ -206,14 +213,14 @@ namespace MiSideTogether
                     Log("Lab: pilot presses " + PathOf(o.transform)); return;
                 }
             foreach (Trigger_MouseEvent t in Object.FindObjectsOfType<Trigger_MouseEvent>())
-                if (t != null && t.isActiveAndEnabled && !labPilotDone.Contains(t.Pointer) && StoryPath(t.transform))
+                if (t != null && t.isActiveAndEnabled && !labPilotDone.Contains(t.Pointer) && StoryPath(t.transform) && ChapterScene(t.gameObject))
                 {
                     labPilotDone.Add(t.Pointer); labPilotActions++;
-                    Log("Lab: pilot looks at " + PathOf(t.transform)); t.Enter(); return;
+                    Log("Lab: pilot looks at " + PathOf(t.transform)); labPilotAt = now + LabGaze(t); return;
                 }
             foreach (Trigger_Event t in Object.FindObjectsOfType<Trigger_Event>())
             {
-                if (t == null || !t.isActiveAndEnabled || labPilotDone.Contains(t.Pointer) || !StoryPath(t.transform)) continue;
+                if (t == null || !t.isActiveAndEnabled || labPilotDone.Contains(t.Pointer) || !StoryPath(t.transform) || !ChapterScene(t.gameObject)) continue;
                 Collider c = t.GetComponent<Collider>();
                 if (c == null) continue;
                 labPilotDone.Add(t.Pointer); labPilotActions++;
@@ -237,6 +244,41 @@ namespace MiSideTogether
             PilotOpensRoom();
         }
 
+        // A player presses what they stand at. Pressed from across the house, a take sends the hand out for an item it
+        // never reaches (Scene 6's key in the basement, the client upstairs): the pilot first goes there, onto the
+        // walkable floor nearest the object.
+        void PilotStepTo(Component o)
+        {
+            PlayerMove p = LocalPlayer;
+            if (p == null || o == null || (p.transform.position - o.transform.position).magnitude < 2f) return;
+            UnityEngine.AI.NavMeshHit hit;
+            if (!UnityEngine.AI.NavMesh.SamplePosition(o.transform.position, out hit, 3f, UnityEngine.AI.NavMesh.AllAreas)) return;
+            Log("Lab: pilot goes to " + PathOf(o.transform) + " (" + (p.transform.position - o.transform.position).magnitude.ToString("0.0") + " m away)");
+            p.TeleportPlayer(hit.position);
+        }
+
+        // Where a run stalls: what each PC could press there (story objects in chapter scenes), to compare the two logs.
+        public void LogPressable() { Log("Lab: pressable here: " + Pressable()); }
+
+        static string Pressable()
+        {
+            List<string> on = new List<string>();
+            foreach (ObjectInteractive o in Object.FindObjectsOfType<ObjectInteractive>())
+                // Switched on by the story; not ObjectInteractive.active, which the game also clears while the player is busy.
+                if (o != null && o.isActiveAndEnabled && ChapterScene(o.gameObject) && StoryPath(o.transform)) on.Add(PathOf(o.transform));
+            on.Sort(System.StringComparer.Ordinal);
+            return string.Join(" | ", on);
+        }
+
+        // pilot.pressable (host): at the end, the client can press the same story objects as the host (what one PC's story
+        // switched on or used up, the other's did too; Scene 6's key stayed on the host's table after the client took it).
+        public void LabPressableNotice(string theirs)
+        {
+            string here = Pressable();
+            if (here.Length > 1000 - "lab-pressablelist:".Length) here = here.Substring(0, 1000 - "lab-pressablelist:".Length);   // as the client's was cut
+            CheckOnce("pilot.pressable", theirs == here, theirs == here ? "same " + (here.Length == 0 ? 0 : here.Split('|').Length) + " objects" : "client " + theirs + " / host " + here);
+        }
+
         void StoryPilotNotice(string notice)
         {
             string host = notice.Substring("lab-pilot:".Length), here = PilotState();
@@ -255,7 +297,11 @@ namespace MiSideTogether
         // pilot.keys: every story key and shared key item the host sent was found here as it is, without guessing by name.
         void StoryPilotEnd()
         {
-            LabTvChecks();
+            LabTvChecks(); LabPropsInHandCheck();
+            // Also when the chapter doesn't end within the tour (Scene 5 goes on into Scene 6 beside it).
+            string pressable = "lab-pressablelist:" + Pressable();
+            SendToHost(Wire.Packet(Op.Notice, w => Wire.Text(w, pressable.Length > 1000 ? pressable.Substring(0, 1000) : pressable)));
+            if (logApplied > 0) CheckOnce("log.clean", logLost == 0, "applied " + logApplied + ", waited " + logWaited + ", lost " + logLost + ", swallowed " + gateSwallowed);
             CheckOnce("pilot.keys",SceneKeys.NameMatched == 0 && keyItemsMissed == 0, SceneKeys.NameMatched + " keys found only by name, " + keyItemsMissed + " key items not found");
             StoryPilotSame();
         }

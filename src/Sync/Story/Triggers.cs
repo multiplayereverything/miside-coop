@@ -44,7 +44,8 @@ namespace MiSideTogether
             TogetherRuntime rt = Instance;
             if (rt == null || !rt.InLogChapter) return false;
             string path = SceneKeys.Key(t);
-            return path.Contains("/Quests#") || path.Contains("/Acts#");
+            // Scene 6 names its story root "Act": looking down there ends Scene 5 (Scene_Load.UnloadScene).
+            return path.Contains("/Quests#") || path.Contains("/Acts#") || path.Contains("/Act#");
         }
 
         // Standing still opens the game's Tetris console. In a session players often wait for each other, so that timer
@@ -95,6 +96,33 @@ namespace MiSideTogether
         // 99 lab only: the storylog tour's test event (TourStoryLog.cs)
         // 16-23 Scene 1 phone app: start/stop, the dialogue line, the name, its buttons, the cooking result; host only (AppSync.cs)
         // 24 Scene 4 console: the win, lose or draw reply the player's game switched on (Minigames.cs)
+        // 25 ObjectInteractiveItemTake.TakeDestroy: the taker's hand reached the item; the take completes everywhere
+        // 26 Scene_Load.UnloadScene(name): a chapter scene unloaded mid-play (Scene 5 under Scene 6's basement)
+        public static bool ApplyingUnload;
+
+        // Another player's take the host waits on (Op.Call 25). If their hand never gets there (a death or cutscene in
+        // between, or a lab pilot standing wrong), the host completes it for everyone after TakeWaitSeconds, so the story
+        // can't hang on it; the taker's late report then finds the item gone.
+        const float TakeWaitSeconds = 8;
+        readonly Dictionary<string, float> watchedTakes = new Dictionary<string, float>();
+        public static void NoteWatchedTake(ObjectInteractiveItemTake take)
+        {
+            TogetherRuntime rt = Instance;
+            if (rt != null && rt.Hosting && take != null) { string key = SceneKeys.Key(take); if (!rt.watchedTakes.ContainsKey(key)) rt.watchedTakes[key] = Time.realtimeSinceStartup; }
+        }
+
+        void WatchedTakeTick(float now)
+        {
+            foreach (KeyValuePair<string, float> t in new List<KeyValuePair<string, float>>(watchedTakes))
+            {
+                if (now - t.Value < TakeWaitSeconds) continue;
+                watchedTakes.Remove(t.Key);
+                if (SceneKeys.Find<ObjectInteractiveItemTake>(t.Key) == null) continue;   // completed meanwhile
+                Log("MT-STORY the taker's hand didn't arrive in " + TakeWaitSeconds + " s; the take completes for everyone: " + t.Key);
+                Story(Op.Call, "25:" + t.Key, 0);
+                ApplyCall("25:" + t.Key, 0);
+            }
+        }
         public static void Call(int entry, Component source, int arg)
         {
             if (source == null) return;
@@ -124,7 +152,25 @@ namespace MiSideTogether
                 case 10: case 11: case 12: case 13: case 14: ApplyCoreCall(entry, target, arg); break;
                 case 15: ApplyMobileShow(target); break;
                 case 24: ApplyConsoleReply(target); break;
-                case 16: case 17: case 18: case 19: case 20: case 21: case 22: case 23: ApplyAppCall(entry, target, arg); break;
+                case 26:
+                {
+                    UnityEngine.SceneManagement.Scene s = UnityEngine.SceneManagement.SceneManager.GetSceneByName(target);
+                    Scene_Load load = Object.FindObjectOfType<Scene_Load>();
+                    if (!s.isLoaded || load == null) break;   // already gone here
+                    Log("MT-STORY unloading " + target + " here, as another player did");
+                    ApplyingUnload = true;
+                    try { load.UnloadScene(target); } finally { ApplyingUnload = false; }
+                    break;
+                }
+                case 25:
+                {
+                    ObjectInteractiveItemTake take = SceneKeys.Find<ObjectInteractiveItemTake>(target);
+                    watchedTakes.Remove(target);
+                    if (take == null && SceneKeys.WasRecorded(target)) break;   // already taken here
+                    if (!Missing(take, target)) { Log("MT-STORY the taker's take completes here: " + target); take.TakeDestroy(); }
+                    break;
+                }
+                case 16: case 17: case 18: case 19: case 20: case 21: case 22: case 23: case 27: ApplyAppCall(entry, target, arg); break;
                 case 5: case 6:
                 {
                     Trigger_DistanceCamera t = SceneKeys.Find<Trigger_DistanceCamera>(target);
