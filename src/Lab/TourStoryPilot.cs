@@ -99,10 +99,9 @@ namespace MiSideTogether
             if (PilotAnswersPrompt()) { labPilotClientAt = now + 2; return; }
             if (labPilotClientPress.Length == 0) return;
             ObjectInteractive o = SceneKeys.Find<ObjectInteractive>(labPilotClientPress);
-            if (o != null && o.active && o.isActiveAndEnabled)
+            if (LabPress(o))
             {
                 Log("Lab: pilot (client) presses " + labPilotClientPress);
-                o.Click();
                 labPilotClientPress = "";
             }
             else if (now > labPilotClientUntil) { Log("Lab: pilot (client) gave up on " + labPilotClientPress); labPilotClientPress = ""; }
@@ -110,6 +109,17 @@ namespace MiSideTogether
 
         // The story's own objects: quests and acts (not the house's ambient triggers).
         static bool StoryPath(Transform t) { string p = PathOf(t); return p.Contains("/Quests/") || p.Contains("/Acts/"); }
+
+        // What the pilot compares between copies: the quests on, and the shared key inventory (Scene 2's batteries).
+        string PilotState()
+        {
+            if (cachedController == null) cachedController = Object.FindObjectOfType<GameController>();
+            List<string> keys = new List<string>();
+            if (cachedController != null && cachedController.inventoryKeysCase != null)
+                foreach (GameObject g in cachedController.inventoryKeysCase) if (g != null) keys.Add(g.name);
+            keys.Sort(System.StringComparer.Ordinal);
+            return ActiveQuests() + " keys:" + string.Join(",", keys);
+        }
 
         static string ActiveQuests()
         {
@@ -147,7 +157,7 @@ namespace MiSideTogether
             if (now >= labPilotSendAt)
             {
                 labPilotSendAt = now + 30;
-                string q = ActiveQuests();
+                string q = PilotState();
                 Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-pilot:" + q)));
             }
             if (PilotAnswersPrompt()) { labPilotAt = now + 2; return; }
@@ -163,16 +173,18 @@ namespace MiSideTogether
             {
                 ObjectInteractive left = SceneKeys.Find<ObjectInteractive>(handed.Key);
                 if (left == null || logKeysSeen.Contains(handed.Key)) { labPilotHanded.Remove(handed.Key); continue; }
-                if (now - handed.Value < PilotClientSeconds || !left.active || !left.isActiveAndEnabled) continue;
+                if (now - handed.Value < PilotClientSeconds || !LabPress(left)) continue;
                 labPilotHanded.Remove(handed.Key);
-                Log("Lab: the client didn't press it, pilot presses " + PathOf(left.transform)); left.Click(); return;
+                Log("Lab: the client didn't press it, pilot presses " + PathOf(left.transform)); return;
             }
             foreach (ObjectInteractive o in Object.FindObjectsOfType<ObjectInteractive>())
                 if (o != null && o.active && o.isActiveAndEnabled && !labPilotDone.Contains(o.Pointer))
                 {
+                    bool toClient = labPilotBoth && !labPilotTurn && AcceptedCount > 0;
+                    if (!toClient && !LabPress(o)) return;   // the press happens in that object's next Update
                     labPilotDone.Add(o.Pointer); labPilotActions++;
                     labPilotTurn = !labPilotTurn;
-                    if (labPilotBoth && labPilotTurn && AcceptedCount > 0)
+                    if (toClient)
                     {
                         string key = SceneKeys.Key(o);
                         labPilotHanded[key] = now;
@@ -181,7 +193,7 @@ namespace MiSideTogether
                         labPilotAt = now + 3;
                         return;
                     }
-                    Log("Lab: pilot presses " + PathOf(o.transform)); o.Click(); return;
+                    Log("Lab: pilot presses " + PathOf(o.transform)); return;
                 }
             foreach (Trigger_MouseEvent t in Object.FindObjectsOfType<Trigger_MouseEvent>())
                 if (t != null && t.isActiveAndEnabled && !labPilotDone.Contains(t.Pointer) && StoryPath(t.transform))
@@ -217,7 +229,7 @@ namespace MiSideTogether
 
         void StoryPilotNotice(string notice)
         {
-            string host = notice.Substring("lab-pilot:".Length), here = ActiveQuests();
+            string host = notice.Substring("lab-pilot:".Length), here = PilotState();
             labPilotCompared++;
             // A quest the host just switched can take a moment here: a difference counts if it is still there next time.
             if (host != here) { if (labPilotLastDiff == host + "#" + here) labPilotDiffer++; labPilotLastDiff = host + "#" + here; Log("Lab: pilot quests differ: host " + host + " / here " + here); }
@@ -230,6 +242,12 @@ namespace MiSideTogether
             labPilotClientUntil = Time.realtimeSinceStartup + 8;
         }
 
-        void StoryPilotEnd() { CheckOnce("pilot.same", labPilotCompared >= 3 && labPilotDiffer == 0, labPilotCompared + " comparisons, " + labPilotDiffer + " lasting differences; quests here " + ActiveQuests() + " in " + ActiveSceneName); }
+        // pilot.keys: every story key and shared key item the host sent was found here as it is, without guessing by name.
+        void StoryPilotEnd()
+        {
+            CheckOnce("pilot.keys", SceneKeys.NameMatched == 0 && keyItemsMissed == 0, SceneKeys.NameMatched + " keys found only by name, " + keyItemsMissed + " key items not found");
+            StoryPilotSame();
+        }
+        void StoryPilotSame() { CheckOnce("pilot.same", labPilotCompared >= 3 && labPilotDiffer == 0, labPilotCompared + " comparisons, " + labPilotDiffer + " lasting differences; quests here " + ActiveQuests() + " in " + ActiveSceneName); }
     }
 }

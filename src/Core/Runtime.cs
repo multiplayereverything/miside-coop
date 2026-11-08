@@ -18,7 +18,8 @@ namespace MiSideTogether
         public string Address = "";
         public int ListenPort;
         public byte Colour;
-        public float PoseAt, LastHeard;
+        public float PoseAt, LastHeard, PingMs;
+        public string Status = "";
         public int SceneHash;
         public Vector3 Position, ShownPosition, Feet;
         public float FeetMovedAt = -100;
@@ -58,7 +59,7 @@ namespace MiSideTogether
         // with the main copy, so it never backs up, mirrors or restores saves.
         public static bool SecondCopy;
         float secondJoinAt;
-        float nextPose, nextPing;
+        float nextPose, nextPing, pingSentAt;
         GUIStyle boxStyle, labelStyle, tagStyle;
         public static readonly Color[] Colours = { new Color(0.95f, 0.35f, 0.3f), new Color(0.35f, 0.75f, 1f), new Color(0.45f, 0.95f, 0.45f), new Color(1f, 0.85f, 0.3f), new Color(0.85f, 0.5f, 1f), new Color(1f, 0.6f, 0.25f) };
         public static string Root { get { return Directory.GetParent(Application.dataPath).FullName; } }
@@ -277,6 +278,7 @@ namespace MiSideTogether
             if (Connected && now >= nextPing)
             {
                 nextPing = now + 2f;
+                pingSentAt = now;
                 Broadcast(Wire.Packet(Op.Ping, null));
             }
             Step("menu", NativeMenuTick);
@@ -421,7 +423,7 @@ namespace MiSideTogether
             float scale = Mathf.Max(1f, Screen.height / 900f);
             Matrix4x4 old = GUI.matrix;
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1));
-            try { DrawPanel(scale); }
+            try { DrawPanel(scale); if (debugOpen && Active) DrawDebugPage(scale); }
             finally { GUI.enabled = true; GUI.matrix = old; }
             panelFrames++;
         }
@@ -467,6 +469,7 @@ namespace MiSideTogether
                 if (IsClient && ui.Button("Go to the host", 26)) TeleportToHost();
                 // Someone stuck or lost: everyone in the host's chapter comes to the host (same safe placement).
                 if (Hosting && AcceptedCount > 0 && ui.Button("Bring everyone here", 26)) { Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "gather"))); Tell("Bringing everyone to you."); }
+                if (ui.Button(debugOpen ? "Hide debug page" : "Debug page", 26)) debugOpen = !debugOpen;
             }
             if (!Active) DrawServerList();
             ui.Text("The host leads the story: chapters, cutscenes and Mita follow the host. Anything any player presses or triggers happens for everyone.");

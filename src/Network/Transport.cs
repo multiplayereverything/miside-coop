@@ -246,12 +246,12 @@ namespace MiSideTogether
         Hello = 1, Welcome, Roster, Reject, Leave, Ping, Pong, Notice,
         Pose, Scene, SceneReady, History,
         Interact, MouseClick, TriggerEnter, TriggerExit, DialogueChoice,
-        Mita, Door, SceneLoad, Visible, SaveFile, Face, Cutscene, CutscenePlay, KeyAdd, KeyRemove, HandItem, Death, SkipDialogue, Prop, Minigame, Carry, InteractionDone, Dialogue, WorldState, AnimEvent, Novella, LookTrigger, DistanceTrigger, Call, SessionLog, Rules, Ordered, Gate, Check, Repair
+        Mita, Door, SceneLoad, Visible, SaveFile, Face, Cutscene, CutscenePlay, KeyAdd, KeyRemove, HandItem, Death, SkipDialogue, Prop, Minigame, Carry, InteractionDone, Dialogue, WorldState, AnimEvent, Novella, LookTrigger, DistanceTrigger, Call, SessionLog, Rules, Ordered, Gate, Check, Repair, Status
     }
 
     public static class Wire
     {
-        public const int Version = 10;
+        public const int Version = 11;
         public static byte[] Packet(Op op, Action<BinaryWriter> write)
         {
             using (MemoryStream memory = new MemoryStream())

@@ -13,6 +13,7 @@ namespace MiSideTogether
             if (labTour == "door") DoorTour(now, scene);
             if (labTour == "allhere") AllHereTour(now, scene);
             if (labTour == "scanner") ScannerTour(now, scene);
+            if (labTour == "debug") DebugTour(now, scene);
         }
 
         // A cutscene that takes over the camera needs everyone: a player elsewhere is told and brought along.

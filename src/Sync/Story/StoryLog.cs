@@ -30,6 +30,7 @@ namespace MiSideTogether
         // Held so the stand-ins' delegates aren't collected while the game can still call them.
         readonly List<UnityAction> gateActions = new List<UnityAction>();
         int logSeq, logNext, logApplied, logWaited, logLost, gateSwallowed, gateFired;
+        string logWaitingOn = "";
         float logBlockedSince = -1, logRetryAt;
         bool gatesBuilt, ownRequest;
         string gatesScene = "";
@@ -66,7 +67,7 @@ namespace MiSideTogether
 
         // A client asked for something: the host runs it first, so a press that can't work here never enters the log. What
         // the press sets off is logged after the press itself.
-        sealed class HostRequestEntry { public Op Op; public string Key; public int Arg, Origin; public float Until; }
+        sealed class HostRequestEntry { public Op Op; public string Key; public int Arg, Origin, From; public float Until; }
         readonly List<HostRequestEntry> hostRequests = new List<HostRequestEntry>();
         List<HostRequestEntry> holdingLogs;
 
@@ -76,7 +77,7 @@ namespace MiSideTogether
             int arg = reader.ReadInt32();
             if (op == Op.Gate && !GateRequestAllowed(key, from)) return;
             bool request = op == Op.Interact || op == Op.MouseClick || op == Op.Gate;
-            HostRequestEntry entry = new HostRequestEntry { Op = op, Key = key, Arg = arg, Origin = request ? -1 : from, Until = Time.realtimeSinceStartup + 5 };
+            HostRequestEntry entry = new HostRequestEntry { Op = op, Key = key, Arg = arg, Origin = request ? -1 : from, From = from, Until = Time.realtimeSinceStartup + 5 };
             if (!RunRequest(entry)) hostRequests.Add(entry);
         }
 
@@ -97,7 +98,14 @@ namespace MiSideTogether
             for (int i = hostRequests.Count - 1; i >= 0; i--)
             {
                 if (RunRequest(hostRequests[i])) hostRequests.RemoveAt(i);
-                else if (now >= hostRequests[i].Until) { Log("MT-LOG refused " + hostRequests[i].Op + " " + hostRequests[i].Key + ": not possible on the host"); hostRequests.RemoveAt(i); }
+                else if (now >= hostRequests[i].Until)
+                {
+                    Log("MT-LOG refused " + hostRequests[i].Op + " " + hostRequests[i].Key + ": not possible on the host");
+                    // Said to the player, so a press that did nothing isn't pressed thirty more times (2026-11-08, a battery).
+                    if (hostRequests[i].Op == Op.Interact || hostRequests[i].Op == Op.MouseClick)
+                        Network.Send(hostRequests[i].From, Wire.Packet(Op.Notice, w => Wire.Text(w, "The host couldn't do that: another player already did it, or the host isn't there yet.")));
+                    hostRequests.RemoveAt(i);
+                }
             }
         }
 
@@ -148,7 +156,7 @@ namespace MiSideTogether
                     if (storyMissing)
                     {
                         if (own) ownRequests.Add(key);
-                        if (logBlockedSince < 0) { logBlockedSince = now; logWaited++; Log("MT-LOG waiting at " + logNext + " for " + op + " " + key); }
+                        if (logBlockedSince < 0) { logBlockedSince = now; logWaited++; logWaitingOn = op + " " + key.Substring(key.LastIndexOf('/') + 1); Log("MT-LOG waiting at " + logNext + " for " + op + " " + key); }
                         if (now - logBlockedSince < LogStuckSeconds) { logRetryAt = now + 0.25f; return; }
                         // Long past anything the story could still do here. Repair (StoryCheck.cs) tries it again.
                         Log("MT-LOG stuck at " + logNext + " for " + LogStuckSeconds + " s, moving on: " + op + " " + key);

@@ -17,14 +17,30 @@ namespace MiSideTogether
         static void ApplyKeyItem(Op op, string key)
         {
             Transform item = SceneKeys.Find<Transform>(key) ?? SceneKeys.FindItemByName(key);
-            if (item == null) { Log("Key item not found here: " + key); return; }
+            GameObject added = item != null ? item.gameObject : KeyItemAsset(key);
+            if (added == null) { keyItemsMissed++; Log("Key item not found here: " + key); return; }
             GameController gc = Object.FindObjectOfType<GameController>();
             if (gc == null) return;
-            if (op == Op.KeyAdd) gc.AddKeyItem(item.gameObject); else gc.RemoveKeyItem(item.gameObject);
+            if (op == Op.KeyAdd) gc.AddKeyItem(added); else gc.RemoveKeyItem(added);
             keyItemsApplied++;
         }
 
-        public static int keyItemsApplied;
+        public static int keyItemsApplied, keyItemsMissed;
+
+        // A key item can be a prefab rather than an object in the room: Scene 2's fridge and server hand over the battery
+        // prefab itself (AddKeyItem(ItemBataryServer)), keyed "/ItemBataryServer#0". Found among loaded assets by name.
+        static GameObject KeyItemAsset(string key)
+        {
+            if (!key.StartsWith("/", StringComparison.Ordinal)) return null;
+            int hash = key.LastIndexOf('#');
+            string name = key.Substring(1, (hash > 0 ? hash : key.Length) - 1);
+            foreach (Object o in Resources.FindObjectsOfTypeAll(Il2CppInterop.Runtime.Il2CppType.Of<GameObject>()))
+            {
+                GameObject go = o.TryCast<GameObject>();
+                if (go != null && go.name == name && !go.scene.IsValid() && go.transform.parent == null) return go;
+            }
+            return null;
+        }
 
         // --- Hand items ----------------------------------------------------------------------------------------
         sealed class HeldVisual { public GameObject Clone; public GameObject Original; }

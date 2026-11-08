@@ -155,9 +155,10 @@ namespace MiSideTogether
                 case Op.Novella: ReadNovella(reader, from); break;
                 case Op.SessionLog: HostSessionLog(peer, reader); break;
                 case Op.Repair: HostRepair(peer); break;
+                case Op.Status: HostStatus(peer, reader); break;
                 case Op.Notice: { string n = Wire.Text(reader, 1100); if (n == "lab-gaze") labGazeAt = Time.realtimeSinceStartup; else if (n.StartsWith("lab-hostcut:", StringComparison.Ordinal)) HostCutAsked(n.Substring(12)); break; }
                 case Op.Ping: Network.Send(from, Wire.Packet(Op.Pong, null)); break;
-                case Op.Pong: break;
+                case Op.Pong: peer.PingMs = (Time.realtimeSinceStartup - pingSentAt) * 1000; break;
                 case Op.Leave: Network.Drop(from); break;
             }
         }
@@ -219,6 +220,7 @@ namespace MiSideTogether
                 case Op.Rules: ClientRules(reader); break;
                 case Op.Ordered: ClientOrdered(reader); break;
                 case Op.Check: ClientCheck(reader); break;
+                case Op.Status: ClientStatus(reader); break;
                 case Op.Scene: ClientScene(reader); break;
                 case Op.History: ClientHistory(reader); break;
                 case Op.Interact:
@@ -256,6 +258,8 @@ namespace MiSideTogether
                     string notice = Wire.Text(reader, 400);
                     if (notice.StartsWith("go:", StringComparison.Ordinal)) { GoNotice(notice.Substring(3)); break; }
                     if (notice == "gather") { if (!TryTeleportToHost(false)) Tell("The host called everyone, but there is no safe spot beside them right now."); else Tell("The host brought you to them."); break; }
+                    if (notice == "dbg-skip") { SkipStuckStep(); break; }
+                    if (notice == "dbg-report") { SaveReport("report", "bug report (host's button)\n" + statusTable); Tell("The host saved a bug report; yours is in " + SessionLogDir + "."); break; }
                     if (notice == "wait-chapter") { waitingForChapter = true; Tell("The host is in the middle of a chapter. You join them when the next chapter starts."); break; }
                     if (notice == "lab-step") { labStepAt = Time.realtimeSinceStartup; break; }
                     if (notice == "lab-gaze") { labGazeAt = Time.realtimeSinceStartup; break; }

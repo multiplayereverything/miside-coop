@@ -66,6 +66,7 @@ namespace MiSideTogether
             Step("w.gates", BuildGates);
             if (IsClient) Step("w.log", () => StoryLogTick(now));
             if (Hosting) Step("w.check", () => HostCheckTick(now)); else Step("w.check", () => ClientCheckTick(now));
+            Step("w.debug", () => DebugTick(now));
             if (hostRequests.Count > 0) Step("w.requests", () => HostRequestTick(now));
             if (storyRetries.Count > 0) Step("w.retry", () => StoryRetryTick(now));
             if (pendingGo != null) Step("w.go", () => GoTick(now));
@@ -606,6 +607,14 @@ namespace MiSideTogether
 
         public static void RegisterItems()
         {
+            // Every object's key as the chapter loaded, the same on every PC. Computed later, sibling numbers drift as the
+            // story spawns and destroys objects, and a name alone can be ambiguous (Scene 2 has two "Quest 3", each with a
+            // TriggerStopDoorTakTak): a client then never found the host's door trigger and its story stalled (2026-11-08).
+            System.Diagnostics.Stopwatch watch = System.Diagnostics.Stopwatch.StartNew();
+            foreach (Transform t in Object.FindObjectsOfType<Transform>(true))
+                if (t != null && t.gameObject.scene.isLoaded) RegisterStable(t.gameObject);
+            TogetherRuntime.Log("Chapter keys recorded: " + stable.Count + " objects in " + watch.ElapsedMilliseconds + " ms");
+            byType.Clear(); scannedAt.Clear();
             foreach (ObjectInteractiveItemTake take in Object.FindObjectsOfType<ObjectInteractiveItemTake>(true))
             {
                 if (take == null) continue;
@@ -641,7 +650,8 @@ namespace MiSideTogether
         public static string Key(GameObject go)
         {
             string known;
-            if (go != null && stable.TryGetValue(go.Pointer, out known)) return known;
+            // The name guards against a destroyed object's address reused by a new one.
+            if (go != null && stable.TryGetValue(go.Pointer, out known) && known.EndsWith("/" + go.name + known.Substring(known.LastIndexOf('#')), StringComparison.Ordinal)) return known;
             return Compute(go);
         }
 
@@ -676,6 +686,8 @@ namespace MiSideTogether
         // path without the sibling indices, when exactly one object has it, is the same object.
         static readonly System.Text.RegularExpressions.Regex SiblingIndex = new System.Text.RegularExpressions.Regex(@"#\d+");
         static readonly HashSet<string> namedLogged = new HashSet<string>();
+        // Story objects found only by name. Objects spawned while the chapter runs ("(Clone)") have no chapter-start key.
+        public static int NameMatched { get { int n = 0; foreach (string k in namedLogged) if (!k.Contains("(Clone)")) n++; return n; } }
 
         static T ByName<T>(Dictionary<string, Object> map, string key) where T : Component
         {

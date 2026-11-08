@@ -83,14 +83,16 @@ namespace MiSideTogether
 
         static string ConversationOf(string position) { int hash = position.LastIndexOf('#'); return hash < 0 ? position : position.Substring(0, hash); }
 
-        void SaveDesyncReport(string mismatch)
+        void SaveDesyncReport(string mismatch) { SaveReport("desync", mismatch); }
+
+        void SaveReport(string kind, string text)
         {
             try
             {
                 string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
                 Directory.CreateDirectory(SessionLogDir);
-                File.WriteAllText(Path.Combine(SessionLogDir, "desync-" + stamp + ".txt"), ActiveSceneName + "\nlog position " + logNext + "\n" + mismatch + "\n");
-                ScreenCapture.CaptureScreenshot(Path.Combine(SessionLogDir, "desync-" + stamp + ".png"));
+                File.WriteAllText(Path.Combine(SessionLogDir, kind + "-" + stamp + ".txt"), ActiveSceneName + "\nlog position " + logNext + "\n" + text + "\n");
+                ScreenCapture.CaptureScreenshot(Path.Combine(SessionLogDir, kind + "-" + stamp + ".png"));
             }
             catch (Exception ex) { Log("MT-DESYNC report failed: " + ex.Message); }
         }

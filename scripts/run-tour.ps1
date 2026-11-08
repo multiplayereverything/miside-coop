@@ -1,4 +1,4 @@
-﻿# Runs one scripted lab tour with hidden windows and judges it. Results go to artifacts/tests/<tour>-results.json.
+# Runs one scripted lab tour with hidden windows and judges it. Results go to artifacts/tests/<tour>-results.json.
 # Usage: run-tour.ps1 -Tour avatars [-Players 2] [-Seconds 180] [-Chapter "Scene 3 - WeTogether"]
 param([Parameter(Mandatory)][string]$Tour, [int]$Players = 2, [int]$Seconds = 0, [string]$Chapter = '', [switch]$Visible, [string]$ExtraHostArgs = '', [string]$ExtraClientArgs = '', [int]$Lag = 0, [int]$Jitter = 0, [string]$JoinAddress = '127.0.0.1')
 $ErrorActionPreference = 'Stop'
@@ -27,9 +27,10 @@ $tours = @{
     'afk'      = @{ Seconds = 90; Chapter = 'Scene 2 - InGame'; Expect = @('afk.console@host', 'client.afk.console') }
     'door'     = @{ Seconds = 100; Chapter = 'Scene 3 - WeTogether'; Expect = @('door.pushed@host', 'client.door.pushed') }
     'allhere'  = @{ Seconds = 120; Chapter = 'Scene 1 - RealRoom'; Expect = @('allhere.played@host', 'client.allhere.notice', 'client.allhere.brought') }
+    'debug'    = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('debug.rows@host', 'debug.waiting@host', 'client.debug.skip', 'client.debug.refused', 'client.debug.report') }
     'scanner'  = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('scanner.waits@host', 'client.scanner.waits', 'scanner.placed@host', 'client.scanner.placed', 'client.scanner.same') }
     'mitasame' = @{ Seconds = 240; LabTour = 'storypilot'; Chapter = 'Scene 3 - WeTogether'; PlayerArgs = '-mt-pilotboth -mt-mitacheck'; Expect = @('mita.moved@host') }
-    'scene2'   = @{ Seconds = 500; LabTour = 'storypilot'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.log.clean') }
+    'scene2'   = @{ Seconds = 500; LabTour = 'storypilot'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     # roomhold: the client keeps a room the host's story switched off, so its lights differ on purpose.
     'roomhold' = @{ Seconds = 162; LightDiffers = $true; Expect = @('room.off@host', 'client.room.kept') }
     'menuleave' = @{ Seconds = 166; ClientLeaves = $true; Expect = @('leave.seen@host', 'client.leave.left') }
