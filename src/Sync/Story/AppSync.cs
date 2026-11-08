@@ -84,6 +84,10 @@ namespace MiSideTogether
         }
 
         // Whoever's knife came down: the slice is made on every board.
+        // Holding the cooking knife hides the cursor (CutHold); letting go shows it only while canCut is set, and the last Cut
+        // clears that. With the board shared, anyone's last cut can end it under a held knife, leaving this PC's cursor hidden.
+        public static void AppMiniGameStopped() { TogetherRuntime rt = Instance; if (rt != null && rt.Connected) Cursor.visible = true; }
+
         public static void AppCut(TamagotchiGame_Cooking cooking)
         {
             if (Replaying || cooking == null) return;

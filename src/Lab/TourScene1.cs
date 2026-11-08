@@ -81,9 +81,9 @@ namespace MiSideTogether
             LabScene1Tutorial(now);   // also types the name in the app, where there is no player object
             Scene1State(now);
             LabPropsInHandTick(now);
-            LabAppMitaTrace();
+            LabAppMitaTrace(); LabCursorTrace(); LabPhoneTrace(now);
             // Every 5 s while the phone app is up (a missing Mita there was seen by the user, between 15 s shots), else 15 s.
-            if (now - tourSceneAt > 20 && now >= labS1ShotAt) { labS1ShotAt = now + (inApp ? 5 : 15); LabShotAll("s1-" + (labS1Shots++).ToString("00")); }
+            if (now - tourSceneAt > 20 && now >= labS1ShotAt) { labS1ShotAt = now + (inApp ? 5 : 2); LabShotAll("s1-" + (labS1Shots++).ToString("00")); }
             if (now < labS1StepAt || now - tourSceneAt < 25) return;
             labS1StepAt = now + 2;
             if (!labS1Took)
@@ -194,7 +194,7 @@ namespace MiSideTogether
             if (scene != "Scene 2 - InGame") return;
             if (labS1EndAt < 0) labS1EndAt = now;
             if (LocalPlayer != null && now - labS1EndAt > 15 && now - labS1EndAt < 16) LabShot("end-" + Name);
-            if (LocalPlayer != null && now - labS1EndAt > 20) LabPropsInHandCheck();
+            if (LocalPlayer != null && now - labS1EndAt > 20) { LabPropsInHandCheck(); LabCursorCheck(); }
             if (LocalPlayer != null && now - labS1EndAt > 20) CheckOnce("end.arrived", true, "in Scene 2 with a player, camera " + (Camera.main != null ? Camera.main.name : "none"));
             else if (now - labS1EndAt > 90) CheckOnce("end.arrived", false, "in Scene 2 for 90 s without a player");
         }
@@ -344,7 +344,7 @@ namespace MiSideTogether
             LabScene1Tutorial(now);   // also types the name in the app, where there is no player object
             Scene1State(now);
             LabPropsInHandTick(now);
-            LabAppMitaTrace();
+            LabAppMitaTrace(); LabCursorTrace(); LabPhoneTrace(now);
         }
     }
 }

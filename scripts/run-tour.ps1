@@ -15,7 +15,7 @@ $tours = @{
     'core'     = @{ Seconds = 174;  Expect = @('chapter.loaded@host', 'core.driven@host', 'client.core.followed', 'core.answered@host', 'client.core.same') }
     'quest'    = @{ Seconds = 216;  Expect = @('chapter.loaded@host', 'quest.clicked@host', 'client.quest.moved') }
     # scene1: the app's Mita follows the host's steps (name, tidy-up), about 1 s late at a step; normal play is held to 1 s by 'mita'.
-    'scene1'   = @{ Seconds = 880; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived', 'client.log.clean', 'client.props.inhand', 'cook.client@host', 'cook.same@host', 'app.lines@host') }
+    'scene1'   = @{ Seconds = 880; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived', 'client.log.clean', 'client.props.inhand', 'client.phone.notmine', 'client.phone.day2', 'client.app.cursor', 'app.cursor@host', 'cook.client@host', 'cook.same@host', 'app.lines@host') }
     'choice'   = @{ Seconds = 154;  AllowGameErrors = $true; Expect = @('choice.picked@host', 'client.choice.applied', 'client.choice.navmesh') }
     'scene1end' = @{ Seconds = 306; NpcLagLimit = 1.5; Expect = @('end.arrived@host', 'client.end.arrived', 'client.log.clean') }
     'scene3'   = @{ Seconds = 326; AllowGameErrors = $true; Expect = @('s3.walk@host', 'client.s3.walk', 'client.s3.navmesh', 'client.s3.choice') }

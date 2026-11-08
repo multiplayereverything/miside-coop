@@ -124,6 +124,7 @@ namespace MiSideTogether
         // What the pilot compares between copies: the quests on, and the shared key inventory (Scene 2's batteries).
         string PilotState()
         {
+            LabRooms();   // logged (MT-ROOMS), not compared: camera-driven objects legitimately differ between PCs
             if (cachedController == null) cachedController = Object.FindObjectOfType<GameController>();
             List<string> keys = new List<string>();
             if (cachedController != null && cachedController.inventoryKeysCase != null)
@@ -131,6 +132,29 @@ namespace MiSideTogether
             keys.Sort(System.StringComparer.Ordinal);
             return ActiveQuests() + " keys:" + string.Join(",", keys);
         }
+
+        // User report (2026-11-08): "after the hallway ... the room doesn't sync". What is switched on in the house: the
+        // rooms by name (three levels down), and a count of everything under them, so a difference deeper down shows too.
+        static string LabRooms()
+        {
+            GameObject world = GameObject.Find("World");
+            Transform house = world != null ? world.transform : null;
+            if (house == null) return "";
+            List<string> on = new List<string>();
+            int all = 0;
+            foreach (Transform t in house.GetComponentsInChildren<Transform>(false))
+            {
+                all++;
+                int depth = 0;
+                for (Transform p = t; p != null && p != house; p = p.parent) depth++;
+                if (depth > 0 && depth <= 3) on.Add(t.name);
+            }
+            on.Sort(System.StringComparer.Ordinal);
+            string names = string.Join(",", on);
+            if (names != labRoomNames) { labRoomNames = names; Log("MT-ROOMS " + all + " " + names); }
+            return all + ":" + Wire.Hash(names).ToString("x8");
+        }
+        static string labRoomNames = "";
 
         static string ActiveQuests()
         {
@@ -170,7 +194,7 @@ namespace MiSideTogether
             labPilotAt = now + 1.5f;
             if (now >= labPilotSendAt)
             {
-                labPilotSendAt = now + 30;
+                labPilotSendAt = now + 10;
                 string q = PilotState();
                 Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-pilot:" + q)));
                 // What each player sees at each comparison, to set side by side (tools/shots_to_png.py).

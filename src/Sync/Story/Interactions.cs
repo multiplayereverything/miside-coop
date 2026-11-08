@@ -211,7 +211,16 @@ namespace MiSideTogether
                 string key = SceneKeys.Key(m);
                 held.Add(new KeyValuePair<string, Transform>(key, Moved(m)));
                 now_.Add(key);
+                heldItems[key] = Moved(m);
             }
+            // The story can destroy the magnet with the item still in this player's hand (Scene 1: Quest 2 destroys Quest 1,
+            // which has the phone's magnet). It stays held: without this the others' copy froze where it last was.
+            foreach (KeyValuePair<string, Transform> h in heldItems)
+                if (held.Count < 8 && !now_.Contains(h.Key) && h.Value != null && h.Value.IsChildOf(root) && SceneKeys.Find<Transform_Magnet>(h.Key) == null)
+                {
+                    held.Add(h);
+                    now_.Add(h.Key);
+                }
             List<string> released = new List<string>();
             foreach (string key in carrying) if (!now_.Contains(key)) released.Add(key);
             if (held.Count == 0 && released.Count == 0) return;
@@ -233,8 +242,10 @@ namespace MiSideTogether
                 foreach (string key in released)
                 {
                     Transform_Magnet m = SceneKeys.Find<Transform_Magnet>(key);
+                    Transform item = m != null ? Moved(m) : null;
+                    if (item == null) heldItems.TryGetValue(key, out item);
                     Wire.Text(w, key);
-                    WritePose(w, m != null ? Moved(m).position : Vector3.zero, m != null ? Moved(m).rotation : Quaternion.identity);
+                    WritePose(w, item != null ? item.position : Vector3.zero, item != null ? item.rotation : Quaternion.identity);
                 }
             }));
             carrying.Clear();
@@ -242,7 +253,7 @@ namespace MiSideTogether
         }
 
         // --- Watchers: carried objects follow the actor's body ---------------------------------------------------
-        sealed class Carried { public int Owner; public string Bone = ""; public Vector3 LocalPos; public Quaternion LocalRot; public Transform_Magnet Magnet; public float Since = Time.realtimeSinceStartup; }
+        sealed class Carried { public int Owner; public string Bone = ""; public Vector3 LocalPos; public Quaternion LocalRot; public Transform_Magnet Magnet; public Transform Item; public float Since = Time.realtimeSinceStartup; }
 
         // The wrist or hand bone of the body nearest to a held item (null when the body has none within reach).
         static Transform HoldingBone(BodyLayout layout, Vector3 at)
@@ -259,6 +270,7 @@ namespace MiSideTogether
             return best;
         }
         readonly Dictionary<string, Carried> carried = new Dictionary<string, Carried>();
+        readonly Dictionary<string, Transform> heldItems = new Dictionary<string, Transform>();
 
         void ReadCarry(BinaryReader reader, int from)
         {
@@ -297,7 +309,7 @@ namespace MiSideTogether
                     if (m == null) continue;
                     // The local magnet would pull the object back to this machine's own targets; pause it while carried.
                     m.enabled = false;
-                    c = new Carried { Magnet = m };
+                    c = new Carried { Magnet = m, Item = Moved(m) };
                     carried[key] = c;
                 }
                 c.Owner = id; c.Bone = bone; c.LocalPos = lp; c.LocalRot = lr;
@@ -312,7 +324,8 @@ namespace MiSideTogether
                 Carried c;
                 if (!carried.TryGetValue(key, out c)) continue;
                 carried.Remove(key);
-                if (c.Magnet != null) { Moved(c.Magnet).SetPositionAndRotation(p, r); c.Magnet.enabled = true; }
+                if (c.Item != null) c.Item.SetPositionAndRotation(p, r);
+                if (c.Magnet != null) c.Magnet.enabled = true;
             }
         }
 
@@ -322,11 +335,11 @@ namespace MiSideTogether
             {
                 Carried c = pair.Value;
                 Peer owner;
-                if (c.Magnet == null || !peers.TryGetValue(c.Owner, out owner) || owner.Avatar == null || owner.Avatar.Root == null) continue;
+                if (c.Item == null || !peers.TryGetValue(c.Owner, out owner) || owner.Avatar == null || owner.Avatar.Root == null) continue;
                 Transform body = owner.Avatar.Root.transform;
                 Transform anchor = c.Bone.Length > 0 ? body.Find(c.Bone) : null;
                 if (anchor == null) anchor = body;
-                Moved(c.Magnet).SetPositionAndRotation(anchor.TransformPoint(c.LocalPos), anchor.rotation * c.LocalRot);
+                c.Item.SetPositionAndRotation(anchor.TransformPoint(c.LocalPos), anchor.rotation * c.LocalRot);
             }
         }
 
@@ -375,7 +388,7 @@ namespace MiSideTogether
         void ClearInteractions()
         {
             foreach (Carried c in carried.Values) if (c.Magnet != null) c.Magnet.enabled = true;
-            carried.Clear(); carrying.Clear(); pendingWatch.Clear(); actorAnimation = null; magnetList = null;
+            carried.Clear(); carrying.Clear(); heldItems.Clear(); pendingWatch.Clear(); actorAnimation = null; magnetList = null;
         }
     }
 }

@@ -70,7 +70,7 @@ namespace MiSideTogether
             s.Append(" tl=");
             foreach (PlayableDirector d in Directors())
                 if (d != null && d.state == PlayState.Playing) s.Append(Wire.Hash(SceneKeys.Key(d)).ToString("x8")).Append(':').Append(d.time.ToString("0.00")).Append(';');
-            s.Append(" anims=").Append(animatorStatesApplied).Append(" room=").Append(stateApplied);
+            s.Append(" anims=").Append(animatorStatesApplied).Append(" room=").Append(stateApplied).Append(" rooms=").Append(LabRooms());
             if (dialogueLagCount > 0) s.Append(" lag=").Append(dialogueLagMax.ToString("0.00")).Append('/').Append((dialogueLagSum / dialogueLagCount).ToString("0.00"));
             Log(s.ToString());
         }

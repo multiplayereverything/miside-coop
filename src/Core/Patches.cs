@@ -76,6 +76,7 @@ namespace MiSideTogether
             Patch(typeof(ButtonMouseClick), "PointerUp", "AppButtonPrefix", "AppButtonUpPostfix");
             Patch(typeof(TamagotchiGame_Cooking), "Ready", null, "AppCookedPostfix");
             Patch(typeof(TamagotchiGame_Cooking), "Cut", null, "AppCutPostfix");
+            Patch(typeof(Tamagotchi_MiniGame), "StopGame", null, "AppMiniGameStopPostfix");
             Patch(typeof(UnityEngine.UI.Button), "Press", "AppUiButtonPrefix", "AppUiButtonPostfix");
             Patch(typeof(Location14_PlayerMobileMove), "Update", "MobileRunPrefix", null);
             Patch(typeof(Location14_PlayerMobileMove), "FixedUpdate", "MobileRunPrefix", null);
@@ -377,6 +378,7 @@ namespace MiSideTogether
         }
         static void AppUiButtonPostfix(UnityEngine.UI.Button __instance) { Safe("AppUiButton", () => TogetherRuntime.AppClicked(__instance)); }
         static void AppCookedPostfix(TamagotchiGame_Cooking __instance) { if (Is<TamagotchiGame_Cooking>(__instance)) Safe("AppCooked", () => TogetherRuntime.AppCooked(__instance)); }
+        static void AppMiniGameStopPostfix(Tamagotchi_MiniGame __instance) { if (Is<Tamagotchi_MiniGame>(__instance)) Safe("AppMiniGameStop", TogetherRuntime.AppMiniGameStopped); }
         static void AppCutPostfix(TamagotchiGame_Cooking __instance) { if (Is<TamagotchiGame_Cooking>(__instance)) Safe("AppCut", () => TogetherRuntime.AppCut(__instance)); }
         static void AppNamePostfix(Location1_InputNamePlayer __instance) { if (Is<Location1_InputNamePlayer>(__instance)) Safe("AppName", () => TogetherRuntime.AppNamed(__instance)); }
         static void QuestMovePostfix(Location14_PlayerQuest __instance, Vector3 _pos, UnityEngine.Events.UnityEvent _event) { Safe("QuestMove", () => TogetherRuntime.QuestMoved(__instance, _pos, _event)); }
