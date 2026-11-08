@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -16,16 +16,25 @@ namespace MiSideTogether
         // Events: the UnityEvent fields the end method fires for the story (cards: Mita reacts, the table closes...).
         // When the player finishes, every watcher fires these same events on their copy, and the story events they
         // trigger are not relayed from the player (no double effects).
-        sealed class MinigameKind { public Type Type; public string[] Start, End, Events = new string[0]; }
+        // WatchEnd: the method a watcher runs on its own copy when the player finishes, so its game state moves on too.
+        // Live: the game reads the keyboard itself as it runs (docs/INPUT-AUDIT.md), so on the story log it runs on the
+        // Main Character's PC alone; Mita follows that PC meanwhile (WorldSync.NpcAuthority) and the others' copies show
+        // it (ConsoleScreen.cs).
+        // Over: how the player's PC sees the game end when the game doesn't call an End method (the card table sets
+        // play off and fires eventStopGame itself).
+        // Quiet: on a watcher, the game's own scripts under its object are switched off while the mirror shows it (the
+        // console's fight would redraw its hearts from its own unplayed state); only for a game object holding nothing else.
+        sealed class MinigameKind { public Type Type; public string[] Start, End, Events = new string[0]; public string WatchEnd; public bool Live, Quiet; public Func<Component, bool> Over; public Func<Component, Transform> Extra; }
 
         static readonly MinigameKind[] MinigameKinds =
         {
-            new MinigameKind { Type = typeof(Location4TableCardGame), Start = new[] { "StartGame" }, End = new[] { "StopGame" }, Events = new[] { "eventStopGame" } },
+            new MinigameKind { Type = typeof(Location4TableCardGame), Start = new[] { "StartGame" }, End = new[] { "StopGame" }, Events = new[] { "eventStopGame" }, Live = true, Over = c => !c.Cast<Location4TableCardGame>().play },
             new MinigameKind { Type = typeof(Location7_GameDance), Start = new[] { "PlayGame" }, End = new[] { "EndGame" }, Events = new[] { "eventFinishPlayer" } },
             new MinigameKind { Type = typeof(Location18_TicTacToe), Start = new[] { "StartGame" }, End = new[] { "Finish" }, Events = new[] { "eventFinish" } },
             new MinigameKind { Type = typeof(Location14_PCSnaker), Start = new[] { "StartComponent" }, End = new[] { "CloseGame" } },
             new MinigameKind { Type = typeof(Location14_Saper), Start = new[] { "StartComponent" }, End = new[] { "Win", "Lose" } },
-            new MinigameKind { Type = typeof(MinigamesTelevisionGame), Start = new[] { "PlayGame" }, End = new[] { "ExitGame" } },
+            new MinigameKind { Type = typeof(MinigamesTelevisionGame), Start = new[] { "PlayGame" }, End = new[] { "ExitGame" }, WatchEnd = "ExitGame", Live = true, Quiet = true,
+                Extra = c => { GameObject ui = c.Cast<MinigamesTelevisionGame>().objectInterface; return ui != null ? ui.transform : null; } },
             new MinigameKind { Type = typeof(CarSpace_Main), Start = new[] { "PlayRacing" }, End = new[] { "FinishRacing", "BossFinish" } },
             new MinigameKind { Type = typeof(Shooter_Main), Start = new[] { "WaveStart" }, End = new[] { "Win" } },
             new MinigameKind { Type = typeof(MakeManeken_Main), Start = new[] { "Start" }, End = new[] { "FinishGame" } },
@@ -63,6 +72,9 @@ namespace MiSideTogether
             catch (Exception ex) { Log("Minigame hook failed " + type.Name + "." + name + ": " + ex.Message); return 0; }
         }
 
+        public static bool LiveOff;   // -mt-nolive: every copy plays live minigames, the lab's proof that the tv and cards checks can fail
+        static bool IsLive(int kind) { return MinigameKinds[kind].Live && !LiveOff; }
+
         static int KindOf(Type type) { for (int i = 0; i < MinigameKinds.Length; i++) if (MinigameKinds[i].Type == type) return i; return -1; }
 
         // The compiled game shares one body between methods with identical code (a minigame's StartGame and a hint's
@@ -81,7 +93,7 @@ namespace MiSideTogether
         // replaying someone else's click is skipped here, so nobody else is seated, moved or given the controls. The
         // others watch through the player's eyes (Spectate.cs). What the minigame changes afterwards reaches everyone
         // through the room-state sync and the story events it fires.
-        sealed class MinigameRun { public string Key; public int Kind, Owner; }
+        sealed class MinigameRun { public string Key; public int Kind, Owner; public bool Running; }
         readonly Dictionary<string, MinigameRun> minigames = new Dictionary<string, MinigameRun>();
         public int minigameStartsBlocked;
         public static float lastMinigameStartAt = -100;
@@ -90,7 +102,17 @@ namespace MiSideTogether
         {
             try
             {
-                if (!ReplayingInteraction || KindOf(__instance, __originalMethod) < 0) return true;
+                int kind = KindOf(__instance, __originalMethod);
+                if (kind < 0) return true;
+                // On the story log a live minigame (Scene 4's console, started by Mita's line) is the Main Character's:
+                // it runs on their PC only, and the story's win and lose lines follow their results.
+                if (IsLive(kind) && NotMyMoment)
+                {
+                    if (Instance != null) Instance.minigameStartsBlocked++;
+                    Log("Minigame " + __originalMethod.DeclaringType.Name + ": the Main Character plays it; watching instead");
+                    return false;
+                }
+                if (!ReplayingInteraction) return true;
                 CutsceneRules.Rule rule = CutsceneRules.For(CutsceneRules.Kind.Minigame, SceneKeys.Key(__instance));
                 if (rule.Who != CutsceneRules.Who.Actor) return true;
                 if (Instance != null) Instance.minigameStartsBlocked++;
@@ -105,9 +127,11 @@ namespace MiSideTogether
             try
             {
                 TogetherRuntime rt = Instance;
-                if (rt == null || !rt.Connected || Replaying || ReplayingInteraction || __instance == null || __originalMethod == null) return;
+                if (rt == null || !rt.Connected || __instance == null || __originalMethod == null) return;
                 int kind = KindOf(__instance, __originalMethod);
                 if (kind < 0) return;
+                // A live one is the Main Character's even when the log started it; a blocked start still gets here.
+                if (IsLive(kind) ? NotMyMoment : Replaying || ReplayingInteraction) return;
                 string key = SceneKeys.Key(__instance);
                 Log("Minigame " + __originalMethod.DeclaringType.Name + " started here: " + key);
                 lastMinigameStartAt = Time.realtimeSinceStartup;
@@ -176,6 +200,7 @@ namespace MiSideTogether
         {
             if (phase == 1) { minigames[key] = new MinigameRun { Key = key, Kind = kind, Owner = owner }; if (owner == SelfId) Tell("You are playing; the others watch."); return; }
             minigames.Remove(key);
+            if (key == screenKey) { screenKey = null; screenTarget.Clear(); screenAnimTargets.Clear(); }   // its last picture mustn't outlive it
             if (owner != SelfId) FireMinigameEnd(key, kind);
         }
 
@@ -183,12 +208,19 @@ namespace MiSideTogether
         void FireMinigameEnd(string key, int kind)
         {
             MinigameKind k = MinigameKinds[kind];
-            if (k.Events.Length == 0) return;
+            if (k.Events.Length == 0 && k.WatchEnd == null) return;
             Component game = null;
             Transform t = SceneKeys.Find<Transform>(key);
             if (t != null) game = t.GetComponent(Il2CppType.From(k.Type));
             if (game == null) { Log("Minigame end: " + key + " not found here"); return; }
             object typed = Activator.CreateInstance(k.Type, game.Pointer);
+            if (k.WatchEnd != null)
+            {
+                Replaying = true;
+                try { k.Type.GetMethod(k.WatchEnd, Type.EmptyTypes).Invoke(typed, null); minigameEndsApplied++; Log("Minigame end: " + k.Type.Name + "." + k.WatchEnd + " here"); }
+                catch (Exception ex) { Log("Minigame end " + k.WatchEnd + " threw here: " + (ex.InnerException ?? ex).Message); }
+                finally { Replaying = false; }
+            }
             foreach (string field in k.Events)
             {
                 PropertyInfo prop = k.Type.GetProperty(field);
@@ -198,6 +230,63 @@ namespace MiSideTogether
                 try { ev.Invoke(); minigameEndsApplied++; Log("Minigame end: fired " + k.Type.Name + "." + field + " here"); }
                 catch (Exception ex) { Log("Minigame end event " + field + " threw here: " + ex.Message); }
                 finally { Replaying = false; }
+            }
+        }
+
+        // Scene 4's console and card table: the player's result switches on one of the game's dialogues (Mita's reply).
+        // Only their PC plays (Live), so the dialogue it switched on is relayed and switched on everywhere (Op.Call 24).
+        readonly List<GameObject> consoleReplies = new List<GameObject>();
+        readonly HashSet<IntPtr> consoleRepliesOn = new HashSet<IntPtr>();
+        string consoleRepliesScene;
+
+        void ConsoleReplyTick()
+        {
+            if (consoleRepliesScene != ActiveSceneName)
+            {
+                consoleRepliesScene = ActiveSceneName; consoleReplies.Clear(); consoleRepliesOn.Clear();
+                foreach (MinigamesTelevisionController c in Object.FindObjectsOfType<MinigamesTelevisionController>(true))
+                    if (c != null && c.games != null)
+                        foreach (MinigamesTelevisionController_Game g in c.games)
+                            if (g != null)
+                                foreach (Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<GameObject> set in new[] { g.dialogueWin, g.dialogueLose, g.dialogueDraw })
+                                    if (set != null) foreach (GameObject d in set) if (d != null) consoleReplies.Add(d);
+                foreach (Location4TableCardGame c in Object.FindObjectsOfType<Location4TableCardGame>(true))
+                    if (c != null && c.dialogues != null) foreach (GameObject d in c.dialogues) if (d != null) consoleReplies.Add(d);
+            }
+            bool playing = OwningMinigame;
+            foreach (GameObject d in consoleReplies)
+            {
+                if (d == null) continue;
+                bool on = d.activeSelf;
+                if (on == consoleRepliesOn.Contains(d.Pointer)) continue;
+                if (!on) { consoleRepliesOn.Remove(d.Pointer); continue; }
+                consoleRepliesOn.Add(d.Pointer);
+                if (playing) { Log("Console reply here: " + d.name); Call(24, d.transform, 0); }
+            }
+        }
+
+        void ApplyConsoleReply(string key)
+        {
+            Transform t = SceneKeys.Find<Transform>(key);
+            if (Missing(t, key)) return;
+            consoleRepliesOn.Add(t.gameObject.Pointer);
+            t.gameObject.SetActive(true);
+        }
+
+        // The player's PC: a live game that ended by itself (MinigameKind.Over) is finished for everyone.
+        void MinigameOverTick()
+        {
+            foreach (MinigameRun r in new List<MinigameRun>(minigames.Values))
+            {
+                MinigameKind k = MinigameKinds[r.Kind];
+                if (r.Owner != SelfId || k.Over == null) continue;
+                Transform t = SceneKeys.Find<Transform>(r.Key);
+                Component game = t != null ? t.GetComponent(Il2CppType.From(k.Type)) : null;
+                if (game == null) continue;
+                if (!k.Over(game)) { r.Running = true; continue; }
+                if (!r.Running) continue;   // not under way yet
+                Log("Minigame finished here (" + k.Type.Name + " ended by itself)");
+                SendMinigame(2, r.Key, r.Kind, SelfId);
             }
         }
 

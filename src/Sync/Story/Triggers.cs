@@ -94,6 +94,7 @@ namespace MiSideTogether
         // 15 Location14_PlayerMobileMove.Play     Scene 14 phone character: shown on the others, run by the holder (PhoneCharacter.cs)
         // 99 lab only: the storylog tour's test event (TourStoryLog.cs)
         // 16-23 Scene 1 phone app: start/stop, the dialogue line, the name, its buttons, the cooking result; host only (AppSync.cs)
+        // 24 Scene 4 console: the win, lose or draw reply the player's game switched on (Minigames.cs)
         public static void Call(int entry, Component source, int arg)
         {
             if (source == null) return;
@@ -122,6 +123,7 @@ namespace MiSideTogether
                 case 9: ApplyQuestReply(target, arg); break;
                 case 10: case 11: case 12: case 13: case 14: ApplyCoreCall(entry, target, arg); break;
                 case 15: ApplyMobileShow(target); break;
+                case 24: ApplyConsoleReply(target); break;
                 case 16: case 17: case 18: case 19: case 20: case 21: case 22: case 23: ApplyAppCall(entry, target, arg); break;
                 case 5: case 6:
                 {

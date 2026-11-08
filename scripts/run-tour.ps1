@@ -30,6 +30,8 @@ $tours = @{
     'debug'    = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('debug.rows@host', 'debug.waiting@host', 'client.debug.skip', 'client.debug.refused', 'client.debug.report') }
     'scanner'  = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('scanner.waits@host', 'client.scanner.waits', 'scanner.placed@host', 'client.scanner.placed', 'client.scanner.same') }
     'mitasame' = @{ Seconds = 240; LabTour = 'storypilot'; Chapter = 'Scene 3 - WeTogether'; PlayerArgs = '-mt-pilotboth -mt-mitacheck'; Expect = @('mita.moved@host') }
+    'scene4'   = @{ Seconds = 1500; LabTour = 'storypilot'; Chapter = 'Scene 4 - StartSecret'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'tv.oneplays@host', 'client.tv.oneplays', 'tv.story@host', 'tv.mirror@host', 'cards.oneplays@host', 'client.cards.oneplays', 'cards.done@host', 'client.hold.same') }
+    'jump45'   = @{ Seconds = 150; Chapter = 'Scene 4 - StartSecret'; Expect = @('jump.clean@host') }
     'scene2'   = @{ Seconds = 500; LabTour = 'storypilot'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     # roomhold: the client keeps a room the host's story switched off, so its lights differ on purpose.
     'roomhold' = @{ Seconds = 162; LightDiffers = $true; Expect = @('room.off@host', 'client.room.kept') }

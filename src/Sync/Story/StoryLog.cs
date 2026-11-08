@@ -22,6 +22,7 @@ namespace MiSideTogether
     {
         public static bool LogOff;   // -mt-nolog: the old relay, the lab's proof that the storylog tour can fail
         public static bool GateRequestsOff;   // -mt-nogaterequest: the lab's proof that a client Main Character's run can fail
+        public static bool HoldGatesOff;   // -mt-nohold: holds' events stay local, the lab's proof that hold.same can fail
         public static string LogAlso = "";   // -mt-logalso <chapter>: tries a chapter on the log before it joins the list
         const float LogStuckSeconds = 12;
 
@@ -41,7 +42,7 @@ namespace MiSideTogether
         // Different events logged: the lab's stall check, since a looping timer (Scene 3's doorbell) logs forever.
         readonly HashSet<string> logKeysSeen = new HashSet<string>();
 
-        public static bool LogChapter(string scene) { return !LogOff && (scene == "Scene 1 - RealRoom" || scene == "Scene 2 - InGame" || scene == "Scene 3 - WeTogether" || scene == LogAlso); }
+        public static bool LogChapter(string scene) { return !LogOff && (scene == "Scene 1 - RealRoom" || scene == "Scene 2 - InGame" || scene == "Scene 3 - WeTogether" || scene == "Scene 4 - StartSecret" || scene == LogAlso); }
 
         bool InLogChapter { get { return Connected && LogChapter(ActiveSceneName); } }
 
@@ -213,6 +214,18 @@ namespace MiSideTogether
                 a.eventStartLoop = Gate(a, "bodyloop", a.eventStartLoop, GateKind.Body);
                 a.eventFinish = Gate(a, "bodyend", a.eventFinish, GateKind.Body);
                 if (a.eventsPlayer != null) for (int i = 0; i < a.eventsPlayer.Count; i++) a.eventsPlayer[i] = Gate(a, "body" + i, a.eventsPlayer[i], GateKind.Body);
+            }
+            // A hold (Scene 4's scarf) reads the holder's key in its own Update: its events are the holder's, like the
+            // animation it belongs to (the source is that animation, so a client holding asks the host).
+            if (!HoldGatesOff)
+            foreach (ObjectAnimationPlayerHold h in Object.FindObjectsOfType<ObjectAnimationPlayerHold>(true))
+            {
+                ObjectAnimationPlayer body = h == null ? null : h.scroap != null ? h.scroap : h.GetComponent<ObjectAnimationPlayer>();
+                if (body == null) continue;
+                h.eventReady = Gate(body, "holdready", h.eventReady, GateKind.Body);
+                h.eventHold = Gate(body, "holdon", h.eventHold, GateKind.Body);
+                h.eventStopHold = Gate(body, "holdoff", h.eventStopHold, GateKind.Body);
+                h.eventDown = Gate(body, "holddown", h.eventDown, GateKind.Body);
             }
             foreach (Player_Look l in Object.FindObjectsOfType<Player_Look>(true)) if (l != null) l.eventEnd = Gate(l, "look", l.eventEnd);
             foreach (Animator_Functions f in Object.FindObjectsOfType<Animator_Functions>(true))

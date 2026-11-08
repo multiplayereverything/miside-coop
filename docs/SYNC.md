@@ -31,11 +31,14 @@ This is the master list. The per-chapter detail (every game script type in every
 | Dialogue | Visual novel (Scene 18) | the host streams its position (dialogue, page, line); clients step along the chain; anyone's click reads on | host plus anyone | `novella` |
 | Cutscenes | Timelines | every `PlayableDirector` time-synced; start relayed | host | `cutscene` |
 | Cutscenes | Scripted (player and Mita animations) | follow from the relayed story event; Mita is puppeted by the host | host | `cutscene`, `mita` |
-| NPCs | Mita, Chibi Mita, follower, boss | puppets on clients: the host's transform and animator at 15 Hz, face changes, gaze at the nearest player | host | `mita` |
+| NPCs | Mita, Chibi Mita, follower, boss | puppets: the moving PC's transform and animator at 15 Hz (the host's, or a live minigame's player's), face changes, gaze at the nearest player | host (or the live minigame's player) | `mita`, `scene4` |
 | NPCs | Chasers (mannequins, killers) | local on purpose: each chases its own player; deaths are shared | each machine | `death` |
 | Deaths | Restart | death prefixes relayed; everyone restarts together | anyone | `death` |
 | Minigames | Ownership | one plays (the one who started); the others' starts are blocked | first starter | `minigame` |
 | Minigames | Endings | the player's end events (cards, tic-tac-toe, dance, QuadLiner) fire on every machine; story events they trigger are not relayed from the player | the player | `minigame` |
+| Minigames | Live ones (Scene 4's console and card table: they read the keyboard themselves) | on the story log they run on the Main Character's PC alone; Mita follows that PC meanwhile (`NpcAuthority`); the reply each result switches on is relayed (`Op.Call` 24); an end the game makes by itself (`play` off) is seen and shared; watchers run `ExitGame` on their copy | the Main Character | `scene4` (`tv.*`, `cards.*`; `-mt-nolive` makes them fail) |
+| Minigames | What watchers see | `Op.Screen`: the player's game object (and the console's interface on the TV) at 10 Hz, parts by path, story pieces and screen overlays left out; the console's own scripts are off on watchers | the Main Character | `scene4` (`tv.mirror`) |
+| Story | Hold interactions | `ObjectAnimationPlayerHold` events are Body gates on the hold's animation: the holder's PC sets them off, everyone runs them | the holder | `scene4` (`hold.same`; `-mt-nohold` makes it fail) |
 | Room | Objects on/off, placement | the host sweeps every scene object and sends changes; snapshot for players arriving later | host | `room` |
 | Room | Lights | on/off, colour, intensity, range | host | `room` |
 | Room | Scene animators (drawers, TV, lamps) | layer-0 state; clients jump to it if their own story has not reached it within 1 s | host | MT-STATE `anims=` counter |

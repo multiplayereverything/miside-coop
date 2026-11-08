@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -53,6 +53,7 @@ namespace MiSideTogether
             HeldItems.Clear();
             firedEnter.Clear(); firedExit.Clear(); missingLogged.Clear(); storyRetries.Clear(); cutscenesStartedHere.Clear(); animationStartedAt.Clear(); animationCatchUps.Clear();
             mitaTargets.Clear(); mitaAnim.Clear(); doorLast.Clear(); doorTargets.Clear(); npcResolved.Clear();
+            screenKey = null; screenTarget.Clear(); screenAnimTargets.Clear(); screenSentKey = null;
             cutsceneList = null; npcList = null; propList = null; propAppliedAt.Clear(); mitaList = null; doorList = null;
         }
 
@@ -67,10 +68,12 @@ namespace MiSideTogether
             if (IsClient) Step("w.log", () => StoryLogTick(now));
             if (Hosting) Step("w.check", () => HostCheckTick(now)); else Step("w.check", () => ClientCheckTick(now));
             Step("w.debug", () => DebugTick(now));
+            if (InLogChapter) Step("w.console", ConsoleReplyTick);
+            if (minigames.Count > 0) { Step("w.screen", () => ScreenSendTick(now)); Step("w.minigame-over", MinigameOverTick); }
             if (hostRequests.Count > 0) Step("w.requests", () => HostRequestTick(now));
             if (storyRetries.Count > 0) Step("w.retry", () => StoryRetryTick(now));
             if (pendingGo != null) Step("w.go", () => GoTick(now));
-            if (Hosting && now >= nextMita) { nextMita = now + 1f / 15f; Step("w.mita", SendMitas); }
+            if (SelfId == NpcAuthority && now >= nextMita) { nextMita = now + 1f / 15f; Step("w.mita", SendMitas); }
             if (Hosting) Step("w.cutscene", () => HostCutsceneTick(now));
             DoorTargetsTick(now);
             if (now >= nextDoor) { nextDoor = now + 0.1f; Step("w.door", () => DoorTick(now)); }
@@ -103,8 +106,9 @@ namespace MiSideTogether
 
         void LateUpdateWorldSync()
         {
-            if (IsClient) Step("w.mita-apply", ApplyMitas);
+            if (SelfId != NpcAuthority) Step("w.mita-apply", ApplyMitas);
             Step("w.carried", LateUpdateCarried);
+            Step("w.screen-apply", ScreenApplyLate);
         }
 
         // --- Story events ------------------------------------------------------------------------
@@ -410,12 +414,23 @@ namespace MiSideTogether
             return null;
         }
 
+        // Who moves the NPCs: the host, except while a player plays a live minigame (Minigames.cs): the game drives Mita
+        // on their PC alone (Scene 4's card table), so the others copy her from there.
+        int NpcAuthority
+        {
+            get
+            {
+                foreach (MinigameRun r in minigames.Values) if (IsLive(r.Kind) && (r.Owner == SelfId || peers.ContainsKey(r.Owner))) return r.Owner;
+                return 0;
+            }
+        }
+
         void SendMitas()
         {
             List<NpcRef> live = new List<NpcRef>();
             foreach (NpcRef n in Npcs()) if (n.Owner != null && n.Root != null && n.Root.gameObject.activeInHierarchy && live.Count < 24) live.Add(n);
             if (live.Count == 0) return;
-            Broadcast(Wire.Packet(Op.Mita, w =>
+            (Hosting ? (Action<byte[]>)(p => Broadcast(p)) : SendToHost)(Wire.Packet(Op.Mita, w =>
             {
                 w.Write(LocalSceneHash);
                 w.Write((byte)live.Count);
@@ -430,12 +445,24 @@ namespace MiSideTogether
             }));
         }
 
+        // On the host: a player's PC moving the NPCs (NpcAuthority) sends them here, for everyone.
+        void HostMita(BinaryReader reader, int from)
+        {
+            if (from != NpcAuthority) return;
+            long start = reader.BaseStream.Position;
+            byte[] rest = new byte[reader.BaseStream.Length - start];
+            reader.BaseStream.Read(rest, 0, rest.Length);
+            reader.BaseStream.Position = start;
+            Broadcast(Wire.Packet(Op.Mita, w => w.Write(rest)), from);
+            ClientMita(reader);
+        }
+
         void ClientMita(BinaryReader reader)
         {
             int scene = reader.ReadInt32();
             int count = reader.ReadByte();
             if (count > 24) throw new IOException("Too many NPCs.");
-            bool sameScene = scene == LocalSceneHash && ClientStoryLive;
+            bool sameScene = scene == LocalSceneHash && (Hosting || ClientStoryLive);
             for (int i = 0; i < count; i++)
             {
                 byte kind = reader.ReadByte();

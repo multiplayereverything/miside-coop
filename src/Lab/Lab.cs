@@ -38,6 +38,8 @@ namespace MiSideTogether
                 if (args[i] == "-mt-norepair") RepairOff = true;
                 if (args[i] == "-mt-logalso" && i + 1 < args.Length) LogAlso = args[++i].Replace('_', ' ');
                 if (args[i] == "-mt-nogaterequest") GateRequestsOff = true;
+                if (args[i] == "-mt-nolive") LiveOff = true;
+                if (args[i] == "-mt-nohold") HoldGatesOff = true;
                 if (args[i] == "-mt-mitacheck") LabMitaCheck = true;
                 if (args[i] == "-mt-pilotfull") labPilotFull = true;
                 if (args[i] == "-mt-pilotboth") labPilotFull = labPilotBoth = true;

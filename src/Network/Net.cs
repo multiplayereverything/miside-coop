@@ -150,13 +150,15 @@ namespace MiSideTogether
                 case Op.Prop: ApplyProp(reader, from); break;
                 case Op.Minigame: ReadMinigame(reader, from); break;
                 case Op.Carry: ReadCarry(reader, from); break;
+                case Op.Screen: ReadScreen(reader, from); break;
+                case Op.Mita: HostMita(reader, from); break;
                 case Op.InteractionDone: ReadInteractionDone(reader, from); break;
                 case Op.AnimEvent: ReadAnimEvent(reader, from); break;
                 case Op.Novella: ReadNovella(reader, from); break;
                 case Op.SessionLog: HostSessionLog(peer, reader); break;
                 case Op.Repair: HostRepair(peer); break;
                 case Op.Status: HostStatus(peer, reader); break;
-                case Op.Notice: { string n = Wire.Text(reader, 1100); if (n == "lab-gaze") labGazeAt = Time.realtimeSinceStartup; else if (n.StartsWith("lab-hostcut:", StringComparison.Ordinal)) HostCutAsked(n.Substring(12)); break; }
+                case Op.Notice: { string n = Wire.Text(reader, 1100); if (n == "lab-gaze") labGazeAt = Time.realtimeSinceStartup; else if (n.StartsWith("lab-hostcut:", StringComparison.Ordinal)) HostCutAsked(n.Substring(12)); else if (n.StartsWith("lab-tvresult:", StringComparison.Ordinal)) LabTvResultNotice(n.Substring(13)); else if (n.StartsWith("lab-tvhearts:", StringComparison.Ordinal)) LabTvHeartsNotice(n.Substring(13)); else if (n.StartsWith("lab-holdquests:", StringComparison.Ordinal)) LabHoldQuestsNotice(n.Substring(15)); break; }
                 case Op.Ping: Network.Send(from, Wire.Packet(Op.Pong, null)); break;
                 case Op.Pong: peer.PingMs = (Time.realtimeSinceStartup - pingSentAt) * 1000; break;
                 case Op.Leave: Network.Drop(from); break;
@@ -246,6 +248,7 @@ namespace MiSideTogether
                 case Op.Prop: ApplyProp(reader, 0); break;
                 case Op.Minigame: ReadMinigame(reader, 0); break;
                 case Op.Carry: ReadCarry(reader, 0); break;
+                case Op.Screen: ReadScreen(reader, 0); break;
                 case Op.InteractionDone: ReadInteractionDone(reader, 0); break;
                 case Op.Dialogue: ReadDialogue(reader); break;
                 case Op.WorldState: ReadWorldState(reader); break;
@@ -276,6 +279,8 @@ namespace MiSideTogether
                     if (notice == "lab-s3pick") { Scene3PickNotice(); break; }
                     if (notice.StartsWith("lab-pilot:", StringComparison.Ordinal)) { StoryPilotNotice(notice); break; }
                     if (notice == "lab-pilot-end") { StoryPilotEnd(); break; }
+                    if (notice.StartsWith("lab-tvhearts:", StringComparison.Ordinal)) { LabTvHeartsNotice(notice.Substring(13)); break; }
+                    if (notice.StartsWith("lab-holdquests:", StringComparison.Ordinal)) { LabHoldQuestsNotice(notice.Substring(15)); break; }
                     if (notice.StartsWith("lab-pilotpress:", StringComparison.Ordinal)) { StoryPilotPress(notice); break; }
                     if (notice.StartsWith("lab-logsame:", StringComparison.Ordinal)) { StoryLogSameNotice(notice); break; }
                     if (notice.StartsWith("lab-scanner:", StringComparison.Ordinal)) { ScannerSameNotice(notice); break; }

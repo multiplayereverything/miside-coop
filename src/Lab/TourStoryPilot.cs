@@ -16,7 +16,7 @@ namespace MiSideTogether
     public sealed partial class TogetherRuntime
     {
         float labPilotAt, labPilotSendAt, labPilotStart;
-        int labPilotActions, labPilotCompared, labPilotDiffer;
+        int labPilotActions, labPilotCompared, labPilotDiffer, labPilotShots;
         readonly HashSet<System.IntPtr> labPilotDone = new HashSet<System.IntPtr>();
         // Objects left to the client, and when: if it can't press one (it doesn't walk there), the story mustn't end there.
         readonly Dictionary<string, float> labPilotHanded = new Dictionary<string, float>();
@@ -65,12 +65,19 @@ namespace MiSideTogether
                     if (w != null) { w.timeWalk = 0.5f; if (labPilotDone.Add(w.Pointer)) { Log("Lab: pilot walks to the toilet"); labPilotActions++; } }
         }
 
+        // Of the keys on offer, the one pressed least: a menu (Scene 4's console: Change, Left, Right, Exit) gets every key in turn.
+        readonly Dictionary<System.IntPtr, int> labPromptPresses = new Dictionary<System.IntPtr, int>();
         bool PilotAnswersPrompt()
         {
             if (!labPilotFull || LocalPlayer == null || (LocalPlayer.animationRun ? !LocalPlayer.animationLoopRun : !LocalPlayer.dontMove)) return false;
+            Interface_KeyHint_Key pick = null; int least = int.MaxValue, n;
             foreach (Interface_KeyHint_Key k in Object.FindObjectsOfType<Interface_KeyHint_Key>())
-                if (k != null && k.isActiveAndEnabled && !k.hide && k.gameObject.scene.name == ActiveSceneName) { Log("Lab: pilot answers the prompt " + PathOf(k.transform)); k.KeyDown(); if (labPilotDone.Add(k.Pointer)) labPilotActions++; return true; }
-            return false;
+                if (k != null && k.isActiveAndEnabled && !k.hide && k.gameObject.scene.name == ActiveSceneName && (labPromptPresses.TryGetValue(k.Pointer, out n) ? n : 0) < least)
+                { pick = k; least = labPromptPresses.TryGetValue(k.Pointer, out n) ? n : 0; }
+            if (pick == null) return false;
+            labPromptPresses[pick.Pointer] = least + 1;
+            Log("Lab: pilot answers the prompt " + PathOf(pick.transform)); pick.KeyDown(); if (labPilotDone.Add(pick.Pointer)) labPilotActions++;
+            return true;
         }
 
         // Rooms are only on near a player (Scene 2's toilet, with its floor and its animator), and the pilot doesn't walk.
@@ -134,20 +141,21 @@ namespace MiSideTogether
         {
             GlobalGame.hintScreen = false;
             string chapter = TourChapter;
-            if (labPilotFull) PilotKeepsCutting();
-            MitaCheckTick(now);
+            if (labPilotFull) { PilotKeepsCutting(); PilotFights(now); PilotPlaysCards(now); PilotHolds(now); }            MitaCheckTick(now);
             if (IsClient && labPilotFull) PilotClientTick(now, scene);
             if (Hosting && !tourStarted && scene == "SceneMenu" && now - tourSceneAt > 6) { tourStarted = true; LoadThroughGame(chapter); return; }
             // The verdict at 360 s, wherever the story has taken the host by then (it may be the next chapter).
             // A full run that has stopped moving has nothing more to tell: end it rather than wait out the time limit.
             int progress = logKeysSeen.Count + labPilotActions;   // a solo game has no log, only the pilot's own actions
-            if (progress != labPilotProgressSeq) { labPilotProgressSeq = progress; labPilotProgressAt = now; }
+            // A minigame being played is progress too: its rounds log nothing until they end.
+            if (progress != labPilotProgressSeq || minigames.Count > 0) { labPilotProgressSeq = progress; labPilotProgressAt = now; }
             bool stalled = labPilotFull && now - labPilotProgressAt > PilotStallSeconds;
             if (stalled && labPilotStart > 0 && !labChecked.Contains("pilot.acted")) Log("Lab: pilot stalled, no story event for " + PilotStallSeconds + " s");
-            bool pilotOver = labPilotStart > 0 && (labPilotFull ? stalled || (scene != chapter && scene != "SceneMenu" && now - tourSceneAt > 15) || now - labPilotStart > 900 : now - labPilotStart > 360);
+            bool pilotOver = labPilotStart > 0 && (labPilotFull ? stalled || (scene != chapter && scene != "SceneMenu" && now - tourSceneAt > 15) || now - labPilotStart > 1400 : now - labPilotStart > 360);
             if (Hosting && tourStarted && pilotOver && !labChecked.Contains("pilot.acted"))
             {
-                CheckOnce("pilot.acted", labPilotActions >= 3 && (!labPilotFull || scene != chapter),labPilotActions + " story actions; quests now " + ActiveQuests() + "; scene " + scene);
+                LabTvChecks();
+                CheckOnce("pilot.acted",labPilotActions >= 3 && (!labPilotFull || scene != chapter),labPilotActions + " story actions; quests now " + ActiveQuests() + "; scene " + scene);
                 Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-pilot-end")));
                 return;
             }
@@ -159,6 +167,8 @@ namespace MiSideTogether
                 labPilotSendAt = now + 30;
                 string q = PilotState();
                 Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-pilot:" + q)));
+                // What each player sees at each comparison, to set side by side (tools/shots_to_png.py).
+                LabShotAll("pilot-" + Slug(scene) + "-" + (labPilotShots++).ToString("00"));
             }
             if (PilotAnswersPrompt()) { labPilotAt = now + 2; return; }
             // A choice can come up while sitting (Scene 3's chair), and a player answers it then.
@@ -245,7 +255,8 @@ namespace MiSideTogether
         // pilot.keys: every story key and shared key item the host sent was found here as it is, without guessing by name.
         void StoryPilotEnd()
         {
-            CheckOnce("pilot.keys", SceneKeys.NameMatched == 0 && keyItemsMissed == 0, SceneKeys.NameMatched + " keys found only by name, " + keyItemsMissed + " key items not found");
+            LabTvChecks();
+            CheckOnce("pilot.keys",SceneKeys.NameMatched == 0 && keyItemsMissed == 0, SceneKeys.NameMatched + " keys found only by name, " + keyItemsMissed + " key items not found");
             StoryPilotSame();
         }
         void StoryPilotSame() { CheckOnce("pilot.same", labPilotCompared >= 3 && labPilotDiffer == 0, labPilotCompared + " comparisons, " + labPilotDiffer + " lasting differences; quests here " + ActiveQuests() + " in " + ActiveSceneName); }
