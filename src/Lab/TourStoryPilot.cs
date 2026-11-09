@@ -12,7 +12,8 @@ namespace MiSideTogether
     //   pilot.acted@host   at 360 s: the host did at least 3 story actions (and how far it got)
     //   pilot.same         at the end: the client's quests matched the host's at every comparison (at least 3)
     // -mt-pilotfull: runs until the chapter ends (15 min at most) and answers key prompts. -mt-pilotboth: also has the
-    // client press every second interactive, so a client gets to be the Main Character.
+    // client press every second interactive, so a client gets to be the Main Character. -mt-pilotclient: the client does
+    // all of it (presses, prompts, choices, looks, trigger volumes) and the host only watches and asks.
     public sealed partial class TogetherRuntime
     {
         float labPilotAt, labPilotSendAt, labPilotStart;
@@ -22,7 +23,9 @@ namespace MiSideTogether
         readonly Dictionary<string, float> labPilotHanded = new Dictionary<string, float>();
         const float PilotClientSeconds = 10;
         string labPilotLastDiff = "", labPilotClientPress = "";
-        bool labPilotFull, labPilotBoth, labPilotTurn;
+        bool labPilotFull, labPilotBoth, labPilotTurn, labPilotClient;
+        string labPilotClientStep = "", labPilotClientLook = "";
+        int labPilotFallbacks;
         float labPilotClientUntil, labPilotClientAt, labPilotProgressAt;
         int labPilotProgressSeq = -1;
         const float PilotStallSeconds = 50;   // the longest quiet stretch measured in Scenes 1-3 is 34 s
@@ -104,6 +107,32 @@ namespace MiSideTogether
             if (scene == "SceneMenu" || LocalPlayer == null || now < labPilotClientAt) return;
             labPilotClientAt = now + 1;
             if (PilotAnswersPrompt()) { labPilotClientAt = now + 2; return; }
+            if (labPilotClient)
+            {
+                foreach (DialogueChanger d in Object.FindObjectsOfType<DialogueChanger>())
+                    if (d != null && d.play && d.buttons != null && d.indexButtons != null && d.indexButtons.Count > 0)
+                    {
+                        int pick = d.indexButtons[0];
+                        Log("Lab: pilot (client) answers " + d.name + " with " + pick); d.ClickButton(pick); return;
+                    }
+                if (labPilotClientLook.Length > 0)
+                {
+                    Trigger_MouseEvent look = SceneKeys.Find<Trigger_MouseEvent>(labPilotClientLook);
+                    Log("Lab: pilot (client) looks at " + labPilotClientLook);
+                    labPilotClientLook = "";
+                    if (look != null) labPilotClientAt = now + LabGaze(look);
+                    return;
+                }
+                if (labPilotClientStep.Length > 0)
+                {
+                    Trigger_Event step = SceneKeys.Find<Trigger_Event>(labPilotClientStep);
+                    Collider box = step != null ? step.GetComponent<Collider>() : null;
+                    Log("Lab: pilot (client) steps into " + labPilotClientStep);
+                    labPilotClientStep = "";
+                    if (box != null) { Vector3 p = box.bounds.center; p.y = Mathf.Max(box.bounds.min.y, LocalPlayer.transform.position.y - 5); LocalPlayer.TeleportPlayer(p); step.TargetEnter(); }
+                    return;
+                }
+            }
             if (labPilotClientPress.Length == 0) return;
             ObjectInteractive o = SceneKeys.Find<ObjectInteractive>(labPilotClientPress);
             PilotStepTo(o);
@@ -199,11 +228,12 @@ namespace MiSideTogether
                 Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-pilot:" + q)));
                 // What each player sees at each comparison, to set side by side (tools/shots_to_png.py).
                 LabShotAll("pilot-" + Slug(scene) + "-" + (labPilotShots++).ToString("00"));
+                if (LabSnapOn) LabSnapAll();
             }
-            if (PilotAnswersPrompt()) { labPilotAt = now + 2; return; }
+            if (!labPilotClient && PilotAnswersPrompt()) { labPilotAt = now + 2; return; }
             // A choice can come up while sitting (Scene 3's chair), and a player answers it then.
             foreach (DialogueChanger d in Object.FindObjectsOfType<DialogueChanger>())
-                if (d != null && d.play && d.buttons != null && d.indexButtons != null && d.indexButtons.Count > 0)
+                if (!labPilotClient && d != null && d.play && d.buttons != null && d.indexButtons != null && d.indexButtons.Count > 0)
                 {
                     int pick = d.indexButtons[0];
                     Log("Lab: pilot answers " + d.name + " with " + pick); d.ClickButton(pick); labPilotActions++; return;
@@ -215,12 +245,13 @@ namespace MiSideTogether
                 if (left == null || logKeysSeen.Contains(handed.Key)) { labPilotHanded.Remove(handed.Key); continue; }
                 if (now - handed.Value < PilotClientSeconds || !LabPress(left)) continue;
                 labPilotHanded.Remove(handed.Key);
-                Log("Lab: the client didn't press it, pilot presses " + PathOf(left.transform)); return;
+                labPilotFallbacks++;
+                Log("Lab: the client didn't press it, pilot presses " + PathOf(left.transform) + " (" + labPilotFallbacks + " so far)"); return;
             }
             foreach (ObjectInteractive o in Object.FindObjectsOfType<ObjectInteractive>())
                 if (o != null && o.active && o.isActiveAndEnabled && !labPilotDone.Contains(o.Pointer) && ChapterScene(o.gameObject))
                 {
-                    bool toClient = labPilotBoth && !labPilotTurn && AcceptedCount > 0;
+                    bool toClient = (labPilotClient || (labPilotBoth && !labPilotTurn)) && AcceptedCount > 0;
                     if (!toClient) PilotStepTo(o);
                     if (!toClient && !LabPress(o)) return;   // the press happens in that object's next Update
                     labPilotDone.Add(o.Pointer); labPilotActions++;
@@ -240,6 +271,7 @@ namespace MiSideTogether
                 if (t != null && t.isActiveAndEnabled && !labPilotDone.Contains(t.Pointer) && StoryPath(t.transform) && ChapterScene(t.gameObject))
                 {
                     labPilotDone.Add(t.Pointer); labPilotActions++;
+                    if (labPilotClient && AcceptedCount > 0) { string key = SceneKeys.Key(t); Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-pilotlook:" + key))); labPilotAt = now + 3; return; }
                     Log("Lab: pilot looks at " + PathOf(t.transform)); labPilotAt = now + LabGaze(t); return;
                 }
             foreach (Trigger_Event t in Object.FindObjectsOfType<Trigger_Event>())
@@ -248,6 +280,7 @@ namespace MiSideTogether
                 Collider c = t.GetComponent<Collider>();
                 if (c == null) continue;
                 labPilotDone.Add(t.Pointer); labPilotActions++;
+                if (labPilotClient && AcceptedCount > 0) { string key = SceneKeys.Key(t); Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-pilotstep:" + key))); labPilotAt = now + 3; return; }
                 Vector3 p = c.bounds.center; p.y = Mathf.Max(c.bounds.min.y, LocalPlayer.transform.position.y - 5);
                 Log("Lab: pilot steps into " + PathOf(t.transform) + " at " + p);
                 LocalPlayer.TeleportPlayer(p);
