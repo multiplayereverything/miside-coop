@@ -495,6 +495,9 @@ namespace MiSideTogether
             lastTeleportAt = -1;
             // Height and head-room catch the real failures (ceiling, furniture). Some chapters have no collider under the
             // host's own feet, so floor is reported but not required.
+            // Where the host isn't standing still either (a cold-started Scene 9 bounces the player between -0.5 and -1.2) there is no height to compare with.
+            Peer teleportHost;
+            if (peers.TryGetValue(0, out teleportHost) && Mathf.Abs(teleportHost.Feet.y - lastTeleportHostY) > 0.15f) { Log("Lab: teleport check skipped, the host is moving vertically here"); return; }
             bool ok = level && headroom;
             if (!ok || !labChecked.Contains("teleport.safe"))
             {

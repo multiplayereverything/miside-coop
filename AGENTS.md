@@ -96,6 +96,7 @@ Here a test is an `MT-CHECK` in a tour, listed in that tour's `Expect` in `scrip
 | `ObjectAnimationPlayer.AnimationPlay`/`AnimationPlayFast`/`AnimationPlayOnPlayer` (postfix) | Tracks the actor's interaction. For `who=actor` rules, `Op.InteractionDone` runs `eventFinish` on the others when it ends; mirrored ones end by themselves. |
 | `Animator_FunctionsOverride.NewEvent`/`EventKey`, `Events_Animator.EventAnim` (prefix, Mita only) | Her animation events run on the PC moving her and reach the others once (`Op.MitaEvent`). |
 | `Trigger_Event.OnTriggerEnter` (prefix + postfix) | The call a walking player reaches; it has its own copy of `TargetEnter`'s logic. `loop` volumes stay per player. |
+| `MinigamesAutomate.StartLoading` (prefix) | Arcade cabinet: Main Character's PC only, or every PC loads the game and hides its player. Its start, finish and stop events are First gates. |
 | `Dialogue_3DText.Start` (postfix) | Registers the line with its start time (dialogue stream and lag metric), with no per-frame scan. |
 | `Location18_Novella.NextDialogue` (postfix) | Visual novel: a client's click is sent to the host, which reads on; clients step after the host's streamed position. |
 | `Trigger_MouseEvent.Enter` (postfix, one-shot looks only), `Trigger_DistanceCircle.Update` (prefix + postfix: `targetInside` flips) | `Op.LookTrigger` / `Op.DistanceTrigger`. |
