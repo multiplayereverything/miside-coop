@@ -12,6 +12,7 @@ namespace MiSideTogether
     {
         Character_Look labMitaLook;
         float labMitaLookAt = -1;
+        bool labMitaYou;
 
         void MitaLookTour(float now, string scene)
         {
@@ -27,13 +28,16 @@ namespace MiSideTogether
             Transform own = GlobalTag.cameraPlayer.transform;
             if (!IsClient)
             {
-                if (t < 15) labMitaLook.LookOnObject(other.Head);
-                else if (t < 40) labMitaLook.LookOnObject(own);
+                if (t < 20) labMitaLook.LookOnObject(other.Head);
+                else if (t < 45) labMitaLook.LookOnObject(own);
                 return;
             }
             string seen = (labMitaLook.lookObject == null ? "nothing" : labMitaLook.lookObject.name) + " / eyes " + (labMitaLook.lookObjectEyes == null ? "nothing" : labMitaLook.lookObjectEyes.name);
-            if (t >= 11) CheckOnce("mitalook.you", labMitaLook.lookObject == own && labMitaLook.lookObjectEyes == own, seen);
-            if (t >= 30) CheckOnce("mitalook.host", labMitaLook.lookObject == other.Head && labMitaLook.lookObjectEyes == other.Head, seen);
+            // The two PCs start this a few seconds apart, so each target is watched for, up to a limit.
+            if (t >= 3 && labMitaLook.lookObject == own && labMitaLook.lookObjectEyes == own) { CheckOnce("mitalook.you", true, seen); labMitaYou = true; }
+            if (t >= 16 && !labMitaYou) CheckOnce("mitalook.you", false, seen);
+            if (labMitaYou && labMitaLook.lookObject == other.Head && labMitaLook.lookObjectEyes == other.Head) CheckOnce("mitalook.host", true, seen);
+            if (t >= 40) CheckOnce("mitalook.host", false, seen);
         }
     }
 }

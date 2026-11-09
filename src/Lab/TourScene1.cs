@@ -34,36 +34,42 @@ namespace MiSideTogether
 
         // User report (2026-11-08): "mita didnt appear on the other player screen" in the phone app.
         //   app.lines: (host) every conversation in the app ends on the same line on both PCs, with Mita's camera showing her
-        //              (its far clip opens to 5) on both. Each PC's n-th conversation is compared when both have ended.
+        //              (its far clip opens to 5) on both. Conversations are matched by name: a PC can miss one's end (no player object for a moment).
         const int AppLinesNeeded = 5;
         bool labAppOpen;
         int labAppLine, labAppEnded;
         float labAppFar;
-        readonly List<string> labAppMine = new List<string>(), labAppTheirs = new List<string>();
+        string labAppWho;
+        readonly Dictionary<string, string> labAppMine = new Dictionary<string, string>(), labAppTheirs = new Dictionary<string, string>();
 
         void LabAppEnded(string result)
         {
-            labAppMine.Add(result);
+            labAppMine[labAppWho ?? "?"] = result;
             Log("MT-APPEND " + labAppMine.Count + " " + result);
             if (Hosting) LabAppCompare();
-            else SendToHost(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-appline:" + result)));
+            else SendToHost(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-appline:" + (labAppWho ?? "?") + "|" + result)));
         }
 
-        public void LabAppLineNotice(string result) { labAppTheirs.Add(result); LabAppCompare(); }
+        public void LabAppLineNotice(string result) { int bar = result.IndexOf('|'); labAppTheirs[result.Substring(0, bar)] = result.Substring(bar + 1); LabAppCompare(); }
 
         void LabAppCompare()
         {
-            int n = Mathf.Min(labAppMine.Count, labAppTheirs.Count);
-            for (int i = 0; i < n; i++)
-                if (labAppMine[i] != labAppTheirs[i]) { CheckOnce("app.lines", false, "conversation " + (i + 1) + ": host " + labAppMine[i] + " / client " + labAppTheirs[i]); return; }
-            if (n >= AppLinesNeeded) CheckOnce("app.lines", true, n + " conversations ended alike; last " + labAppMine[n - 1]);
+            int n = 0;
+            foreach (KeyValuePair<string, string> c in labAppMine)
+            {
+                string theirs;
+                if (!labAppTheirs.TryGetValue(c.Key, out theirs)) continue;
+                n++;
+                if (c.Value != theirs) { CheckOnce("app.lines", false, c.Key + ": host " + c.Value + " / client " + theirs); return; }
+            }
+            if (n >= AppLinesNeeded) CheckOnce("app.lines", true, n + " conversations ended alike");
         }
 
         void LabAppMitaTrace()
         {
             if (appWindows != null) foreach (Tamagotchi_Dialogue w0 in appWindows) if (w0 != null)
             {
-                if (w0.enableDialogue) { labAppOpen = true; labAppLine = w0.dialogueIndex; if (w0.mitaCamera != null && w0.mitaCamera.activeInHierarchy && w0.mitaCameraCam != null) labAppFar = Mathf.Max(labAppFar, w0.mitaCameraCam.farClipPlane); }
+                if (w0.enableDialogue) { labAppOpen = true; labAppLine = w0.dialogueIndex; if (Running(w0)) labAppWho = RunKey(w0.dialogueRun); if (w0.mitaCamera != null && w0.mitaCamera.activeInHierarchy && w0.mitaCameraCam != null) labAppFar = Mathf.Max(labAppFar, w0.mitaCameraCam.farClipPlane); }
                 else if (labAppOpen) { labAppOpen = false; LabAppEnded("line " + labAppLine + (labAppFar >= 4 ? " mita shown" : " no mita")); labAppFar = 0; }
                 break;
             }
@@ -77,11 +83,12 @@ namespace MiSideTogether
             // In the phone app the player object is switched off (the camera is the app's), so only the steps before need it.
             Tamagotchi_Main app = Object.FindObjectOfType<Tamagotchi_Main>();
             bool inApp = app != null && app.play;
+            if (scene == "Scene 1 - RealRoom") LabAppMitaTrace();
             if (scene != "Scene 1 - RealRoom" || (LocalPlayer == null && !inApp)) return;
             LabScene1Tutorial(now);   // also types the name in the app, where there is no player object
             Scene1State(now);
             LabPropsInHandTick(now);
-            LabAppMitaTrace(); LabCursorTrace(); LabPhoneTrace(now);
+            LabCursorTrace(); LabPhoneTrace(now);
             // Every 5 s while the phone app is up (a missing Mita there was seen by the user, between 15 s shots), else 15 s.
             if (now - tourSceneAt > 20 && now >= labS1ShotAt) { labS1ShotAt = now + (inApp ? 5 : 2); LabShotAll("s1-" + (labS1Shots++).ToString("00")); }
             if (now < labS1StepAt || now - tourSceneAt < 25) return;
@@ -341,10 +348,11 @@ namespace MiSideTogether
         {
             GlobalGame.hintScreen = false;
             if (scene != "Scene 1 - RealRoom") return;
+            LabAppMitaTrace();
             LabScene1Tutorial(now);   // also types the name in the app, where there is no player object
             Scene1State(now);
             LabPropsInHandTick(now);
-            LabAppMitaTrace(); LabCursorTrace(); LabPhoneTrace(now);
+            LabCursorTrace(); LabPhoneTrace(now);
         }
     }
 }
