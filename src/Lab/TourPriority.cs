@@ -10,6 +10,7 @@ namespace MiSideTogether
         void PriorityTours(float now, string scene)
         {
             if (labTour == "afk") AfkTour(now, scene);
+            if (labTour == "passlevel") PassLevelTour(now, scene);
             if (labTour == "door") DoorTour(now, scene);
             if (labTour == "allhere") AllHereTour(now, scene);
             if (labTour == "scanner") ScannerTour(now, scene);
@@ -71,8 +72,10 @@ namespace MiSideTogether
             System.Collections.Generic.List<string> all = new System.Collections.Generic.List<string>();
             // A light the game animates (Light_Intensity: a noise curve and lerps on each PC's own clock; Scene 5's house)
             // counts as lit or dark, not by its level in this frame. Its colour and the story's switching it off still count.
+            // A flashlight is this player's own: its lights go off while this player's hands are busy (FlashLight, on the hand
+            // item; PlayerMove moves its sphere light onto the player as "LightSphere"), so they aren't part of the room.
             foreach (Light l in Object.FindObjectsOfType<Light>())
-                if (l != null && l.enabled) all.Add(l.name + (l.GetComponent<Light_Intensity>() != null ? (l.intensity >= 0.25f ? "lit" : "dark") : Mathf.Round(l.intensity * 2).ToString()) + Mathf.Round(l.color.r * 4) + Mathf.Round(l.color.g * 4) + Mathf.Round(l.color.b * 4));
+                if (l != null && l.enabled && l.name != "LightSphere" && l.GetComponentInParent<FlashLight>() == null) all.Add(l.name + (l.GetComponent<Light_Intensity>() != null ? (l.intensity >= 0.25f ? "lit" : "dark") : Mathf.Round(l.intensity * 2).ToString()) + Mathf.Round(l.color.r * 4) + Mathf.Round(l.color.g * 4) + Mathf.Round(l.color.b * 4));
             all.Sort(StringComparer.Ordinal);
             string names = string.Join(",", all);
             if (names != labLightNames) { labLightNames = names; Log("MT-LIGHTS " + names); }

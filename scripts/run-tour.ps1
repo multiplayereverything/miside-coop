@@ -24,6 +24,7 @@ $tours = @{
     # scene3full: as scene2, all of Scene 3. The other whole-chapter tours (scene1, scene1end) allow 1.5 s too.
     'scene3full' = @{ Seconds = 800; NpcLagLimit = 1.5; LabTour = 'storypilot'; Chapter = 'Scene 3 - WeTogether'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.log.clean') }
     # mitasame: Mita's real body in the same place on both copies, measured while she walks in Scene 3 (screenshots in the lab shots folders).
+    'passlevel' = @{ Seconds = 240; Chapter = 'Scene 2 - InGame'; Expect = @('passlevel.arrived@host', 'client.passlevel.arrived', 'passlevel.twice@host', 'client.passlevel.twice') }
     'afk'      = @{ Seconds = 90; Chapter = 'Scene 2 - InGame'; Expect = @('afk.console@host', 'client.afk.console') }
     'door'     = @{ Seconds = 100; Chapter = 'Scene 3 - WeTogether'; Expect = @('door.pushed@host', 'client.door.pushed') }
     'allhere'  = @{ Seconds = 120; Chapter = 'Scene 1 - RealRoom'; Expect = @('allhere.played@host', 'client.allhere.notice', 'client.allhere.brought') }
@@ -33,7 +34,7 @@ $tours = @{
     # scene4: the game's own Audio_BlendShapeVoice errors after Scene 4 hands over to Scene 5 (jump45 with -mt-nopatch shows them without the mod).
     'scene4'   = @{ Seconds = 1500; AllowGameErrors = $true; LabTour = 'storypilot'; Chapter = 'Scene 4 - StartSecret'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'tv.oneplays@host', 'client.tv.oneplays', 'tv.story@host', 'tv.mirror@host', 'cards.oneplays@host', 'client.cards.oneplays', 'cards.done@host', 'client.hold.same') }
     'scene5'   = @{ Seconds = 1500; LabTour = 'storypilot'; Chapter = 'Scene 5 - StartHorror'; PlayerArgs = '-mt-pilotboth -mt-logalso Scene_5_-_StartHorror'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'pilot.pressable@host') }
-    'lamp'     = @{ Seconds = 100; Chapter = 'Scene 6 - BasementFirst'; Expect = @('lamp.shared@host') }
+    'lamp'     = @{ Seconds = 130; Chapter = 'Scene 6 - BasementFirst'; Expect = @('lamp.shared@host', 'lamp.edge@host') }
     'jump45'   = @{ Seconds = 150; Chapter = 'Scene 4 - StartSecret'; Expect = @('jump.clean@host') }
     'scene2'   = @{ Seconds = 500; LabTour = 'storypilot'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     # roomhold: the client keeps a room the host's story switched off, so its lights differ on purpose.

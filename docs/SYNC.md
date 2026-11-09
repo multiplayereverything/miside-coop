@@ -25,6 +25,8 @@ This is the master list. The per-chapter detail (every game script type in every
 | Story | Puzzles and typing | `Basement_Safe.ClickButton`, `InputKeyboard_Main` keys (`Op.Call`) | anyone | inventory coverage (no tour yet) |
 | Story | Randomness | seeded `Random_*`, `Material_Random`, `Animator_RandomPlay`, `Location21_DialogueRandom` | deterministic | `story` (seed fingerprint) |
 | Interactions | Animations (phone, plane, ...) | mirror: the replayed click plays the same animation on every player's own character, at the same spot. `who=actor` cases: carried objects, anim events and finish relayed | anyone | `mirror`, `interactions`, `carry` |
+| Interactions | Scene 1 phone once its magnet is gone | the holder keeps streaming an item still under their player after the story destroys its `Transform_Magnet` (`heldItems`, `Interactions.cs`) | holder | `scene1` (`phone.day2`) |
+| Minigames | Cursor after a phone minigame | `Tamagotchi_MiniGame.StopGame` shows this PC's cursor again (`AppSync.AppMiniGameStopped`) | each PC | `scene1` (`app.cursor`) |
 | Dialogue | 3D text lines | the host streams active lines with their age; clients start missing lines, skip finished ones (0.8 s grace), and measure the start lag | host | `dialogue` (lag in MT-STATE) |
 | Dialogue | Choices | `DialogueChanger.ClickButton` | anyone | `story` |
 | Dialogue | Skips | `Dialogue_3DText.SkipDialogue` | anyone | `dialogue` |

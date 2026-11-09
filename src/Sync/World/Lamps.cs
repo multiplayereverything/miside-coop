@@ -13,9 +13,9 @@ namespace MiSideTogether
         {
             TogetherRuntime rt = Instance;
             if (rt == null || !rt.Connected || lamp == null) return;
-            Vector3 center = lamp.transform.TransformPoint(lamp.center);
+            Transform box = lamp.transform; Vector3 center = box.position + box.right * lamp.center.x + box.up * lamp.center.y + box.forward * lamp.center.z;   // GlobalAM.TransformPivot: no scale
             Quaternion toLocal = Quaternion.Inverse(lamp.transform.rotation);
-            Vector3 half = new Vector3(Mathf.Abs(lamp.size.x), Mathf.Abs(lamp.size.y), Mathf.Abs(lamp.size.z));
+            Vector3 half = new Vector3(Mathf.Abs(lamp.size.x), Mathf.Abs(lamp.size.y), Mathf.Abs(lamp.size.z)) * 0.5f;
             foreach (Peer p in rt.peers.Values)
             {
                 if (!p.HasPose || p.SceneHash != LocalSceneHash) continue;

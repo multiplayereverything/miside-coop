@@ -15,16 +15,6 @@ namespace MiSideTogether
     //   chapters  host walks through every chapter scene; clients must follow each and see the host's model
     public sealed partial class TogetherRuntime
     {
-        // Every chapter, entered from the main menu like a player picking it from Chapters. Scene 19 (Glasses) is left out:
-        // the game itself cannot start it cold, even from the menu (World.Update NRE every frame on the host too, run of
-        // 2026-10-22); players only reach it through the story, where Op.SceneLoad replays the game's own transition.
-        public static readonly string[] Chapters =
-        {
-            "Scene 1 - RealRoom", "Scene 2 - InGame", "Scene 3 - WeTogether", "Scene 4 - StartSecret", "Scene 5 - StartHorror",
-            "Scene 6 - BasementFirst", "Scene 7 - Backrooms", "Scene 8 - ReRooms", "Scene 9 - ChibiMita", "Scene 10 - ManekenWorld",
-            "Scene 11 - Backrooms", "Scene 12 - Freak", "Scene 13 - HelloCore", "Scene 14 - MobilePlayer", "Scene 15 - BasementAndDeath",
-            "Scene 16 - TheEnd", "Scene 17 - Dreamer", "Scene 20 - FightMita", "Scene 18 - 2D"
-        };
         const float ChapterSeconds = 45;
 
         string tourChapter;

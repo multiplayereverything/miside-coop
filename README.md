@@ -38,6 +38,7 @@ The **F5** panel also works in game:
 - **Player list.**
 - **Go to the host:** teleports you onto safe floor next to the host. It refuses while either of you is in a cutscene.
 - **Bring everyone here:** the host's button that brings everyone stuck or lost to them.
+- **Debug page > Pass this level:** the host's button that takes everyone to the next chapter. It can't reach Scene 19, and after Scene 17 it goes to Scene 20, then Scene 18.
 
 ## What is shared
 The full list (how each thing syncs, who is in charge and which test proves it) is in [docs/SYNC.md](docs/SYNC.md). Every game script in every chapter is listed with its sync status in [docs/SYNC-INVENTORY.md](docs/SYNC-INVENTORY.md).
