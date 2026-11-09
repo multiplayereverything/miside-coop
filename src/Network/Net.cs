@@ -152,6 +152,7 @@ namespace MiSideTogether
                 case Op.Carry: ReadCarry(reader, from); break;
                 case Op.Screen: ReadScreen(reader, from); break;
                 case Op.Mita: HostMita(reader, from); break;
+                case Op.MitaEvent: HostMitaEvent(reader, from); break;
                 case Op.InteractionDone: ReadInteractionDone(reader, from); break;
                 case Op.AnimEvent: ReadAnimEvent(reader, from); break;
                 case Op.Novella: ReadNovella(reader, from); break;
@@ -242,6 +243,7 @@ namespace MiSideTogether
                     ReadStoryEvent(op, reader, 0);
                     break;
                 case Op.Mita: ClientMita(reader); break;
+                case Op.MitaEvent: ApplyMitaEvent(reader); break;
                 case Op.Door: ApplyDoor(reader, 0); break;
                 case Op.Visible: ReadVisibility(reader, 0); break;
                 case Op.HandItem: ReadHandItem(reader, 0); break;

@@ -313,7 +313,9 @@ namespace MiSideTogether
         {
             LabFrameStart();
             if (Connected) Step("world-late", LateUpdateWorldSync);
+            if (Connected) Step("handhold", HandHoldTick);
             Step("avatars-late", LateUpdateAvatars);
+            if (Connected) Step("handhold-pose", HandHoldPose);
             Step("spectate", SpectateTick);
             if (LabMode) Step("lab-late", LabLateTick);
             LabFrameEnd(false);

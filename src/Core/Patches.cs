@@ -36,7 +36,7 @@ namespace MiSideTogether
             Patch(typeof(Location3CutCarrot), "CutStart", "MainCharacterOnlyPrefix", null);
             Patch(typeof(Location3CutCarrot), "Cut", null, "CarrotCutPostfix");
             Patch(typeof(Location3WalkToToilet), "Start", "MainCharacterOnlyPrefix", null);
-            Patch(typeof(Location3WalkToToilet), "LateUpdate", "MainCharacterOnlyPrefix", null);
+            Patch(typeof(Location3WalkToToilet), "LateUpdate", "MainCharacterOnlyPrefix", "HandWalkPostfix");
             Patch(typeof(Location34_Communication), "TakeEventWhenReadyWalk", "ReadyEventPrefix", null);
             Patch(typeof(Location34_Communication), "TakeEventWhenReadyWalkIgnoryAnimation", "ReadyEventPrefix", null);
             Patch(typeof(Player_Position), "Play", "ScriptedMovePrefix", null);
@@ -54,6 +54,7 @@ namespace MiSideTogether
             Patch(typeof(ObjectDoor), "FixedUpdate", "DoorFixedPrefix", "DoorFixedPostfix");
             Patch(typeof(ObjectDoor), "OptimizationActive", null, "DoorOptimizationPostfix");
             Patch(typeof(ObjectDoor), "Lock", null, "DoorLockPostfix");
+            Patch(typeof(Events_Animator), "EventAnim", "MitaEventAnimPrefix", null); Patch(typeof(Animator_FunctionsOverride), "EventKey", "MitaEventKeyPrefix", null); Patch(typeof(Animator_FunctionsOverride), "NewEvent", "MitaNewEventPrefix", null);
             Patch(typeof(PlayerMove), "RemoveItem", "RemoveItemPrefix", "RemoveItemPostfix");
             Patch(typeof(Dialogue_3DText), "SkipDialogue", null, "SkipDialoguePostfix");
             Patch(typeof(Dialogue_3DText), "Start", null, "DialogueStartPostfix");
@@ -254,6 +255,9 @@ namespace MiSideTogether
         static void FaceLayerPostfix(MitaPerson __instance, int __0) { Safe("Face", () => TogetherRuntime.AfterFace(__instance, TogetherRuntime.FaceLayer, null, __0)); }
         static void FaceLayerFastPostfix(MitaPerson __instance, int __0) { Safe("Face", () => TogetherRuntime.AfterFace(__instance, TogetherRuntime.FaceLayerFast, null, __0)); }
 
+        static bool MitaEventAnimPrefix(Events_Animator __instance, int _index) { return Look("MitaEvent", () => TogetherRuntime.MitaEvent(__instance, 2, _index)); }
+        static bool MitaEventKeyPrefix(Animator_FunctionsOverride __instance, int x) { return Look("MitaEvent", () => TogetherRuntime.MitaEvent(__instance, 1, x)); }
+        static bool MitaNewEventPrefix(Animator_FunctionsOverride __instance, int x) { return Look("MitaEvent", () => TogetherRuntime.MitaEvent(__instance, 0, x)); }
         static bool Look(string where, Func<bool> body)
         {
             try { return body(); }
@@ -460,6 +464,7 @@ namespace MiSideTogether
         }
         static void ControllerUpdatePrefix(GameController __instance) { TogetherRuntime.HoldIdleConsole(__instance); }
         static void CarrotCutPostfix(Location3CutCarrot __instance) { if (Is<Location3CutCarrot>(__instance)) Safe("CarrotCut", () => TogetherRuntime.CarrotCutHere(__instance)); }
+        static void HandWalkPostfix() { Safe("HandWalk", TogetherRuntime.NoteHandWalk); }
         static bool MainCharacterOnlyPrefix() { return !TogetherRuntime.NotMyMoment; }
         static void ReadyEventPrefix(Events_Data __0) { Safe("ReadyEvent", () => TogetherRuntime.GateReadyEvent(__0)); }
         static bool ScriptedMovePrefix(Player_Position __instance)

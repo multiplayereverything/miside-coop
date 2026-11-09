@@ -49,6 +49,8 @@ $tours = @{
     'lockgather' = @{ Seconds = 100; Chapter = 'Scene 4 - StartSecret'; Expect = @('lockgather.together@host', 'client.lockgather.together') }
     'lockgatherc' = @{ Seconds = 100; LabTour = 'lockgather'; Chapter = 'Scene 4 - StartSecret'; PlayerArgs = '-mt-lockclient'; Expect = @('lockgather.together@host', 'client.lockgather.together') }
     'blackscreen' = @{ Seconds = 100; Chapter = 'Scene 3 - WeTogether'; Expect = @('client.blackscreen.moved') }
+    'handhold' = @{ Seconds = 110; Chapter = 'Scene 3 - WeTogether'; Expect = @('handhold.led@c1', 'handhold.hand') }
+    'mitaevent' = @{ Seconds = 100; Chapter = 'Scene 3 - WeTogether'; Expect = @('mitaevent.ignored@c1', 'mitaevent.relayed@c1') }
     'mitalook' = @{ Seconds = 130; Chapter = 'Scene 4 - StartSecret'; Expect = @('mitalook.you@c1', 'mitalook.host@c1') }
     'loading'  = @{ Seconds = 150; Chapter = 'Scene 4 - StartSecret'; Expect = @('loading.dialogue@host', 'loading.back') }
     'legs'     = @{ Seconds = 100; Chapter = 'Scene 5 - StartHorror'; Expect = @('legs.shared@host') }

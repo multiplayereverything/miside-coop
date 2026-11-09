@@ -544,6 +544,51 @@ namespace MiSideTogether
             }
         }
 
+        // What Mita handles is moved by events in her animation (Scene 3: spatula, juice glass, TV remote). On a watcher her animation is corrected from the
+        // stream, which crosses an event twice or jumps over it, so the events belong to the PC moving her and reach the others once.
+        public static bool MitaEvent(Component c, byte kind, int index)
+        {
+            TogetherRuntime rt = Instance;
+            if (rt == null || !rt.Connected || Replaying || c == null || c.GetComponentInParent<MitaPerson>(true) == null) return true;
+            if (rt.SelfId != rt.NpcAuthority) return false;
+            string key = SceneKeys.Key(c);
+            byte[] packet = Wire.Packet(Op.MitaEvent, w => { w.Write(LocalSceneHash); w.Write(kind); Wire.Text(w, key); w.Write(index); });
+            if (rt.Hosting) rt.Broadcast(packet); else rt.SendToHost(packet);
+            return true;
+        }
+
+        void HostMitaEvent(BinaryReader reader, int from)
+        {
+            if (from != NpcAuthority) return;
+            long start = reader.BaseStream.Position;
+            byte[] rest = new byte[reader.BaseStream.Length - start];
+            reader.BaseStream.Read(rest, 0, rest.Length);
+            reader.BaseStream.Position = start;
+            Broadcast(Wire.Packet(Op.MitaEvent, w => w.Write(rest)), from);
+            ApplyMitaEvent(reader);
+        }
+
+        void ApplyMitaEvent(BinaryReader reader)
+        {
+            int scene = reader.ReadInt32();
+            byte kind = reader.ReadByte();
+            string key = Wire.Text(reader, 1024);
+            int index = reader.ReadInt32();
+            if (scene != LocalSceneHash || !(Hosting || ClientStoryLive)) return;
+            bool was = Replaying;
+            Replaying = true;
+            try
+            {
+                if (kind == 2) { Events_Animator e = SceneKeys.Find<Events_Animator>(key); if (e != null) e.EventAnim(index); }
+                else
+                {
+                    Animator_FunctionsOverride a = SceneKeys.Find<Animator_FunctionsOverride>(key);
+                    if (a != null && kind == 0) a.NewEvent(index); else if (a != null) a.EventKey(index);
+                }
+            }
+            finally { Replaying = was; }
+        }
+
         // Which player an NPC looks at. Each PC's Character_Look only knows its own camera and picks glances by its own random numbers.
         const byte LookNobody = 255;
 

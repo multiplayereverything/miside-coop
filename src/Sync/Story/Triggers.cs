@@ -159,6 +159,7 @@ namespace MiSideTogether
                 case 10: case 11: case 12: case 13: case 14: ApplyCoreCall(entry, target, arg); break;
                 case 15: ApplyMobileShow(target); break;
                 case 24: ApplyConsoleReply(target); break;
+                case 30: handLeader = arg; break;
                 case 29:
                 {
                     Location3CutCarrot c = SceneKeys.Find<Location3CutCarrot>(target);
