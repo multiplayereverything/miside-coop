@@ -373,8 +373,8 @@ namespace MiSideTogether
         // Story characters move and animate on the host and are mirrored on clients. Chasers (Mita Killer, mannequins,
         // lift and bacteria enemies) are deliberately left to each machine's own AI: they hunt that machine's player,
         // and their kills are relayed so the whole group restarts together (see Deaths.cs).
-        public sealed class NpcRef { public Component Owner; public Transform Root; public Animator Anim; public NavMeshAgent Agent; public byte Kind; public string Key; }
-        sealed class NpcState { public byte Kind; public Vector3 Position; public Quaternion Rotation; public readonly AnimFrame Anim = new AnimFrame(); public float At; public bool Snap; }
+        public sealed class NpcRef { public Character_Look Look; public Component Owner; public Transform Root; public Animator Anim; public NavMeshAgent Agent; public byte Kind; public string Key; }
+        sealed class NpcState { public byte Look, Eyes; public byte Kind; public Vector3 Position; public Quaternion Rotation; public readonly AnimFrame Anim = new AnimFrame(); public float At; public bool Snap; }
         readonly Dictionary<string, NpcState> mitaTargets = new Dictionary<string, NpcState>();
         readonly Dictionary<string, AnimTarget> mitaAnim = new Dictionary<string, AnimTarget>();
         List<NpcRef> npcList;
@@ -454,6 +454,9 @@ namespace MiSideTogether
                     WritePose(w, n.Root.position, n.Root.rotation);
                     mitaFrame.Capture(n.Anim);
                     mitaFrame.Write(w);
+                    Character_Look look = NpcLook(n);
+                    w.Write(LookWho(look == null ? null : look.lookObject));
+                    w.Write(LookWho(look == null ? null : look.lookObjectEyes));
                 }
             }));
         }
@@ -485,6 +488,7 @@ namespace MiSideTogether
                 NpcState state;
                 if (!mitaTargets.TryGetValue(key, out state)) { state = new NpcState { Snap = true, Kind = kind }; if (sameScene) mitaTargets[key] = state; }
                 state.Anim.Read(reader);
+                state.Look = reader.ReadByte(); state.Eyes = reader.ReadByte();
                 if ((pos - state.Position).sqrMagnitude > 25f) state.Snap = true;
                 state.Position = pos; state.Rotation = rot; state.At = Time.realtimeSinceStartup;
             }
@@ -536,8 +540,46 @@ namespace MiSideTogether
                     mitaAnim[pair.Key] = target;
                 }
                 AnimSync.Apply(target, state.Anim, false);
+                ApplyLook(npc, state);
             }
         }
+
+        // Which player an NPC looks at. Each PC's Character_Look only knows its own camera and picks glances by its own random numbers.
+        const byte LookNobody = 255;
+
+        static Character_Look NpcLook(NpcRef n)
+        {
+            if (n.Look == null && n.Kind == KindMita && n.Owner != null) n.Look = n.Owner.GetComponentInChildren<Character_Look>(true);
+            return n.Look;
+        }
+
+        byte LookWho(Transform t)
+        {
+            if (t == null) return LookNobody;
+            if (GlobalTag.cameraPlayer != null && t == GlobalTag.cameraPlayer.transform) return (byte)SelfId;
+            foreach (KeyValuePair<int, Peer> p in peers) if (p.Value.Avatar != null && p.Value.Avatar.Head == t) return (byte)p.Key;
+            return LookNobody;
+        }
+
+        Transform LookHead(byte who)
+        {
+            if (who == SelfId) return GlobalTag.cameraPlayer != null ? GlobalTag.cameraPlayer.transform : null;
+            Peer peer;
+            return peers.TryGetValue(who, out peer) && peer.Avatar != null ? peer.Avatar.Head : null;
+        }
+
+        // A target that isn't a player is the story's, which every PC runs itself; a player left over here is cleared.
+        void ApplyLook(NpcRef npc, NpcState state)
+        {
+            Character_Look look = NpcLook(npc);
+            if (look == null) return;
+            Transform head = LookHead(state.Look), eyes = LookHead(state.Eyes);
+            if (head != null) { if (look.lookObject != head) look.LookOnObject(head); }
+            else if (state.Look == LookNobody && LookWho(look.lookObject) != LookNobody) look.lookObject = null;
+            if (eyes != null) { if (look.lookObjectEyes != eyes) look.lookObjectEyes = eyes; }
+            else if (state.Eyes == LookNobody && LookWho(look.lookObjectEyes) != LookNobody) look.lookObjectEyes = null;
+        }
+
         // --- Doors ---------------------------------------------------------------------------------
         List<ObjectDoor> doorList;
         float doorListAt, nextDoor;
