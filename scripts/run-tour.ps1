@@ -49,7 +49,7 @@ $tours = @{
     'lockgather' = @{ Seconds = 100; Chapter = 'Scene 4 - StartSecret'; Expect = @('lockgather.together@host', 'client.lockgather.together') }
     'lockgatherc' = @{ Seconds = 100; LabTour = 'lockgather'; Chapter = 'Scene 4 - StartSecret'; PlayerArgs = '-mt-lockclient'; Expect = @('lockgather.together@host', 'client.lockgather.together') }
     'blackscreen' = @{ Seconds = 100; Chapter = 'Scene 3 - WeTogether'; Expect = @('client.blackscreen.moved') }
-    'loading'  = @{ Seconds = 90; Chapter = 'Scene 4 - StartSecret'; Expect = @('loading.dialogue@host') }
+    'loading'  = @{ Seconds = 150; Chapter = 'Scene 4 - StartSecret'; Expect = @('loading.dialogue@host', 'loading.back') }
     'legs'     = @{ Seconds = 100; Chapter = 'Scene 5 - StartHorror'; Expect = @('legs.shared@host') }
     'pickup'   = @{ Seconds = 110; Chapter = 'Scene 6 - BasementFirst'; PlayerArgs = '-mt-nolog'; Expect = @('pickup.gone@host', 'client.pickup.gone') }
     'pickupc'  = @{ Seconds = 110; LabTour = 'pickup'; Chapter = 'Scene 6 - BasementFirst'; PlayerArgs = '-mt-nolog -mt-pickupclient'; Expect = @('pickup.gone@host', 'client.pickup.gone') }
