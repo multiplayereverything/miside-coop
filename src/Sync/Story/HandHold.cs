@@ -52,8 +52,8 @@ namespace MiSideTogether
             List<int> chain = HandChain();
             for (int i = 0; i < chain.Count; i++)
             {
-                if (i > 0) Reach(chain[i], "Right", chain[i - 1], "Left");
-                if (i < chain.Count - 1) Reach(chain[i], "Left", chain[i + 1], "Right");
+                if (i > 0) Reach(chain[i], "Left", chain[i - 1], "Right");
+                if (i < chain.Count - 1) Reach(chain[i], "Right", chain[i + 1], "Left");   // the left hand may hold the pills
             }
         }
 

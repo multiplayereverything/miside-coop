@@ -37,8 +37,8 @@ namespace MiSideTogether
             float walked = (leader - labHandStart).magnitude;
             if (at < 3) return;
             float gap = (LocalPlayer.transform.position - peer.Feet).magnitude;
-            Transform me = HandBone(LocalPlayer.animPerson.transform, IsClient ? "Right arm" : "Left arm");
-            Transform them = HandBone(other.Root.transform, IsClient ? "Left wrist" : "Right wrist");
+            Transform me = HandBone(LocalPlayer.animPerson.transform, IsClient ? "Left arm" : "Right arm");
+            Transform them = HandBone(other.Root.transform, IsClient ? "Right wrist" : "Left wrist");
             float hands = me != null && them != null ? (me.position - them.position).magnitude : 99;
             if (IsClient && gap <= 1.6f && walked >= 1.5f) CheckOnce("handhold.led", true, gap.ToString("0.00") + " m behind, the host walked " + walked.ToString("0.0") + " m");
             if (hands <= 0.7f && labHandWalk != null && labHandWalk.gameObject.activeInHierarchy) { if (labHandShotAt < 0) labHandShotAt = now + 1f; CheckOnce("handhold.hand", true, hands.ToString("0.00") + " m from their hand to this shoulder"); }
