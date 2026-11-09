@@ -46,6 +46,7 @@ namespace MiSideTogether
                 if (args[i] == "-mt-pilotboth") labPilotFull = labPilotBoth = true;
                 if (args[i] == "-mt-pilotclient") labPilotFull = labPilotBoth = labPilotClient = true;
                 if (args[i] == "-mt-snap") LabSnapOn = true;
+                if (args[i] == "-mt-pickupclient") LabPickupClient = true;
                 if (args[i] == "-mt-snapbreak") LabSnapOn = labSnapBreak = true;
                 if (args[i] == "-mt-tour" && i + 1 < args.Length) labTour = args[++i];
                 if (args[i] == "-mt-players" && i + 1 < args.Length) int.TryParse(args[++i], out labPlayers);

@@ -120,6 +120,8 @@ namespace MiSideTogether
         // --- Actor: track the interaction animation and what it carries -----------------------------------------
         string actorAnimation;
         float actorAnimationAt, nextCarry;
+        // Decided when the animation starts, as the watchers do: by its end a held item has left the slot the rule looks at.
+        CutsceneRules.Rule actorRule;
         readonly HashSet<string> carrying = new HashSet<string>();
         List<Transform_Magnet> magnetList;
         float magnetListAt;
@@ -136,6 +138,8 @@ namespace MiSideTogether
             if (rt.LocalPlayer != null && !rt.LocalPlayer.animationRun) return;
             rt.actorAnimation = SceneKeys.Key(scr);
             rt.actorAnimationAt = Time.realtimeSinceStartup;
+            string click = rt.actorAnimationAt - rt.lastClickAt < 3 ? rt.lastClickKey : null;
+            rt.actorRule = CutsceneRules.ForInteraction(click, rt.actorAnimation);
             if (rt.IsClient && rt.InLogChapter) rt.ownBody.Add(scr.Pointer);
         }
 
@@ -175,12 +179,7 @@ namespace MiSideTogether
         }
 
         // The rule of what this player is performing now (null when nothing).
-        CutsceneRules.Rule ActorRule()
-        {
-            if (actorAnimation == null) return null;
-            string click = Time.realtimeSinceStartup - lastClickAt < 3 || actorAnimationAt - lastClickAt < 3 ? lastClickKey : null;
-            return CutsceneRules.ForInteraction(click, actorAnimation);
-        }
+        CutsceneRules.Rule ActorRule() { return actorAnimation == null ? null : actorRule; }
 
         bool ActorOnly { get { CutsceneRules.Rule r = ActorRule(); return r != null && (r.Who == CutsceneRules.Who.Actor || InLogChapter); } }
 
