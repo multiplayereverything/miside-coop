@@ -110,7 +110,9 @@ namespace MiSideTogether
                 { pick = k; least = labPromptPresses.TryGetValue(k.Pointer, out n) ? n : 0; }
             if (pick == null) return false;
             labPromptPresses[pick.Pointer] = least + 1;
-            Log("Lab: pilot answers the prompt " + PathOf(pick.transform)); pick.KeyDown(); if (labPilotDone.Add(pick.Pointer)) labPilotActions++;
+            Log("Lab: pilot answers the prompt " + PathOf(pick.transform));
+            if (Hosting && pick.destroyAfter) { string key = SceneKeys.Key(pick); Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-promptdone:" + key))); }
+            pick.KeyDown(); if (labPilotDone.Add(pick.Pointer)) labPilotActions++;
             return true;
         }
 
@@ -137,6 +139,7 @@ namespace MiSideTogether
             // Only the host is told the chapter, so a client can't compare against it.
             if (scene == "SceneMenu" || LocalPlayer == null || now < labPilotClientAt) return;
             labPilotClientAt = now + 1;
+            LabPromptsTick(now);
             if (PilotAnswersPrompt()) { labPilotClientAt = now + 2; return; }
             if (labPilotClient)
             {
@@ -173,6 +176,23 @@ namespace MiSideTogether
                 labPilotClientPress = "";
             }
             else if (now > labPilotClientUntil) { Log("Lab: pilot (client) gave up on " + labPilotClientPress); labPilotClientPress = ""; }
+        }
+
+        // prompt.answered (client): a prompt the host answered is used up here too within 4 s. Left live, this player could answer it
+        // again and run the story's reply alone. SmoothDestroy, the game's own way to take it down, sets destroyActive.
+        readonly Dictionary<string, float> labPromptsDone = new Dictionary<string, float>();
+        int labPromptsChecked, labPromptsLive;
+        void LabPromptDoneNotice(string key) { labPromptsDone[key] = Time.realtimeSinceStartup + 4; }
+        void LabPromptsTick(float now)
+        {
+            foreach (string key in new List<string>(labPromptsDone.Keys))
+            {
+                if (now < labPromptsDone[key]) continue;
+                labPromptsDone.Remove(key);
+                Interface_KeyHint_Key k = SceneKeys.Find<Interface_KeyHint_Key>(key);
+                labPromptsChecked++;
+                if (k != null && !k.destroyActive) { labPromptsLive++; Log("Lab: prompt still live here after the host answered: " + key); }
+            }
         }
 
         // A chapter's scene: the one active, or one the story loaded beside it (Scene 5 loads Scene 6 additively).
@@ -363,8 +383,12 @@ namespace MiSideTogether
         // switched on or used up, the other's did too; Scene 6's key stayed on the host's table after the client took it).
         public void LabPressableNotice(string theirs)
         {
+            int mark = theirs.IndexOf('#');
+            string chapter = theirs.Substring(0, mark); theirs = theirs.Substring(mark + 1);
+            if (chapter != ActiveSceneName) { Log("Lab: pilot.pressable not compared: client in " + chapter + ", host in " + ActiveSceneName); return; }
             string here = Pressable();
-            if (here.Length > 1000 - "lab-pressablelist:".Length) here = here.Substring(0, 1000 - "lab-pressablelist:".Length);   // as the client's was cut
+            int room = 1000 - "lab-pressablelist:".Length - mark - 1;
+            if (here.Length > room) here = here.Substring(0, room);   // as the client's was cut
             CheckOnce("pilot.pressable", theirs == here, theirs == here ? "same " + (here.Length == 0 ? 0 : here.Split('|').Length) + " objects" : "client " + theirs + " / host " + here);
         }
 
@@ -388,8 +412,9 @@ namespace MiSideTogether
         {
             LabTvChecks(); LabPropsInHandCheck();
             // Also when the chapter doesn't end within the tour (Scene 5 goes on into Scene 6 beside it).
-            string pressable = "lab-pressablelist:" + Pressable();
+            string pressable = "lab-pressablelist:" + ActiveSceneName + "#" + Pressable();
             SendToHost(Wire.Packet(Op.Notice, w => Wire.Text(w, pressable.Length > 1000 ? pressable.Substring(0, 1000) : pressable)));
+            if (labPromptsChecked > 0) CheckOnce("prompt.answered", labPromptsLive == 0, labPromptsChecked + " prompts the host answered, " + labPromptsLive + " still live here");
             if (logApplied > 0) CheckOnce("log.clean", logLost == 0, "applied " + logApplied + ", waited " + logWaited + ", lost " + logLost + ", swallowed " + gateSwallowed);
             CheckOnce("pilot.keys",SceneKeys.NameMatched == 0 && keyItemsMissed == 0, SceneKeys.NameMatched + " keys found only by name, " + keyItemsMissed + " key items not found");
             StoryPilotSame();

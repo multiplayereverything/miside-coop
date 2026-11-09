@@ -284,7 +284,7 @@ namespace MiSideTogether
                     if (notice == "lab-pressable") { LogPressable(); break; }
                     if (notice.StartsWith("lab-tvhearts:", StringComparison.Ordinal)) { LabTvHeartsNotice(notice.Substring(13)); break; }
                     if (notice.StartsWith("lab-holdquests:", StringComparison.Ordinal)) { LabHoldQuestsNotice(notice.Substring(15)); break; }
-                    if (notice.StartsWith("lab-pilotpress:", StringComparison.Ordinal)) { StoryPilotPress(notice); break; }
+                    if (notice.StartsWith("lab-pilotpress:", StringComparison.Ordinal)) { StoryPilotPress(notice); break; } if (notice.StartsWith("lab-promptdone:", StringComparison.Ordinal)) { LabPromptDoneNotice(notice.Substring(15)); break; }
                     if (notice.StartsWith("lab-pilotstep:", StringComparison.Ordinal)) { labPilotClientStep = notice.Substring(14); break; }
                     if (notice.StartsWith("lab-pilotlook:", StringComparison.Ordinal)) { labPilotClientLook = notice.Substring(14); break; }
                     if (notice.StartsWith("lab-snap:", StringComparison.Ordinal)) { LabSnap(int.Parse(notice.Substring(9))); break; }

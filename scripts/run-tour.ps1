@@ -33,12 +33,13 @@ $tours = @{
     'mitasame' = @{ Seconds = 240; LabTour = 'storypilot'; Chapter = 'Scene 3 - WeTogether'; PlayerArgs = '-mt-pilotboth -mt-mitacheck'; Expect = @('mita.moved@host') }
     # scene4: the game's own Audio_BlendShapeVoice errors after Scene 4 hands over to Scene 5 (jump45 with -mt-nopatch shows them without the mod).
     'scene4'   = @{ Seconds = 1500; AllowGameErrors = $true; LabTour = 'storypilot'; Chapter = 'Scene 4 - StartSecret'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'tv.oneplays@host', 'client.tv.oneplays', 'tv.story@host', 'tv.mirror@host', 'cards.oneplays@host', 'client.cards.oneplays', 'cards.done@host', 'client.hold.same') }
+    'scene6'   = @{ Seconds = 420; LabTour = 'storypilot'; Chapter = 'Scene 6 - BasementFirst'; PlayerArgs = '-mt-pilotfull'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.prompt.answered') }
     'scene5'   = @{ Seconds = 1500; LabTour = 'storypilot'; Chapter = 'Scene 5 - StartHorror'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'pilot.pressable@host') }
     'lamp'     = @{ Seconds = 130; Chapter = 'Scene 6 - BasementFirst'; Expect = @('lamp.shared@host', 'lamp.edge@host') }
     'jump45'   = @{ Seconds = 150; Chapter = 'Scene 4 - StartSecret'; Expect = @('jump.clean@host') }
-    'distance' = @{ Seconds = 130; Chapter = 'Scene 11 - Backrooms'; PlayerArgs = '-mt-logalso Scene_11_-_Backrooms'; Expect = @('distance.quiet@host', 'distance.left@host') }
-    'scene11'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 11 - Backrooms'; PlayerArgs = '-mt-pilotboth -mt-logalso Scene_11_-_Backrooms'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
-    'scene17'  = @{ Seconds = 600; LabTour = 'storypilot'; Chapter = 'Scene 17 - Dreamer'; PlayerArgs = '-mt-pilotboth -mt-logalso Scene_17_-_Dreamer'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
+    'distance' = @{ Seconds = 130; Chapter = 'Scene 11 - Backrooms'; PlayerArgs = ''; Expect = @('distance.quiet@host', 'distance.left@host') }
+    'scene11'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 11 - Backrooms'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
+    'scene17'  = @{ Seconds = 600; LabTour = 'storypilot'; Chapter = 'Scene 17 - Dreamer'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     'scene14'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 14 - MobilePlayer'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same') }
     'scene20'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 20 - FightMita'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.death.regroup', 'death.regroup@host') }
     'doorroom' = @{ Seconds = 90; Chapter = 'Scene 2 - InGame'; Expect = @('doorroom.loaded@host', 'client.doorroom.loaded') }

@@ -23,6 +23,7 @@ Co-op for MiSide (2 to 4 players). Everyone sees the others as the main characte
 - **Played on 0.3.6 (2026-11-06, about 06:36-06:39 local):** the user hosted, a friend ("lidar") joined, both reached Scene 1. The user reports "a lot of bugs" but has not listed them yet; one screenshot so far. Host logs and the screenshot are in `private\playtests\2026-11-06\`. The friend's log was not collected.
 - **Not tested:** four real players (4-player runs are lab-only); the other player's shading confirmed by a person.
 - **Co-op Anything:** the hub's MiSide entry and write-up describe v0.3.5 (cranebeaker/coop-anything#264, merged by the maintainer by hand on 2026-10-31, so GitHub shows it closed). No hub update for 0.3.6.
+- **After 0.3.18 (2026-11-09/10, local, not released, wire 15):** the six reports from the real session are fixed in the lab (MODLOG). Scenes 1 to 17 are on the story log; 18 is the novella, 19 and 20 stay off it (19 can't be started cold; 20 is a chase, `death.regroup` fails on the log). Key prompts reach the other players only on the log (`prompt.answered`). **Next:** the bot stops at minigames in Scenes 8, 9, 11, 12, 14 and 16, so those are listed without a played-through chapter; a real session with friends is the missing evidence.
 
 ## Pick up here (2026-11-07)
 0.3.11 (protocol 10) is committed, pushed and published as a pre-release (2026-11-07). The user is testing it themselves; real players haven't tried it yet.
