@@ -151,8 +151,15 @@ foreach ($id in $pids) { Stop-Process -Id $id -Force -ErrorAction SilentlyContin
 foreach ($id in $pids) { Wait-Process -Id $id -Timeout 15 -ErrorAction SilentlyContinue }
 Write-Output 'stopped lab processes'
 New-Item -ItemType Directory -Force $saveDir | Out-Null
-Get-ChildItem $saveDir -File | Remove-Item -Force
-Copy-Item (Join-Path $saveBackup '*') $saveDir -Force -ErrorAction SilentlyContinue
+# A file a closing game still holds must not stop the restore (2026-11-09: it aborted here and left the saves half gone).
+Get-ChildItem $saveDir -File | Remove-Item -Force -ErrorAction SilentlyContinue
+$restored = $false
+for ($try = 0; $try -lt 15 -and -not $restored; $try++) {
+    if ($try -gt 0) { Start-Sleep 1 }
+    try { Copy-Item (Join-Path $saveBackup '*') $saveDir -Force -ErrorAction SilentlyContinue } catch { }
+    $restored = -not (Get-ChildItem $saveBackup -File | Where-Object { $copy = Get-Item -LiteralPath (Join-Path $saveDir $_.Name) -ErrorAction SilentlyContinue; -not $copy -or $copy.Length -ne $_.Length })
+}
+if (-not $restored) { throw "SAVES NOT RESTORED: copy them back from $saveBackup" }
 Write-Output 'restored the user''s saves'
 
 $name = if ($Chapter) { "$Tour-" + ($Chapter -replace '[^A-Za-z0-9]+', '_') } else { $Tour }
