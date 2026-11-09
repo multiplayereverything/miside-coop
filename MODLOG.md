@@ -486,7 +486,7 @@ Both players driven by the pilot, each chapter twice: as players get it now, and
 - Both roles, Scenes 3 to 17 and 20, 32 runs (`private/playtests/2026-11-09-state`, `compare.txt` in each). The pilot still stops at minigames, so depth is as before. Findings, not fixed:
   - Basement safe: `SafeOption/Interactive Place` and its 34 children exist on one PC only (Scenes 6, 15). The other PC then waits 12 s per keypad press (Scene 15: 6 entries lost, about 75 s frozen, then `Dialogue_3DText.Update` NRE flood and dialogue mismatch 69%; Scene 5/6 lost 1). Which PC loses it isn't explained yet. Scenes 5 and 15 are on the log locally, so this needs fixing before they ship.
   - Collectibles taken by one player stay on the other PC: `Cartridge Console` (Scenes 6, 7, 10, 12, 13), `FlashMita` (9, 12, 17), the phone (14, 16).
-  - Scene 5, client acting: the basement key stays takeable on the client after it's used.
+  - Scene 5, client acting: ``ItemTake Key`` is available on the client while it is off on the host. Nobody pressed it in that run; an earlier note here (and the 0.3.17 release notes) said "after it's used", which the logs do not show.
   - Scene 13, client acting: the core computer's `ScreenEntry` differs (also in the screenshots).
   - Scene 10, client acting: `Mita Maneken Hello` and `Time StartFlashLight` are on on the client, off on the host, for the whole run.
   - Scene 7, host acting: quests differ, lighting 90%, 90 objects gone on the client (rooms and `Quest1`).
