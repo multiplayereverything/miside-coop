@@ -29,11 +29,20 @@ namespace MiSideTogether
             Call(15, m, 0);
         }
 
+        // What the game's Update does besides walking (lightPlayer fades to 1 or 0 at 2 a second; at 0 a destroySmooth character goes away).
+        public static void MobileWatcherLight(Location14_PlayerMobileMove m)
+        {
+            if (m.lightPlayer == null || Time.timeScale <= 0) return;
+            m.lightPlayer.intensity = Mathf.MoveTowards(m.lightPlayer.intensity, m.lightActive ? 1 : 0, 2 * Time.deltaTime);
+            if (!m.lightActive && m.destroySmooth && m.lightPlayer.intensity <= 0) Object.Destroy(m.gameObject);
+        }
+
         void ApplyMobileShow(string target)
         {
             Location14_PlayerMobileMove m = SceneKeys.Find<Location14_PlayerMobileMove>(target);
             if (Missing(m, target)) return;
             if (!m.gameObject.activeSelf) m.gameObject.SetActive(true);
+            m.lightActive = true;   // the holder's animation switches it on, and that animation runs on the holder only
             mobileShown++;
             Log("Phone character: showing the holder's character " + target);
         }

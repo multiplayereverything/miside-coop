@@ -78,7 +78,7 @@ namespace MiSideTogether
             Patch(typeof(TamagotchiGame_Cooking), "Cut", null, "AppCutPostfix");
             Patch(typeof(Tamagotchi_MiniGame), "StopGame", null, "AppMiniGameStopPostfix");
             Patch(typeof(UnityEngine.UI.Button), "Press", "AppUiButtonPrefix", "AppUiButtonPostfix");
-            Patch(typeof(Location14_PlayerMobileMove), "Update", "MobileRunPrefix", null);
+            Patch(typeof(Location14_PlayerMobileMove), "Update", "MobileUpdatePrefix", null);
             Patch(typeof(Location14_PlayerMobileMove), "FixedUpdate", "MobileRunPrefix", null);
             Patch(typeof(Location14_ButtonChangeDialogue), "OnPointerDown", "QuestReplyPrefix", "QuestReplyPostfix");
             Patch(typeof(GamesCore_InputField), "ButtonClick", "CoreClickPrefix", null);
@@ -332,7 +332,7 @@ namespace MiSideTogether
         static void LookEnterPostfix(Trigger_MouseEvent __instance) { Safe("LookEnter", () => { if (__instance != null && (__instance.oneTime || __instance.destroyEnterMouse || TogetherRuntime.StoryLook(__instance))) TogetherRuntime.Story(Op.LookTrigger, __instance, 1); }); }
         static void LookUpdatePrefix(Trigger_MouseEvent __instance) { Safe("LookBefore", () => TogetherRuntime.LookBefore(__instance)); }
         static void LookUpdatePostfix(Trigger_MouseEvent __instance) { Safe("LookAfter", () => TogetherRuntime.LookAfter(__instance)); }
-        static void DistancePrefix(Trigger_DistanceCircle __instance) { Safe("DistanceBefore", () => TogetherRuntime.DistanceBefore(__instance)); }
+        static bool DistancePrefix(Trigger_DistanceCircle __instance) { Safe("DistanceBefore", () => TogetherRuntime.DistanceBefore(__instance)); return !TogetherRuntime.DistanceHeld(__instance); }
         static void DistancePostfix(Trigger_DistanceCircle __instance) { Safe("DistanceAfter", () => TogetherRuntime.DistanceAfter(__instance)); }
         static void SafeButtonPostfix(Basement_Safe __instance, int x) { Safe("SafeButton", () => TogetherRuntime.Call(0, __instance, x)); }
         static void KeyboardAddPostfix(InputKeyboard_Main __instance, string _key) { Safe("KeyboardAdd", () => { if (!string.IsNullOrEmpty(_key)) TogetherRuntime.Call(1, __instance, _key[0]); }); }
@@ -353,6 +353,12 @@ namespace MiSideTogether
         }
         static void MobilePlayPostfix(Location14_PlayerMobileMove __instance) { if (IsMobile(__instance)) Safe("MobilePlay", () => TogetherRuntime.MobilePlayed(__instance)); }
         static bool MobileRunPrefix(Location14_PlayerMobileMove __instance) { return !TogetherRuntime.MobileWatcher || !IsMobile(__instance); }
+        static bool MobileUpdatePrefix(Location14_PlayerMobileMove __instance)
+        {
+            if (!TogetherRuntime.MobileWatcher || !IsMobile(__instance)) return true;
+            Safe("MobileLight", () => TogetherRuntime.MobileWatcherLight(__instance));
+            return false;
+        }
 
         // Scene 1 phone app (AppSync.cs): the host's app is relayed; on clients the player's own reading on and name
         // check do nothing. Each checks the real type (shared compiled bodies, see Minigames.KindOf).

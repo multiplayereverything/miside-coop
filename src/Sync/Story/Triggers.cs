@@ -28,6 +28,10 @@ namespace MiSideTogether
             if (was < t.timeHold && t.timeHoldNow >= t.timeHold) Story(Op.LookTrigger, t, 3);
         }
 
+        // Told by another player that someone is inside: this PC holds that until they say they left. Its own Update would see its own player outside and send the opposite back, every frame.
+        static readonly HashSet<System.IntPtr> distanceHeld = new HashSet<System.IntPtr>();
+        public static bool DistanceHeld(Trigger_DistanceCircle t) { return t != null && distanceHeld.Contains(t.Pointer); }
+
         public static void DistanceBefore(Trigger_DistanceCircle t) { if (t != null) distanceInside[t.Pointer] = t.targetInside; }
 
         public static void DistanceAfter(Trigger_DistanceCircle t)
@@ -70,6 +74,7 @@ namespace MiSideTogether
             Trigger_DistanceCircle t = SceneKeys.Find<Trigger_DistanceCircle>(key);
             if (Missing(t, key) || !t.gameObject.activeInHierarchy) return;
             bool inside = arg == 1;
+            if (inside) distanceHeld.Add(t.Pointer); else distanceHeld.Remove(t.Pointer);
             if (t.targetInside == inside) return;   // this machine got there by itself
             t.targetInside = inside;
             distanceInside[t.Pointer] = inside;
@@ -78,7 +83,7 @@ namespace MiSideTogether
             distanceApplied++;
         }
 
-        void ClearTriggers() { firedLook.Clear(); distanceInside.Clear(); lookHold.Clear(); }
+        void ClearTriggers() { firedLook.Clear(); distanceInside.Clear(); distanceHeld.Clear(); lookHold.Clear(); }
 
         // --- Method relays: puzzle and input calls replayed on every machine (Op.Call, key "<entry>:<scene key>") ---
         //  0 Basement_Safe.ClickButton(int)       safe keypad presses (the right code opens it everywhere)

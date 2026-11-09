@@ -233,6 +233,8 @@ namespace MiSideTogether
                         if (Missing(exit, key)) return;
                         if (!exit.loop && !firedExit.Add(key)) return;
                         exit.TargetExit();
+                        // The player who left has destroyed theirs; a copy nobody entered here would otherwise live on and fire alone (Scene 17's Trigger Save).
+                        if (exit != null && exit.destroyOnExit) Object.Destroy(exit.gameObject);
                         break;
                     case Op.LookTrigger: ApplyLookTrigger(key, arg); break;
                     case Op.DistanceTrigger: ApplyDistanceTrigger(key, arg); break;

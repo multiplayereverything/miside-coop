@@ -36,6 +36,11 @@ $tours = @{
     'scene5'   = @{ Seconds = 1500; LabTour = 'storypilot'; Chapter = 'Scene 5 - StartHorror'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'pilot.pressable@host') }
     'lamp'     = @{ Seconds = 130; Chapter = 'Scene 6 - BasementFirst'; Expect = @('lamp.shared@host', 'lamp.edge@host') }
     'jump45'   = @{ Seconds = 150; Chapter = 'Scene 4 - StartSecret'; Expect = @('jump.clean@host') }
+    'distance' = @{ Seconds = 130; Chapter = 'Scene 11 - Backrooms'; PlayerArgs = '-mt-logalso Scene_11_-_Backrooms'; Expect = @('distance.quiet@host', 'distance.left@host') }
+    'scene11'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 11 - Backrooms'; PlayerArgs = '-mt-pilotboth -mt-logalso Scene_11_-_Backrooms'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
+    'scene17'  = @{ Seconds = 600; LabTour = 'storypilot'; Chapter = 'Scene 17 - Dreamer'; PlayerArgs = '-mt-pilotboth -mt-logalso Scene_17_-_Dreamer'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
+    'scene14'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 14 - MobilePlayer'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same') }
+    'scene20'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 20 - FightMita'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.death.regroup', 'death.regroup@host') }
     'scene15'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 15 - BasementAndDeath'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     'scene2'   = @{ Seconds = 500; LabTour = 'storypilot'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     # roomhold: the client keeps a room the host's story switched off, so its lights differ on purpose.
