@@ -232,6 +232,7 @@ namespace MiSideTogether
             foreach (Tamagotchi_Dialogue_Mob d in Object.FindObjectsOfType<Tamagotchi_Dialogue_Mob>(true)) if (d != null) d.eventStop = Gate(d, "stop", d.eventStop);
             // Eyes covered, then the story goes on (Scene 3: teleport to the black room). It plays on the acting player's PC only.
             foreach (BlackScreenAnimation b in Object.FindObjectsOfType<BlackScreenAnimation>(true)) if (b != null) b.eventStop1 = Gate(b, "stop1", b.eventStop1, GateKind.First);
+            foreach (Location5_MitaLegs l in Object.FindObjectsOfType<Location5_MitaLegs>(true)) if (l != null) l.eventStartPlayer = Gate(l, "legs", l.eventStartPlayer, GateKind.First);
             foreach (Playable_Animation p in Object.FindObjectsOfType<Playable_Animation>(true)) if (p != null) p.eventStop = Gate(p, "cut", p.eventStop);
             foreach (ObjectAnimationPlayer a in Object.FindObjectsOfType<ObjectAnimationPlayer>(true))
             {
