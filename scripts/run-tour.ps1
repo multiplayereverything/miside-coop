@@ -41,6 +41,7 @@ $tours = @{
     'scene17'  = @{ Seconds = 600; LabTour = 'storypilot'; Chapter = 'Scene 17 - Dreamer'; PlayerArgs = '-mt-pilotboth -mt-logalso Scene_17_-_Dreamer'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     'scene14'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 14 - MobilePlayer'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same') }
     'scene20'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 20 - FightMita'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.death.regroup', 'death.regroup@host') }
+    'legs'     = @{ Seconds = 100; Chapter = 'Scene 5 - StartHorror'; Expect = @('legs.shared@host') }
     'pickup'   = @{ Seconds = 110; Chapter = 'Scene 6 - BasementFirst'; PlayerArgs = '-mt-nolog'; Expect = @('pickup.gone@host', 'client.pickup.gone') }
     'pickupc'  = @{ Seconds = 110; LabTour = 'pickup'; Chapter = 'Scene 6 - BasementFirst'; PlayerArgs = '-mt-nolog -mt-pickupclient'; Expect = @('pickup.gone@host', 'client.pickup.gone') }
     'scene15'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 15 - BasementAndDeath'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
