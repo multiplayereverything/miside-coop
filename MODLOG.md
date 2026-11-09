@@ -546,3 +546,13 @@ Real session 13:51 (0.3.18, liam1 and lidar, `private/playtests/2026-11-09-real2
 - Left off the log: Scene 20 (a chase: each player runs their own corridor; on the log the others' kick and death animations are held as the Main Character's and they end 102.7 m away, `death.regroup`; passes off the log, so its prompts stay per player) and Scene 19 (can't be started cold, so it can't be tried).
 - Scene 14's `own event threw` on the log is the game's `Audio_HightPass.LowPassLerp` NRE, also thrown off the log; it is the last listener of that event.
 - Tours after listing: scene6, distance, mobile, safe, death, storylog pass. scene11, scene14, scene17 fail on `pilot.acted` only (the bot stops at minigames: 6, 2 and 9 actions; their sync checks pass). `chapters` failed on lighting 11% (19 of 171): Scene 17 9 of 9, Scene 20 9 of 9, Scene 15 1 of 9. That tour's host enters those two with the previous chapter's saved position and falls below the map (y -17 to -226, also in the 19:19 run); started directly both PCs spawn at the same place with the same 14 lights. Why the client no longer falls with it this run isn't known.
+
+## 2026-11-10: code audit, checker tightened, suite cut short
+- **Audit:** `docs/AUDIT-2026-11-10.md`: design choices to change, bugs found by reading, test gaps, order of work. Nothing in it is reproduced in the lab yet.
+- **Suite (0.3.18 code, started 00:15, stopped by the user at about 00:50):** 32 tours passed. `scene19` failed on a checker false alarm, `mobile` on one light flickering at different instants per PC. Not run: `scene1`, `scene2`, `menuleave`, `roomhold`, `scene1end`, `scene3`, `scene3full`.
+- **`tests/verify-lab.py` (checked against the saved logs only, no tour rerun):**
+  - `beside_gates` skips a chapter's exit loader (the `scene19` false alarm).
+  - Lighting: a difference counts only when the neighbouring sample in the same chapter differs too, and the limit is 5% instead of 10%. Saved logs: `mobile` 14% -> 0%, `chapters` 11% -> 10% (still fails, the Scene 17 and 20 differences are lasting), `scene20` 81%, `storypilot-Scene_8` 6%.
+  - A run now fails on "the game's own event threw" (unless `AllowGameErrors`). Saved logs: only Scene 14, `AnimationPlayer TakeMobile` (`body2`, `bodyloop`), on host and client. Cause unknown, so `scene14` will fail on it until explained.
+- **New tour `pressrace`** (`src/Lab/TourPressRace.cs`, Scene 2, 300 ms lag): both players press the same object at once; the client must not perform the host's press. Compiles (`build.ps1 -NoInstall`). **Never run**: its red run is still owed, and no fix is written.
+- Next: the order of work at the end of the audit, starting with the save-overwrite guard (`Saves.cs:97`).

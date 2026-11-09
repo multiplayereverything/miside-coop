@@ -158,7 +158,16 @@ def light_compare(host, client):
     both = [c for c in same if any(h[1] == c[1] and abs(h[0] - c[0]) <= 3 for h in host)]
     if len(both) < 5:
         return None
-    return round(sum(not any(h[1] == c[1] and h[2] == c[2] and abs(h[0] - c[0]) <= 3 for h in host) for c in both) / len(both), 2)
+    bad = [not any(h[1] == c[1] and h[2] == c[2] and abs(h[0] - c[0]) <= 3 for h in host) for c in both]
+    # A light that dims and comes back is sampled at a different instant on each PC (mobile, 2026-11-10: one "Point Light"
+    # dipping for 2 s was 14%). A difference counts when the sample beside it in the same chapter differs too.
+    lasting = sum(bad[i] and any(0 <= j < len(both) and bad[j] and both[j][1] == both[i][1] for j in (i - 1, i + 1)) for i in range(len(both)))
+    return round(lasting / len(both), 2)
+
+
+def event_threw(path):
+    """Story events the mod ran that threw inside the game: the rest of that event's listeners never ran on this PC."""
+    return [line.strip()[:300] for line in path.read_text(encoding="utf-8", errors="replace").splitlines() if "the game's own event threw" in line]
 
 
 def door_compare(host, client):
@@ -302,7 +311,8 @@ def beside_gates(path):
                     first = m.group(1)
             m = pattern.search(line)
             if m:
-                (gates if m.group(1) == "Gate" else presses).add(m.group(2))
+                if m.group(1) != "SceneLoad":   # a chapter's exit loader is relayed off the log too (Scene 18)
+                    (gates if m.group(1) == "Gate" else presses).add(m.group(2))
     # No gate at all: this chapter was not on the story log, so nothing could come through it.
     return sorted(s for s in presses - gates if s != first) if first and gates else []
 
@@ -354,6 +364,9 @@ def main():
             failures.append(f"{role}: the story log repeats one entry {flood[0]} times within a second: {flood[1]}")
         if moderrors:
             failures.append(f"{role}: {len(moderrors)} mod errors, first: {moderrors[0]}")
+        threw = event_threw(path)
+        if threw and not allow_game_errors:
+            failures.append(f"{role}: {len(threw)} story events threw inside the game, first: {threw[0]}")
         if metrics:
             half = metrics[len(metrics) // 2:]
             err = [float(m.get("errors", 0)) for m in half]
@@ -443,7 +456,7 @@ def main():
             light = light_compare(results["host"]["_lights"], info["_lights"])
             if light is not None:
                 sync["light_mismatch"] = light
-                if light > 0.1 and not light_differs:
+                if light > 0.05 and not light_differs:   # lasting differences only, so half the old 10%
                     failures.append(f"{role}: lighting differs from the host's in {light:.0%} of samples")
             doors = door_compare(results["host"]["_doors"], info["_doors"])
             if doors:
