@@ -33,9 +33,10 @@ $tours = @{
     'mitasame' = @{ Seconds = 240; LabTour = 'storypilot'; Chapter = 'Scene 3 - WeTogether'; PlayerArgs = '-mt-pilotboth -mt-mitacheck'; Expect = @('mita.moved@host') }
     # scene4: the game's own Audio_BlendShapeVoice errors after Scene 4 hands over to Scene 5 (jump45 with -mt-nopatch shows them without the mod).
     'scene4'   = @{ Seconds = 1500; AllowGameErrors = $true; LabTour = 'storypilot'; Chapter = 'Scene 4 - StartSecret'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'tv.oneplays@host', 'client.tv.oneplays', 'tv.story@host', 'tv.mirror@host', 'cards.oneplays@host', 'client.cards.oneplays', 'cards.done@host', 'client.hold.same') }
-    'scene5'   = @{ Seconds = 1500; LabTour = 'storypilot'; Chapter = 'Scene 5 - StartHorror'; PlayerArgs = '-mt-pilotboth -mt-logalso Scene_5_-_StartHorror'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'pilot.pressable@host') }
+    'scene5'   = @{ Seconds = 1500; LabTour = 'storypilot'; Chapter = 'Scene 5 - StartHorror'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'pilot.pressable@host') }
     'lamp'     = @{ Seconds = 130; Chapter = 'Scene 6 - BasementFirst'; Expect = @('lamp.shared@host', 'lamp.edge@host') }
     'jump45'   = @{ Seconds = 150; Chapter = 'Scene 4 - StartSecret'; Expect = @('jump.clean@host') }
+    'scene15'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 15 - BasementAndDeath'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     'scene2'   = @{ Seconds = 500; LabTour = 'storypilot'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     # roomhold: the client keeps a room the host's story switched off, so its lights differ on purpose.
     'roomhold' = @{ Seconds = 162; LightDiffers = $true; Expect = @('room.off@host', 'client.room.kept') }

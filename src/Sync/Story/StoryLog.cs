@@ -43,7 +43,7 @@ namespace MiSideTogether
         // Different events logged: the lab's stall check, since a looping timer (Scene 3's doorbell) logs forever.
         readonly HashSet<string> logKeysSeen = new HashSet<string>();
 
-        public static bool LogChapter(string scene) { return !LogOff && (scene == "Scene 1 - RealRoom" || scene == "Scene 2 - InGame" || scene == "Scene 3 - WeTogether" || scene == "Scene 4 - StartSecret" || scene == LogAlso); }
+        public static bool LogChapter(string scene) { return !LogOff && (scene == "Scene 1 - RealRoom" || scene == "Scene 2 - InGame" || scene == "Scene 3 - WeTogether" || scene == "Scene 4 - StartSecret" || scene == "Scene 5 - StartHorror" || scene == "Scene 15 - BasementAndDeath" || scene == LogAlso); }
 
         bool InLogChapter { get { string s = ActiveSceneName; return Connected && (LogChapter(s) || s == logContinuation); } }
         public static bool InStoryLog { get { TogetherRuntime rt = Instance; return rt != null && rt.InLogChapter; } }
