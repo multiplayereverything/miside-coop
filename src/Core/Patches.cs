@@ -35,6 +35,7 @@ namespace MiSideTogether
             Patch(typeof(GameController), "Update", "ControllerUpdatePrefix", null);
             Patch(typeof(Location3CutCarrot), "CutStart", "MainCharacterOnlyPrefix", null);
             Patch(typeof(Location3CutCarrot), "Cut", null, "CarrotCutPostfix");
+            Patch(typeof(MinigamesAutomate), "StartLoading", "MainCharacterOnlyPrefix", null);
             Patch(typeof(Location3WalkToToilet), "Start", "MainCharacterOnlyPrefix", null);
             Patch(typeof(Location3WalkToToilet), "LateUpdate", "MainCharacterOnlyPrefix", "HandWalkPostfix");
             Patch(typeof(Location34_Communication), "TakeEventWhenReadyWalk", "ReadyEventPrefix", null);

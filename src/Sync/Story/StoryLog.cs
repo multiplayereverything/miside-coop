@@ -43,7 +43,7 @@ namespace MiSideTogether
         // Different events logged: the lab's stall check, since a looping timer (Scene 3's doorbell) logs forever.
         readonly HashSet<string> logKeysSeen = new HashSet<string>();
 
-        public static bool LogChapter(string scene) { return !LogOff && (scene == "Scene 1 - RealRoom" || scene == "Scene 2 - InGame" || scene == "Scene 3 - WeTogether" || scene == "Scene 4 - StartSecret" || scene == "Scene 5 - StartHorror" || scene == "Scene 15 - BasementAndDeath" || scene == LogAlso); }
+        public static bool LogChapter(string scene) { return !LogOff && (scene == "Scene 1 - RealRoom" || scene == "Scene 2 - InGame" || scene == "Scene 3 - WeTogether" || scene == "Scene 4 - StartSecret" || scene == "Scene 5 - StartHorror" || scene == "Scene 7 - Backrooms" || scene == "Scene 10 - ManekenWorld" || scene == "Scene 13 - HelloCore" || scene == "Scene 15 - BasementAndDeath" || scene == LogAlso); }
 
         bool InLogChapter { get { string s = ActiveSceneName; return Connected && (LogChapter(s) || s == logContinuation); } }
         public static bool InStoryLog { get { TogetherRuntime rt = Instance; return rt != null && rt.InLogChapter; } }
@@ -232,6 +232,7 @@ namespace MiSideTogether
             foreach (Tamagotchi_Dialogue_Mob d in Object.FindObjectsOfType<Tamagotchi_Dialogue_Mob>(true)) if (d != null) d.eventStop = Gate(d, "stop", d.eventStop);
             // Eyes covered, then the story goes on (Scene 3: teleport to the black room). It plays on the acting player's PC only.
             foreach (BlackScreenAnimation b in Object.FindObjectsOfType<BlackScreenAnimation>(true)) if (b != null) b.eventStop1 = Gate(b, "stop1", b.eventStop1, GateKind.First);
+            foreach (MinigamesAutomate m in Object.FindObjectsOfType<MinigamesAutomate>(true)) if (m != null) { m.eventStartGame = Gate(m, "autostart", m.eventStartGame, GateKind.First); m.eventFinishGame = Gate(m, "autofinish", m.eventFinishGame, GateKind.First); m.eventStopGame = Gate(m, "autostop", m.eventStopGame, GateKind.First); }
             foreach (Location5_MitaLegs l in Object.FindObjectsOfType<Location5_MitaLegs>(true)) if (l != null) l.eventStartPlayer = Gate(l, "legs", l.eventStartPlayer, GateKind.First);
             foreach (Playable_Animation p in Object.FindObjectsOfType<Playable_Animation>(true)) if (p != null) p.eventStop = Gate(p, "cut", p.eventStop);
             foreach (ObjectAnimationPlayer a in Object.FindObjectsOfType<ObjectAnimationPlayer>(true))

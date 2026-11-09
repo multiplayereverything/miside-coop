@@ -22,6 +22,7 @@ namespace MiSideTogether
             if (labTour == "mitalook") MitaLookTour(now, scene);
             if (labTour == "handhold") HandHoldTour(now, scene);
             if (labTour == "mitaevent") MitaEventTour(now, scene);
+            if (labTour == "automate") AutomateTour(now, scene);
             if (labTour == "blackscreen") BlackScreenTour(now, scene);
             if (labTour == "corridor") CorridorTour(now, scene);
             if (labTour == "door") DoorTour(now, scene);

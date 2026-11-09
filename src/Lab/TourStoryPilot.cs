@@ -17,6 +17,7 @@ namespace MiSideTogether
     public sealed partial class TogetherRuntime
     {
         float labPilotAt, labPilotSendAt, labPilotStart;
+        readonly Dictionary<System.IntPtr, float> labPilotCabinetAt = new Dictionary<System.IntPtr, float>();
         int labPilotActions, labPilotCompared, labPilotDiffer, labPilotShots;
         readonly HashSet<System.IntPtr> labPilotDone = new HashSet<System.IntPtr>();
         // Objects left to the client, and when: if it can't press one (it doesn't walk there), the story mustn't end there.
@@ -62,6 +63,15 @@ namespace MiSideTogether
         {
             foreach (Location3CutCarrot c in Object.FindObjectsOfType<Location3CutCarrot>())
                 if (c != null && c.play) { c.autoCut = true; if (labPilotDone.Add(c.Pointer)) { Log("Lab: pilot cuts the carrot"); labPilotActions++; } }
+            // The arcade cabinet's game is played by keys: after a while the pilot leaves it by the game's exit, as having finished.
+            if (!NotMyMoment)
+                foreach (MinigamesAutomate m in Object.FindObjectsOfType<MinigamesAutomate>())
+                    if (m != null && m.game != null && !m.exitGame)
+                    {
+                        float at;
+                        if (!labPilotCabinetAt.TryGetValue(m.Pointer, out at)) { labPilotCabinetAt[m.Pointer] = Time.realtimeSinceStartup + 10f; labPilotActions++; Log("Lab: pilot plays the cabinet"); }
+                        else if (Time.realtimeSinceStartup >= at) { m.finishReady = true; m.StartStopGame(); Log("Lab: pilot leaves the cabinet"); }
+                    }
             // The walk to the toilet is held with the Up key, which keeps this at 0.5.
             if (!NotMyMoment)
                 foreach (Location3WalkToToilet w in Object.FindObjectsOfType<Location3WalkToToilet>())
