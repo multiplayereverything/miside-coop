@@ -21,6 +21,7 @@ namespace MiSideTogether
             Patch(typeof(Input), "GetButtonDown", null, "PressReadPostfix", typeof(string));
             Patch(typeof(Trigger_MouseClick), "Click", "MouseClickPrefix", "MouseClickPostfix");
             Patch(typeof(Trigger_Event), "TargetEnter", "TriggerEnterPrefix", "TriggerEnterPostfix");
+            Patch(typeof(Trigger_Event), "OnTriggerEnter", "TriggerWalkPrefix", "TriggerEnterPostfix");
             Patch(typeof(Trigger_Event), "TargetExit", "TriggerExitPrefix", "TriggerExitPostfix");
             Patch(typeof(Trigger_Event), "Restart", null, "TriggerRestartPostfix");
             Patch(typeof(DialogueChanger), "ClickButton", null, "DialogueChoicePostfix", typeof(int));
@@ -33,6 +34,7 @@ namespace MiSideTogether
             Patch(typeof(PlayerMove), "AnimationHandPlay", "PlayerHandAnimationPrefix", null);
             Patch(typeof(GameController), "Update", "ControllerUpdatePrefix", null);
             Patch(typeof(Location3CutCarrot), "CutStart", "MainCharacterOnlyPrefix", null);
+            Patch(typeof(Location3CutCarrot), "Cut", null, "CarrotCutPostfix");
             Patch(typeof(Location3WalkToToilet), "Start", "MainCharacterOnlyPrefix", null);
             Patch(typeof(Location3WalkToToilet), "LateUpdate", "MainCharacterOnlyPrefix", null);
             Patch(typeof(Location34_Communication), "TakeEventWhenReadyWalk", "ReadyEventPrefix", null);
@@ -51,6 +53,7 @@ namespace MiSideTogether
             Patch(typeof(LampBox), "Update", "LampPrefix", null);
             Patch(typeof(ObjectDoor), "FixedUpdate", "DoorFixedPrefix", "DoorFixedPostfix");
             Patch(typeof(ObjectDoor), "OptimizationActive", null, "DoorOptimizationPostfix");
+            Patch(typeof(ObjectDoor), "Lock", null, "DoorLockPostfix");
             Patch(typeof(PlayerMove), "RemoveItem", "RemoveItemPrefix", "RemoveItemPostfix");
             Patch(typeof(Dialogue_3DText), "SkipDialogue", null, "SkipDialoguePostfix");
             Patch(typeof(Dialogue_3DText), "Start", null, "DialogueStartPostfix");
@@ -206,8 +209,21 @@ namespace MiSideTogether
         static bool TriggerEnterPrefix(Trigger_Event __instance, out bool __state)
         {
             __state = false;
-            try { bool run = TogetherRuntime.BeforeTriggerEnter(__instance); __state = run && !__instance.triggerActive && !__instance.enterTime; return run; }
+            try { bool run = TogetherRuntime.BeforeTriggerEnter(__instance); __state = run && !__instance.triggerActive && !__instance.enterTime; if (__state) TogetherRuntime.NoteStoryActor(); return run; }
             catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook TriggerEnter: " + ex.Message); return true; }
+        }
+
+        // A player walking in: the physics call, with its own copy of TargetEnter (disassembly), so TargetEnter never runs.
+        static bool TriggerWalkPrefix(Trigger_Event __instance, Collider other, out bool __state)
+        {
+            __state = false;
+            try
+            {
+                if (other == null || __instance.objectTarget == null || other.gameObject != __instance.objectTarget) return true;
+                if (__instance.loop) return true;   // re-arming volumes follow each player (Scene 4's TriggerRoom): relayed they bounce between PCs
+                bool run = TogetherRuntime.BeforeTriggerEnter(__instance); __state = run && !__instance.triggerActive && !__instance.enterTime; if (__state) TogetherRuntime.NoteStoryActor(); return run;
+            }
+            catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook TriggerWalk: " + ex.Message); return true; }
         }
 
         static void TriggerEnterPostfix(Trigger_Event __instance, bool __state) { if (__state) Safe("TriggerEnter", () => TogetherRuntime.AfterTriggerEnter(__instance)); }
@@ -308,6 +324,7 @@ namespace MiSideTogether
         // A pushed door opens inside FixedUpdate (its own copy of DoorOpened, which is never called).
         static void DoorFixedPrefix(ObjectDoor __instance, out bool __state) { __state = Is<ObjectDoor>(__instance) && __instance.open; }
         static void DoorFixedPostfix(ObjectDoor __instance, bool __state) { if (!__state && Is<ObjectDoor>(__instance) && __instance.open) Safe("DoorOpened", () => TogetherRuntime.DoorOpenedHere(__instance)); }
+        static void DoorLockPostfix(ObjectDoor __instance, bool x) { if (Is<ObjectDoor>(__instance)) Safe("DoorLock", () => TogetherRuntime.DoorLockedHere(__instance, x)); }
         static void DoorOptimizationPostfix(ObjectDoor __instance) { if (Is<ObjectDoor>(__instance)) TogetherRuntime.NoteDoorOptimization(__instance); }
         static void LampPrefix(LampBox __instance) { if (Is<LampBox>(__instance)) Safe("Lamp", () => TogetherRuntime.LampSeesPlayers(__instance)); }
 
@@ -442,6 +459,7 @@ namespace MiSideTogether
             catch (Exception ex) { TogetherRuntime.Log("MT-MODERROR hook PlayerHandAnimation: " + ex.Message); return false; }
         }
         static void ControllerUpdatePrefix(GameController __instance) { TogetherRuntime.HoldIdleConsole(__instance); }
+        static void CarrotCutPostfix(Location3CutCarrot __instance) { if (Is<Location3CutCarrot>(__instance)) Safe("CarrotCut", () => TogetherRuntime.CarrotCutHere(__instance)); }
         static bool MainCharacterOnlyPrefix() { return !TogetherRuntime.NotMyMoment; }
         static void ReadyEventPrefix(Events_Data __0) { Safe("ReadyEvent", () => TogetherRuntime.GateReadyEvent(__0)); }
         static bool ScriptedMovePrefix(Player_Position __instance)

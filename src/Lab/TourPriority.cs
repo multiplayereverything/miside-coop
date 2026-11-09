@@ -15,6 +15,11 @@ namespace MiSideTogether
             if (labTour == "pickup") PickupTour(now, scene);
             if (labTour == "legs") LegsTour(now, scene);
             if (labTour == "doorroom") DoorRoomTour(now, scene);
+            if (labTour == "trigwalk") TrigWalkTour(now, scene);
+            if (labTour == "carrot") CarrotTour(now, scene);
+            if (labTour == "lockgather") LockGatherTour(now, scene);
+            if (labTour == "loading") LoadingTour(now, scene);
+            if (labTour == "blackscreen") BlackScreenTour(now, scene);
             if (labTour == "corridor") CorridorTour(now, scene);
             if (labTour == "door") DoorTour(now, scene);
             if (labTour == "allhere") AllHereTour(now, scene);

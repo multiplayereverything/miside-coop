@@ -44,6 +44,12 @@ $tours = @{
     'doorroom' = @{ Seconds = 90; Chapter = 'Scene 2 - InGame'; Expect = @('doorroom.loaded@host', 'client.doorroom.loaded') }
     'corridor' = @{ Seconds = 90; Chapter = 'Scene 2 - InGame'; Expect = @('corridor.gathered@host', 'client.corridor.gathered') }
     'corridorc' = @{ Seconds = 90; LabTour = 'corridor'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-corridorclient'; Expect = @('corridor.gathered@host', 'client.corridor.gathered') }
+    'trigwalk' = @{ Seconds = 90; Chapter = 'Scene 2 - InGame'; Expect = @('trigwalk.relayed@host') }
+    'carrot'   = @{ Seconds = 100; Chapter = 'Scene 3 - WeTogether'; Expect = @('client.carrot.follows') }
+    'lockgather' = @{ Seconds = 100; Chapter = 'Scene 4 - StartSecret'; Expect = @('lockgather.together@host', 'client.lockgather.together') }
+    'lockgatherc' = @{ Seconds = 100; LabTour = 'lockgather'; Chapter = 'Scene 4 - StartSecret'; PlayerArgs = '-mt-lockclient'; Expect = @('lockgather.together@host', 'client.lockgather.together') }
+    'blackscreen' = @{ Seconds = 100; Chapter = 'Scene 3 - WeTogether'; Expect = @('client.blackscreen.moved') }
+    'loading'  = @{ Seconds = 90; Chapter = 'Scene 4 - StartSecret'; Expect = @('loading.dialogue@host') }
     'legs'     = @{ Seconds = 100; Chapter = 'Scene 5 - StartHorror'; Expect = @('legs.shared@host') }
     'pickup'   = @{ Seconds = 110; Chapter = 'Scene 6 - BasementFirst'; PlayerArgs = '-mt-nolog'; Expect = @('pickup.gone@host', 'client.pickup.gone') }
     'pickupc'  = @{ Seconds = 110; LabTour = 'pickup'; Chapter = 'Scene 6 - BasementFirst'; PlayerArgs = '-mt-nolog -mt-pickupclient'; Expect = @('pickup.gone@host', 'client.pickup.gone') }

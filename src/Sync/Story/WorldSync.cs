@@ -142,6 +142,7 @@ namespace MiSideTogether
             // The minigame's own end event runs on every machine (Minigames.cs), so what it fires is not relayed.
             if (MinigameEnding) { Log("MT-STORY held (minigame end event) " + op + " " + key); return; }
             Log("MT-STORY local " + op + " " + key + (arg != 0 ? " " + arg : ""));
+            rt.lastStoryPlayer = rt.SelfId;
             if (op == Op.Interact || op == Op.MouseClick) NoteLocalClick(key);
             if (op == Op.CutscenePlay && rt.Hosting) rt.AllPlayersHere();
             if (rt.Hosting && rt.InLogChapter) { rt.HostLog(op, key, arg); return; }
@@ -153,7 +154,7 @@ namespace MiSideTogether
         void ReadStoryEvent(Op op, BinaryReader reader, int from)
         {
             long start = reader.BaseStream.Position;
-            if (Hosting && InLogChapter) { HostRequest(op, reader, from); return; }
+            if (Hosting && InLogChapter) { lastStoryPlayer = from; HostRequest(op, reader, from); return; }
             if (Hosting)
             {
                 byte[] packet = new byte[reader.BaseStream.Length - start + 1];
@@ -606,6 +607,7 @@ namespace MiSideTogether
 
         // What the game itself set for each door: offOptimization is forced on by DoorTick, so a shut door hides nothing.
         static readonly Dictionary<IntPtr, bool> doorGameOff = new Dictionary<IntPtr, bool>();
+        static readonly Dictionary<IntPtr, float> doorToldAt = new Dictionary<IntPtr, float>();
         public static void NoteDoorOptimization(ObjectDoor door) { doorGameOff[door.Pointer] = door.offOptimization; }
 
         // The game brings back the rooms behind a door when it opens, unless the story turned that off for the door. Scene 2 switches
@@ -617,6 +619,10 @@ namespace MiSideTogether
             bool gameOff;
             if (doorGameOff.TryGetValue(door.Pointer, out gameOff) && gameOff) return;   // the story said this door brings nothing (the corridor's)
             door.OptimizationObjectsActivation();
+            // A door leaned on flaps open and shut: once a second is plenty.
+            float last;
+            if (doorToldAt.TryGetValue(door.Pointer, out last) && Time.realtimeSinceStartup - last < 1f) return;
+            doorToldAt[door.Pointer] = Time.realtimeSinceStartup;
             Call(28, door, 0);   // the game's own DoorOpened only: its story also swings doors (OpenAngle) with rooms that must stay off
         }
 

@@ -60,6 +60,7 @@ namespace MiSideTogether
         void HostLog(Op op, string key, int arg, int origin = -1)
         {
             if (holdingLogs != null) { holdingLogs.Add(new HostRequestEntry { Op = op, Key = key, Arg = arg, Origin = origin }); return; }
+            if (origin >= 0) lastStoryPlayer = origin;
             int seq = logSeq++;
             logKeysSeen.Add(key);
             byte[] packet = Wire.Packet(Op.Ordered, w => { w.Write(seq); w.Write((byte)op); w.Write(origin); Wire.Text(w, key); w.Write(arg); });
@@ -150,6 +151,7 @@ namespace MiSideTogether
                     int origin = reader.ReadInt32();
                     string key = Wire.Text(reader, 1024);
                     int arg = reader.ReadInt32();
+                    lastStoryPlayer = origin >= 0 ? origin : 0;   // no origin: the host's own event
                     if (origin == self) { logQueue.Remove(logNext); logNext++; logApplied++; continue; }
                     retryingStory = true;
                     bool own = (op == Op.Interact || op == Op.Gate) && ownRequests.Remove(key);
@@ -228,6 +230,8 @@ namespace MiSideTogether
             }
             foreach (Dialogue_3DText d in Object.FindObjectsOfType<Dialogue_3DText>(true)) if (d != null) d.eventFinish = Gate(d, "line", d.eventFinish);
             foreach (Tamagotchi_Dialogue_Mob d in Object.FindObjectsOfType<Tamagotchi_Dialogue_Mob>(true)) if (d != null) d.eventStop = Gate(d, "stop", d.eventStop);
+            // Eyes covered, then the story goes on (Scene 3: teleport to the black room). It plays on the acting player's PC only.
+            foreach (BlackScreenAnimation b in Object.FindObjectsOfType<BlackScreenAnimation>(true)) if (b != null) b.eventStop1 = Gate(b, "stop1", b.eventStop1, GateKind.First);
             foreach (Playable_Animation p in Object.FindObjectsOfType<Playable_Animation>(true)) if (p != null) p.eventStop = Gate(p, "cut", p.eventStop);
             foreach (ObjectAnimationPlayer a in Object.FindObjectsOfType<ObjectAnimationPlayer>(true))
             {
