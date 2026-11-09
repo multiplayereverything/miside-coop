@@ -56,7 +56,6 @@ namespace MiSideTogether
             Patch(typeof(Trigger_MouseEvent), "Enter", null, "LookEnterPostfix");
             Patch(typeof(Trigger_MouseEvent), "Update", "LookUpdatePrefix", "LookUpdatePostfix");
             Patch(typeof(Trigger_DistanceCircle), "Update", "DistancePrefix", "DistancePostfix");
-            Patch(typeof(Basement_Safe), "ClickButton", null, "SafeButtonPostfix");
             Patch(typeof(InputKeyboard_Main), "AddKey", null, "KeyboardAddPostfix");
             Patch(typeof(InputKeyboard_Main), "RemoveKey", null, "KeyboardRemovePostfix");
             Patch(typeof(InputKeyboard_Main), "ButtonEnter", null, "KeyboardEnterPostfix");
@@ -334,7 +333,6 @@ namespace MiSideTogether
         static void LookUpdatePostfix(Trigger_MouseEvent __instance) { Safe("LookAfter", () => TogetherRuntime.LookAfter(__instance)); }
         static bool DistancePrefix(Trigger_DistanceCircle __instance) { Safe("DistanceBefore", () => TogetherRuntime.DistanceBefore(__instance)); return !TogetherRuntime.DistanceHeld(__instance); }
         static void DistancePostfix(Trigger_DistanceCircle __instance) { Safe("DistanceAfter", () => TogetherRuntime.DistanceAfter(__instance)); }
-        static void SafeButtonPostfix(Basement_Safe __instance, int x) { Safe("SafeButton", () => TogetherRuntime.Call(0, __instance, x)); }
         static void KeyboardAddPostfix(InputKeyboard_Main __instance, string _key) { Safe("KeyboardAdd", () => { if (!string.IsNullOrEmpty(_key)) TogetherRuntime.Call(1, __instance, _key[0]); }); }
         static void KeyboardRemovePostfix(InputKeyboard_Main __instance) { Safe("KeyboardRemove", () => TogetherRuntime.Call(2, __instance, 0)); }
         static void KeyboardEnterPostfix(InputKeyboard_Main __instance) { Safe("KeyboardEnter", () => TogetherRuntime.Call(3, __instance, 0)); }

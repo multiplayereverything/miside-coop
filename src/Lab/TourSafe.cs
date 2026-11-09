@@ -50,7 +50,16 @@ namespace MiSideTogether
             }
             if (now < labSafeStepAt || labSafeStep > 3) return;
             labSafeStepAt = now + 1.5f;
-            if (labSafeStep < 3) { safe.ClickButton(labSafeStep + 1); Log("Lab: host presses " + (labSafeStep + 1) + " -> '" + SafeTyped(safe) + "'"); labSafeStep++; return; }
+            if (labSafeStep < 3)
+            {
+                // As a player does: the button's own press, whose click calls ClickButton.
+                Transform digit = safe.transform.Find("SafeDoorButton " + (labSafeStep + 1));
+                ObjectInteractive button = digit != null ? digit.GetComponent<ObjectInteractive>() : null;
+                if (button == null || !LabPress(button)) { Log("Lab: safe button " + (labSafeStep + 1) + " not pressable yet"); return; }
+                Log("Lab: host presses button " + (labSafeStep + 1));
+                labSafeStep++;
+                return;
+            }
             labSafeStep++;
             string typed = SafeTyped(safe);
             CheckOnce("safe.typed", (safe.passwordNow ?? "").Length == 3, "host's keypad: " + typed + " (active=" + safe.active + ")");

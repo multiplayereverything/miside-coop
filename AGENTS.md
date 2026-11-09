@@ -1,4 +1,4 @@
-﻿# MiSide Together development
+# MiSide Together development
 
 Start with `docs/HANDOFF.md` (current state, next steps, new-PC setup), `README.md` (behaviour, limitations) and `docs/SYNC.md` (every synced thing, how, which tour proves it, and the work list). Keep them current, along with `MODLOG.md`. Per-cutscene tuning: `CUTSCENES.md`. Per-chapter coverage: `docs/SYNC-INVENTORY.md` (regenerate with the `inventory` tour plus `python tools/inventory_report.py`).
 
@@ -97,7 +97,7 @@ Here a test is an `MT-CHECK` in a tour, listed in that tour's `Expect` in `scrip
 | `Dialogue_3DText.Start` (postfix) | Registers the line with its start time (dialogue stream and lag metric), with no per-frame scan. |
 | `Location18_Novella.NextDialogue` (postfix) | Visual novel: a client's click is sent to the host, which reads on; clients step after the host's streamed position. |
 | `Trigger_MouseEvent.Enter` (postfix, one-shot looks only), `Trigger_DistanceCircle.Update` (prefix + postfix: `targetInside` flips) | `Op.LookTrigger` / `Op.DistanceTrigger`. |
-| `Basement_Safe.ClickButton`, `InputKeyboard_Main.AddKey`/`RemoveKey`/`ButtonEnter`/`ButtonUpper`, `Trigger_DistanceCamera.Enter`/`Exit` | `Op.Call` method relays (table in `Triggers.cs`). |
+| `InputKeyboard_Main.AddKey`/`RemoveKey`/`ButtonEnter`/`ButtonUpper`, `Trigger_DistanceCamera.Enter`/`Exit` | `Op.Call` method relays (table in `Triggers.cs`). |
 | `Location14_PlayerMobileMove.Play` (prefix + postfix), `.Update`/`.FixedUpdate` (prefix) | Scene 14 phone character: the phone's holder runs it and relays `Op.Call` 15; on the others it is shown, not run, and placed from the prop stream (`PhoneCharacter.cs`). |
 | `Tamagotchi_Main.GameStart`/`GameStop`, `Tamagotchi_Dialogue.KeyNextDialogue`, `Location1_InputNamePlayer.CheckName`, `ButtonMouseClick.PointerDown`/`PointerUp`, `UnityEngine.UI.Button.Press`, `TamagotchiGame_Cooking.Ready`/`Cut` | Scene 1 phone app: the host's are relayed (`Op.Call` 16-23), the clients' own input in the app does nothing (`AppSync.cs`), except the cooking board: every player drags their own knife and any player's `Cut` runs on every PC (`Op.Call` 27). Buttons count only under `Tamagotchi/` in Scene 1. |
 | Minigame end methods (prefix + postfix) | While the player's end method runs, story relays are held (`MinigameEnding`). Watchers fire the kind's end UnityEvents (`MinigameKind.Events`). |

@@ -86,7 +86,6 @@ namespace MiSideTogether
         void ClearTriggers() { firedLook.Clear(); distanceInside.Clear(); distanceHeld.Clear(); lookHold.Clear(); }
 
         // --- Method relays: puzzle and input calls replayed on every machine (Op.Call, key "<entry>:<scene key>") ---
-        //  0 Basement_Safe.ClickButton(int)       safe keypad presses (the right code opens it everywhere)
         //  1 InputKeyboard_Main.AddKey(char)      on-screen keyboard typing
         //  2 InputKeyboard_Main.RemoveKey()
         //  3 InputKeyboard_Main.ButtonEnter()
@@ -142,7 +141,6 @@ namespace MiSideTogether
             string target = key.Substring(colon + 1);
             switch (entry)
             {
-                case 0: { Basement_Safe safe = SceneKeys.Find<Basement_Safe>(target); if (!Missing(safe, target)) safe.ClickButton(arg); break; }
                 case 1: case 2: case 3: case 4:
                 {
                     InputKeyboard_Main keys = SceneKeys.Find<InputKeyboard_Main>(target);
