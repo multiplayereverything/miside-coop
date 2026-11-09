@@ -147,6 +147,11 @@ def lights(path):
 def light_compare(host, client):
     """Share of samples where no host sample within 3 s shows the same lighting."""
     same = [c for c in client if c[1].startswith("Scene_")]
+    # The PCs enter a chapter a few seconds apart and its lights come on in sequence, so the first seconds compare different moments.
+    first = {}
+    for c in same:
+        first.setdefault(c[1], c[0])
+    same = [c for c in same if c[0] - first[c[1]] >= 12]
     if len(same) < 5:
         return None
     # Only where the host was in the same chapter then: a client left behind (or loading) isn't a lighting difference.

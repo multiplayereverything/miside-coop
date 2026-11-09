@@ -20,7 +20,7 @@ namespace MiSideTogether
         float lockGatherUntil = -1;
 
         // Before the trigger's own events run: the door locks inside them.
-        public static void NoteStoryActor() { TogetherRuntime rt = Instance; if (rt != null && rt.Connected && !Replaying) rt.lastStoryPlayer = rt.SelfId; }
+        public static void NoteStoryActor() { TogetherRuntime rt = Instance; if (rt != null && rt.Connected && !Replaying) { rt.lastStoryPlayer = rt.SelfId; if (rt.InLogChapter) rt.momentMine = true; } }
 
         public static void DoorLockedHere(ObjectDoor door, bool locked)
         {

@@ -74,10 +74,13 @@ namespace MiSideTogether
             return best;
         }
 
+        readonly HashSet<string> labPropFarBefore = new HashSet<string>();
         void LabPropSample(Peer p, string what, float d)
         {
             labPropSamples++;
-            if (d > 0.3f) labPropFar++;
+            // Far in this sample and still far 2 s later: a body's snap at the end of an animation lasts a moment.
+            if (d > 0.3f && !labPropFarBefore.Add(what)) labPropFar++;
+            else if (d <= 0.3f) labPropFarBefore.Remove(what);
             if (d > labPropWorstD) { labPropWorstD = d; labPropWorst = what; }
             Log(string.Format(System.Globalization.CultureInfo.InvariantCulture, "MT-PROP {0} {1} {2:0.00} m from the nearest hand", p.Name, what, d));
         }

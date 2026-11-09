@@ -224,6 +224,8 @@ namespace MiSideTogether
                         Trigger_Event enter = SceneKeys.Find<Trigger_Event>(key);
                         if (Missing(enter, key)) return;
                         if (!enter.loop && !firedEnter.Add(key)) return;
+                        // Whoever walked in is the moment's Main Character, as if they had pressed something (Scene 7's hand-hold).
+                        if (InLogChapter && !enter.loop) momentMine = ownRequest;
                         enter.TargetEnter();
                         break;
                     case Op.TriggerExit:

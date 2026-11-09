@@ -72,10 +72,31 @@ namespace MiSideTogether
                         if (!labPilotCabinetAt.TryGetValue(m.Pointer, out at)) { labPilotCabinetAt[m.Pointer] = Time.realtimeSinceStartup + 10f; labPilotActions++; Log("Lab: pilot plays the cabinet"); }
                         else if (Time.realtimeSinceStartup >= at) { m.finishReady = true; m.StartStopGame(); Log("Lab: pilot leaves the cabinet"); }
                     }
+            if (!NotMyMoment) PilotCore();
             // The walk to the toilet is held with the Up key, which keeps this at 0.5.
             if (!NotMyMoment)
                 foreach (Location3WalkToToilet w in Object.FindObjectsOfType<Location3WalkToToilet>())
                     if (w != null) { w.timeWalk = 0.5f; if (labPilotDone.Add(w.Pointer)) { Log("Lab: pilot walks to the toilet"); labPilotActions++; } }
+        }
+
+        // The core computer: the program is started by sitting down, then answered as a player types it (the keys, then Enter).
+        float labPilotCoreAt;
+        bool labPilotCoreStarted;
+        int labPilotCoreAnswers;
+        void PilotCore()
+        {
+            GamesCore_Main main = Object.FindObjectOfType<GamesCore_Main>();
+            Transform ui = main != null ? main.transform.Find("Interface") : null;
+            if (ui == null || !ui.gameObject.activeInHierarchy || Time.realtimeSinceStartup < labPilotCoreAt || labPilotCoreAnswers >= 8 || LocalPlayer == null || !LocalPlayer.animationRun || !coreOperatorHere) return;   // seated, as the operator
+            labPilotCoreAt = Time.realtimeSinceStartup + 4f;
+            if (!labPilotCoreStarted) { labPilotCoreStarted = true; main.StartVersionMita(); labPilotActions++; Log("Lab: pilot starts the core program's version question"); return; }
+            GamesCore_InputField field = Object.FindObjectOfType<GamesCore_InputField>();
+            if (field == null || string.IsNullOrEmpty(field.fieldCharsNeed) || !field.isActiveAndEnabled) return;
+            for (int i = 0; i < 12 && field.indexCharNow > 0; i++) field.ButtonBackspace();
+            foreach (int k in KeysFor(field)) { field.canInput = true; field.indexButtonNow = k; field.ButtonClick(); }
+            field.ButtonEnter();
+            labPilotCoreAnswers++; labPilotActions++;
+            Log("Lab: pilot answers the core computer with " + field.fieldCharsNeed);
         }
 
         // Of the keys on offer, the one pressed least: a menu (Scene 4's console: Change, Left, Right, Exit) gets every key in turn.
