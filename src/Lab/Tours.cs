@@ -480,9 +480,12 @@ namespace MiSideTogether
         }
 
         // Every teleport must end on the floor at the target's height with head-room: never in furniture or above a ceiling.
+        float labHostYMin = float.MaxValue, labHostYMax = float.MinValue;
         void TeleportSafeCheck(float now)
         {
             PlayerMove player = LocalPlayer;
+            Peer teleportHost;
+            if (lastTeleportAt >= 0 && peers.TryGetValue(0, out teleportHost)) { labHostYMin = Mathf.Min(labHostYMin, teleportHost.Feet.y); labHostYMax = Mathf.Max(labHostYMax, teleportHost.Feet.y); }
             if (player == null || lastTeleportAt < 0 || now - lastTeleportAt < 1.5f || now - lastTeleportAt > 3f) return;
             Vector3 feet = player.transform.position;
             bool level = Mathf.Abs(feet.y - lastTeleportHostY) < 0.3f, headroom = true, floor = true;
@@ -496,8 +499,9 @@ namespace MiSideTogether
             // Height and head-room catch the real failures (ceiling, furniture). Some chapters have no collider under the
             // host's own feet, so floor is reported but not required.
             // Where the host isn't standing still either (a cold-started Scene 9 bounces the player between -0.5 and -1.2) there is no height to compare with.
-            Peer teleportHost;
-            if (peers.TryGetValue(0, out teleportHost) && Mathf.Abs(teleportHost.Feet.y - lastTeleportHostY) > 0.15f) { Log("Lab: teleport check skipped, the host is moving vertically here"); return; }
+            bool hostSteady = labHostYMax - labHostYMin <= 0.15f;
+            labHostYMin = float.MaxValue; labHostYMax = float.MinValue;
+            if (!hostSteady) { Log("Lab: teleport check skipped, the host is moving vertically here"); return; }
             bool ok = level && headroom;
             if (!ok || !labChecked.Contains("teleport.safe"))
             {
@@ -832,6 +836,7 @@ namespace MiSideTogether
             }
             string target = Chapters[chapterIndex];
             // Loaded = the chapter is up without game errors piling up (Scene 18 is 2D and has no PlayerMove).
+            if (scene == target && now - tourSceneAt > ChapterSeconds - 12 && labChapterShot != chapterIndex) { labChapterShot = chapterIndex; LabShotAll("chapter-" + chapterIndex.ToString("00")); }
             if (scene == target && now - tourSceneAt > 10)
                 CheckOnce("chapter.loaded:" + Slug(target), errorCount - chapterErrorsAtLoad < 20, "player=" + (LocalPlayer != null) + " game errors since load " + (errorCount - chapterErrorsAtLoad));
             if (returningToMenu)
@@ -854,6 +859,7 @@ namespace MiSideTogether
         bool returningToMenu;
         int chapterErrorsAtLoad;
 
+        int labChapterShot = -1;
         void NextChapter(float now)
         {
             chapterIndex++;
