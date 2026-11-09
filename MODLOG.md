@@ -478,3 +478,16 @@ Both players driven by the pilot, each chapter twice: as players get it now, and
 - New check `death.regroup` (pilot tours, 12 s after a death, within 15 m). Off the log Scene 20 passes at 1.8 m. On the log (trial only) the screenshots showed the client left at the far end in the dark after the host's death: blocks listing Scene 20.
 - `triggers` lighting differs in 22 to 38% of its 9 samples. Not caused by the hold (same with it off). Source unknown.
 - Host and client screenshot sheets for Scenes 5 to 17 and 20 viewed by hand: first, middle and last comparison of each.
+
+## 2026-11-09: whole-world snapshots and both-role runs (user's ideas 3 and 1)
+- `-mt-snap` (`LabSnapshot.cs`): at each pilot comparison every PC writes every recorded object's on/off state plus lights, animators, colliders and renderers; `tools/compare_state.py` lists what differs in two snapshots in a row. `-mt-snapbreak` proved it can fail (the object the client switched off, 10 of 10 snapshots). It first compared only objects both PCs have; objects destroyed on one PC now count too, which raised some runs from a handful of differences to hundreds.
+- `-mt-pilotclient`: the client does the pressing, prompts, choices, looks and trigger volumes; the host hands each out. Scene 2: 30 client actions, 1 host fallback, whole chapter passes.
+- Full suite on 924e544: 38 of 41 pass; triggers, death and scene2 fail on the lighting comparison only (scene2 passed earlier the same day, so intermittent).
+- Both roles, Scenes 3 to 17 and 20, 32 runs (`private/playtests/2026-11-09-state`, `compare.txt` in each). The pilot still stops at minigames, so depth is as before. Findings, not fixed:
+  - Basement safe: `SafeOption/Interactive Place` and its 34 children exist on one PC only (Scenes 6, 15). The other PC then waits 12 s per keypad press (Scene 15: 6 entries lost, about 75 s frozen, then `Dialogue_3DText.Update` NRE flood and dialogue mismatch 69%; Scene 5/6 lost 1). Which PC loses it isn't explained yet. Scenes 5 and 15 are on the log locally, so this needs fixing before they ship.
+  - Collectibles taken by one player stay on the other PC: `Cartridge Console` (Scenes 6, 7, 10, 12, 13), `FlashMita` (9, 12, 17), the phone (14, 16).
+  - Scene 5, client acting: the basement key stays takeable on the client after it's used.
+  - Scene 13, client acting: the core computer's `ScreenEntry` differs (also in the screenshots).
+  - Scene 10, client acting: `Mita Maneken Hello` and `Time StartFlashLight` are on on the client, off on the host, for the whole run.
+  - Scene 7, host acting: quests differ, lighting 90%, 90 objects gone on the client (rooms and `Quest1`).
+  - Scenes 3 and 4, per-room triggers (`TriggerRoom *`) and `CapsulePlace Mita` differ per PC; they follow where each player is. Effect of the capsule collider on walking not measured.

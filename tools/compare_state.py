@@ -19,6 +19,7 @@ def load(path):
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8")
     host, client = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
     names = sorted({p.name for p in host.glob("*.txt")} & {p.name for p in client.glob("*.txt")})
     if len(names) < 2:
@@ -28,10 +29,11 @@ def main():
     for name in names:
         h, c = load(host / name), load(client / name)
         now = set()
-        for k in h.keys() & c.keys():
-            if h[k] != c[k]:
+        # An object destroyed on one PC is only in the other's snapshot.
+        for k in h.keys() | c.keys():
+            if h.get(k, "gone") != c.get(k, "gone"):
                 now.add(k)
-                sample[k] = (h[k], c[k])
+                sample[k] = (h.get(k, "gone"), c.get(k, "gone"))
                 first.setdefault(k, name[:-4])
         for k in now:
             runs[k] = runs.get(k, 0) + 1
