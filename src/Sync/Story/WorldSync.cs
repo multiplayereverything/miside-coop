@@ -581,7 +581,10 @@ namespace MiSideTogether
                 // (ObjectDoor.DoorClosed). With players on both sides, each PC hid the other player's room. In a
                 // session the house stays whole: both sides on, and no hiding.
                 foreach (ObjectDoor d in doorList)
+                {
+                    if (!doorGameOff.ContainsKey(d.Pointer)) doorGameOff[d.Pointer] = d.offOptimization;
                     if (!d.offOptimization) { d.offOptimization = true; d.OptimizationObjectsActivation(); }
+                }
             }
             if (IsClient && !ClientStoryLive) return;
             int sent = 0;
@@ -599,6 +602,22 @@ namespace MiSideTogether
                 sent++;
                 Broadcast(Wire.Packet(Op.Door, w => { Wire.Text(w, key); w.Write(rot.x); w.Write(rot.y); w.Write(rot.z); w.Write(rot.w); w.Write(door.open); }));
             }
+        }
+
+        // What the game itself set for each door: offOptimization is forced on by DoorTick, so a shut door hides nothing.
+        static readonly Dictionary<IntPtr, bool> doorGameOff = new Dictionary<IntPtr, bool>();
+        public static void NoteDoorOptimization(ObjectDoor door) { doorGameOff[door.Pointer] = door.offOptimization; }
+
+        // The game brings back the rooms behind a door when it opens, unless the story turned that off for the door. Scene 2 switches
+        // Main and Bedroom off for the corridor and relies on this to bring them back.
+        public static void DoorOpenedHere(ObjectDoor door)
+        {
+            TogetherRuntime rt = Instance;
+            if (rt == null || !rt.Connected || door == null || Replaying) return;
+            bool gameOff;
+            if (doorGameOff.TryGetValue(door.Pointer, out gameOff) && gameOff) return;   // the story said this door brings nothing (the corridor's)
+            door.OptimizationObjectsActivation();
+            Call(28, door, 0);   // the game's own DoorOpened only: its story also swings doors (OpenAngle) with rooms that must stay off
         }
 
         void ApplyDoor(BinaryReader reader, int from)

@@ -49,6 +49,8 @@ namespace MiSideTogether
             Patch(typeof(ObjectInteractiveItemTake), "TakeDestroy", null, "TakeDestroyPostfix");
             Patch(typeof(Scene_Load), "UnloadScene", null, "SceneUnloadPostfix", typeof(string));
             Patch(typeof(LampBox), "Update", "LampPrefix", null);
+            Patch(typeof(ObjectDoor), "FixedUpdate", "DoorFixedPrefix", "DoorFixedPostfix");
+            Patch(typeof(ObjectDoor), "OptimizationActive", null, "DoorOptimizationPostfix");
             Patch(typeof(PlayerMove), "RemoveItem", "RemoveItemPrefix", "RemoveItemPostfix");
             Patch(typeof(Dialogue_3DText), "SkipDialogue", null, "SkipDialoguePostfix");
             Patch(typeof(Dialogue_3DText), "Start", null, "DialogueStartPostfix");
@@ -303,6 +305,10 @@ namespace MiSideTogether
             Safe("TakeDone", () => { if (__instance != null && takesHere.Remove(__instance.Pointer) && TogetherRuntime.InStoryLog && !TogetherRuntime.TakeShortcutOff) TogetherRuntime.Call(25, __instance, 0); });
         }
 
+        // A pushed door opens inside FixedUpdate (its own copy of DoorOpened, which is never called).
+        static void DoorFixedPrefix(ObjectDoor __instance, out bool __state) { __state = Is<ObjectDoor>(__instance) && __instance.open; }
+        static void DoorFixedPostfix(ObjectDoor __instance, bool __state) { if (!__state && Is<ObjectDoor>(__instance) && __instance.open) Safe("DoorOpened", () => TogetherRuntime.DoorOpenedHere(__instance)); }
+        static void DoorOptimizationPostfix(ObjectDoor __instance) { if (Is<ObjectDoor>(__instance)) TogetherRuntime.NoteDoorOptimization(__instance); }
         static void LampPrefix(LampBox __instance) { if (Is<LampBox>(__instance)) Safe("Lamp", () => TogetherRuntime.LampSeesPlayers(__instance)); }
 
         // A chapter scene unloaded mid-play (Scene 6 unloads Scene 5 as the players go down into its basement, and the

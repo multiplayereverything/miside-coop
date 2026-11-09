@@ -201,6 +201,7 @@ namespace MiSideTogether
             if (labPilotFull) { PilotKeepsCutting(); PilotFights(now); PilotPlaysCards(now); PilotHolds(now); }
             LabPropsInHandTick(now);
             MitaCheckTick(now);
+            LabBatteryDoorTick(now, scene);
             if (IsClient && labPilotFull) PilotClientTick(now, scene);
             if (Hosting && !tourStarted && scene == "SceneMenu" && now - tourSceneAt > 6) { tourStarted = true; LoadThroughGame(chapter); return; }
             // The verdict at 360 s, wherever the story has taken the host by then (it may be the next chapter).

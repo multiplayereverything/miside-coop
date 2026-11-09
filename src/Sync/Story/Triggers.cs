@@ -83,7 +83,7 @@ namespace MiSideTogether
             distanceApplied++;
         }
 
-        void ClearTriggers() { firedLook.Clear(); distanceInside.Clear(); distanceHeld.Clear(); lookHold.Clear(); }
+        void ClearTriggers() { firedLook.Clear(); distanceInside.Clear(); distanceHeld.Clear(); lookHold.Clear(); doorGameOff.Clear(); }
 
         // --- Method relays: puzzle and input calls replayed on every machine (Op.Call, key "<entry>:<scene key>") ---
         //  1 InputKeyboard_Main.AddKey(char)      on-screen keyboard typing
@@ -102,6 +102,7 @@ namespace MiSideTogether
         // 24 Scene 4 console: the win, lose or draw reply the player's game switched on (Minigames.cs)
         // 25 ObjectInteractiveItemTake.TakeDestroy: the taker's hand reached the item; the take completes everywhere
         // 26 Scene_Load.UnloadScene(name): a chapter scene unloaded mid-play (Scene 5 under Scene 6's basement)
+        // 28 ObjectDoor.DoorOpened: the rooms behind the door come on for everyone (WorldSync.DoorOpenedHere)
         public static bool ApplyingUnload;
 
         // Another player's take the host waits on (Op.Call 25). If their hand never gets there (a death or cutscene in
@@ -155,6 +156,7 @@ namespace MiSideTogether
                 case 10: case 11: case 12: case 13: case 14: ApplyCoreCall(entry, target, arg); break;
                 case 15: ApplyMobileShow(target); break;
                 case 24: ApplyConsoleReply(target); break;
+                case 28: { ObjectDoor door = SceneKeys.Find<ObjectDoor>(target); if (!Missing(door, target)) door.OptimizationObjectsActivation(); break; }
                 case 26:
                 {
                     UnityEngine.SceneManagement.Scene s = UnityEngine.SceneManagement.SceneManager.GetSceneByName(target);

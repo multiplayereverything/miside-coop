@@ -71,6 +71,7 @@ namespace MiSideTogether
             }
             if (!Connected) return;
             StartBarrierTick(Time.realtimeSinceStartup);
+            CorridorGatherTick(Time.realtimeSinceStartup);
             if (Hosting) { HostSceneTick(active); return; }
             ClientSceneTick(active);
         }
