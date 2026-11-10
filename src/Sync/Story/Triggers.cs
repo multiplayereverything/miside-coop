@@ -149,6 +149,9 @@ namespace MiSideTogether
                 case 1: case 2: case 3: case 4:
                 {
                     InputKeyboard_Main keys = SceneKeys.Find<InputKeyboard_Main>(target);
+                    // A keyboard that was in the chapter and is gone has been used up here already (Scene 1's name field
+                    // is put away by the name itself, which arrives first): there is nothing to wait for.
+                    if (keys == null && SceneKeys.WasRecorded(target)) break;
                     if (Missing(keys, target)) break;
                     if (entry == 1) keys.AddKey(((char)arg).ToString()); else if (entry == 2) keys.RemoveKey(); else if (entry == 3) keys.ButtonEnter(); else keys.ButtonUpper();
                     break;

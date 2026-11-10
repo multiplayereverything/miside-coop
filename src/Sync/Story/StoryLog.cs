@@ -174,6 +174,7 @@ namespace MiSideTogether
                 logQueue.Remove(logNext);
                 logNext++;
                 logApplied++;
+                if (LogStepOn) return;   // lab: one step a frame, as on a fast PC where each arrives in its own frame
             }
         }
 

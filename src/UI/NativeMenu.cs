@@ -35,11 +35,25 @@ namespace MiSideTogether
         {
             if (ActiveSceneName != "SceneMenu") { menuPage = null; menuButton = null; menuFailed = false; rows.Clear(); rowsSignature = ""; return; }
             if (menuPage == null && !menuFailed && arrivedAt >= 0 && Time.realtimeSinceStartup - arrivedAt > 1.5f) BuildNativeMenu();
+            if (menuButton != null && Time.realtimeSinceStartup >= nextFontMatch) { nextFontMatch = Time.realtimeSinceStartup + 0.5f; MatchGameFont(); }
             if (menuPage != null && menuPage.activeInHierarchy && Time.realtimeSinceStartup >= nextMenuRefresh)
             {
                 nextMenuRefresh = Time.realtimeSinceStartup + 1;
                 RefreshRows();
             }
+        }
+
+        float nextFontMatch;
+
+        // The game's translation component picks each label's font for the language. Our copies had to lose it to keep
+        // their own words, so they take the font from the Settings button, which still has it.
+        void MatchGameFont()
+        {
+            Transform own = menuButton.transform.parent.Find("Button Settings");
+            Text like = own != null ? own.GetComponentInChildren<Text>(true) : null;
+            if (like == null || like.font == null) return;
+            foreach (GameObject root in new[] { menuButton, menuPage })
+                if (root != null) foreach (Text t in root.GetComponentsInChildren<Text>(true)) if (t.font != like.font) t.font = like.font;
         }
 
         static Transform FindDeep(Transform root, string name)

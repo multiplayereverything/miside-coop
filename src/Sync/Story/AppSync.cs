@@ -211,6 +211,7 @@ namespace MiSideTogether
             if (entry == 19)
             {
                 ButtonMouseClick b = SceneKeys.Find<ButtonMouseClick>(target);
+                if (b == null && SceneKeys.WasRecorded(target)) return;   // gone with its panel, as above
                 if (Missing(b, target)) return;
                 if (!b.gameObject.activeInHierarchy && target.Contains("/Frame EnterTutorial#")) SkipOwnStyleFrame();
                 // A press often hides its own button, and the release is what opens the next panel: it never waits.

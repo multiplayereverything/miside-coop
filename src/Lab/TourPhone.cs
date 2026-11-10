@@ -97,12 +97,17 @@ namespace MiSideTogether
                     return;
                 }
             }
+            // The name is the host's to enter: a client watching the host's app types nothing.
+            if (IsClient) return;
             foreach (Location1_InputNamePlayer n in Object.FindObjectsOfType<Location1_InputNamePlayer>())
             {
                 if (n == null || !n.isActiveAndEnabled || n.inputName == null || !n.inputName.gameObject.activeInHierarchy || n.inputName.text == Name) continue;
                 n.inputName.text = Name;
-                n.CheckName();
-                Log("Lab: tutorial - name " + Name);
+                // A player confirms the name with the on-screen Enter button; that press is what reaches the other PCs.
+                ButtonMouseClick enter = null;
+                foreach (ButtonMouseClick b in Object.FindObjectsOfType<ButtonMouseClick>()) if (b.name == "ButtonEnter" && b.transform.parent != null && b.transform.parent.name == "InputName") enter = b;
+                if (enter != null) { enter.PointerDown(); enter.PointerUp(); } else n.CheckName();
+                Log("Lab: tutorial - name " + Name + (enter != null ? " (Enter button)" : " (no Enter button found: CheckName)"));
                 return;
             }
         }
@@ -150,8 +155,26 @@ namespace MiSideTogether
             }
         }
 
+        float labNameGoneAt = -1;
+        bool labNameSeen;
+
+        // phone.name (client): after the host confirms the name, this PC's story goes on: no step is lost waiting for the
+        // name field, which the name itself has already put away here.
+        void PhoneNameCheck(float now)
+        {
+            if (labChecked.Contains("phone.name")) return;
+            bool field = false;
+            foreach (Location1_InputNamePlayer n in Object.FindObjectsOfType<Location1_InputNamePlayer>()) if (n != null && n.isActiveAndEnabled) field = true;
+            if (field) { labNameSeen = true; return; }
+            if (!labNameSeen) return;
+            if (labNameGoneAt < 0) labNameGoneAt = now;
+            if (now - labNameGoneAt < 16) return;
+            CheckOnce("phone.name", logLost == 0 && logBlockedSince < 0, "story steps lost here: " + logLost + ", waited on: " + logWaited + (logBlockedSince >= 0 ? ", still waiting on " + logWaitingOn : ""));
+        }
+
         void PhoneClient(float now, string scene)
         {
+            PhoneNameCheck(now);
             GlobalGame.hintScreen = false;
             if (scene == "Scene 1 - RealRoom") LabScene1Tutorial(now);
             PlayerMove player = LocalPlayer;

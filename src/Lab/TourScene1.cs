@@ -346,6 +346,7 @@ namespace MiSideTogether
 
         void Scene1Client(float now, string scene)
         {
+            PhoneNameCheck(now);
             GlobalGame.hintScreen = false;
             if (scene != "Scene 1 - RealRoom") return;
             LabAppMitaTrace();

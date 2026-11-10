@@ -14,6 +14,8 @@ namespace MiSideTogether
     public sealed partial class TogetherRuntime
     {
         public static bool LabMode;
+        // A client applies one story step per frame (a 240 fps PC gets each of the host's steps in a frame of its own).
+        public static bool LogStepOn;
         static StreamWriter labLog;
         static readonly object labLogGate = new object();
         static int errorCount, modErrorCount;
@@ -32,6 +34,7 @@ namespace MiSideTogether
             {
                 if (args[i] == "-mt-lab") LabMode = true;
                 if (args[i] == "-mt-labnotices-off") LabNoticesOff = true;
+                if (args[i] == "-mt-logstep") LogStepOn = true;
                 if (args[i] == "-mt-noshots") noShots = true;
                 if (args[i] == "-mt-nosessionsend") sessionNoSend = true;
                 if (args[i] == "-mt-norules") RulesOff = true;
