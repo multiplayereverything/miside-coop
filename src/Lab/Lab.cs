@@ -31,6 +31,7 @@ namespace MiSideTogether
             for (int i = 0; i < args.Length; i++)
             {
                 if (args[i] == "-mt-lab") LabMode = true;
+                if (args[i] == "-mt-labnotices-off") LabNoticesOff = true;
                 if (args[i] == "-mt-noshots") noShots = true;
                 if (args[i] == "-mt-nosessionsend") sessionNoSend = true;
                 if (args[i] == "-mt-norules") RulesOff = true;

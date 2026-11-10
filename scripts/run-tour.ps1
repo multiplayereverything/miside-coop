@@ -32,6 +32,8 @@ $tours = @{
     'savesguard' = @{ Seconds = 60; Expect = @('savesguard.sent@host', 'client.savesguard.kept') }
     'blip' = @{ Seconds = 130; Chapter = 'Scene 2 - InGame'; Expect = @('blip.kept@host', 'client.blip.back', 'client.blip.stayed', 'client.blip.story') }
     'ownerleaves' = @{ Seconds = 100; Chapter = 'Scene 4 - StartSecret'; ClientLeaves = $true; Expect = @('ownerleaves.watched@host', 'ownerleaves.ended@host') }
+    'deathclient' = @{ Seconds = 110; Chapter = 'Scene 11 - Backrooms'; Expect = @('deathclient.restarted@host', 'client.deathclient.died') }
+    'labgate' = @{ Seconds = 110; Chapter = 'Scene 1 - RealRoom'; PlayerArgs = '-mt-labnotices-off'; Expect = @('labgate.ignored@host') }
     'novellarace' = @{ Seconds = 110; Chapter = 'Scene 18 - 2D'; PlayerArgs = '-mt-lag 300 0'; Expect = @('novellarace.moved@host', 'novellarace.once@host') }
     'pressrace' = @{ Seconds = 110; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-lag 300 0'; Expect = @('pressrace.hostplays@host', 'client.pressrace.onemain') }
     'scanner'  = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('scanner.waits@host', 'client.scanner.waits', 'scanner.placed@host', 'client.scanner.placed', 'client.scanner.same') }
