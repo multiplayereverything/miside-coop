@@ -32,6 +32,9 @@ namespace MiSideTogether
                 s.Append(" player[").Append(p.gameObject.scene.name).Append(p.gameObject.activeInHierarchy ? ",on" : ",off").Append(p == LocalPlayer ? ",local]=" : "]=").Append(p.transform.position.ToString("0.0"));
             Camera cam = Camera.main;
             s.Append(" cam=").Append(cam != null ? cam.transform.position.ToString("0.0") + "@" + cam.gameObject.scene.name : "none");
+            // Screens in the scene (a phone, a console) are cameras drawing into a texture.
+            foreach (Camera c in UnityEngine.Object.FindObjectsOfType<Camera>(true))
+                if (c.targetTexture != null) s.Append(" screen[").Append(PathOf(c.transform)).Append(c.gameObject.activeInHierarchy ? ",on" : ",off").Append(c.enabled ? "" : ",disabled").Append(",mask ").Append(c.cullingMask.ToString("x")).Append("]=").Append(c.transform.position.ToString("0.0"));
             Log(s.ToString());
         }
 

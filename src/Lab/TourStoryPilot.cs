@@ -20,6 +20,19 @@ namespace MiSideTogether
         readonly Dictionary<System.IntPtr, float> labPilotCabinetAt = new Dictionary<System.IntPtr, float>();
         int labPilotActions, labPilotCompared, labPilotDiffer, labPilotShots;
         readonly HashSet<System.IntPtr> labPilotDone = new HashSet<System.IntPtr>();
+        readonly HashSet<string> labPilotAnswers = new HashSet<string>();
+        readonly Dictionary<System.IntPtr, int> labPilotAgain = new Dictionary<System.IntPtr, int>();
+
+        // Something a player talks to more than once (Mita, with a topic each time) is armed again after it was pressed.
+        // When the story has stood still for 15 s, the pilot presses it again, up to 6 times.
+        bool PilotPressesAgain(ObjectInteractive o, float now)
+        {
+            int n;
+            labPilotAgain.TryGetValue(o.Pointer, out n);
+            if (now - labPilotProgressAt < 15 || n >= 6 || o.GetComponentInParent<MinigamesAutomate>() != null) return false;
+            labPilotAgain[o.Pointer] = n + 1; labPilotProgressAt = now - 5;
+            return true;
+        }
         // Objects left to the client, and when: if it can't press one (it doesn't walk there), the story mustn't end there.
         readonly Dictionary<string, float> labPilotHanded = new Dictionary<string, float>();
         const float PilotClientSeconds = 10;
@@ -201,7 +214,7 @@ namespace MiSideTogether
         static bool ChapterScene(GameObject g) { return g.scene.name != null && g.scene.name.StartsWith("Scene ", System.StringComparison.Ordinal); }
 
         // The story's own objects: quests and acts (not the house's ambient triggers).
-        static bool StoryPath(Transform t) { string p = PathOf(t); return p.Contains("/Quests/") || p.Contains("/Acts/") || p.Contains("/Act/"); }
+        static bool StoryPath(Transform t) { string p = PathOf(t); return p.Contains("/Quests/") || p.Contains("/Quest/") || p.Contains("/Triggers/") || p.Contains("/Acts/") || p.Contains("/Act/") || t.name.StartsWith("Trigger", System.StringComparison.Ordinal); }
 
         // What the pilot compares between copies: the quests on, and the shared key inventory (Scene 2's batteries).
         string PilotState()
@@ -289,7 +302,10 @@ namespace MiSideTogether
             foreach (DialogueChanger d in Object.FindObjectsOfType<DialogueChanger>())
                 if (!labPilotClient && d != null && d.play && d.buttons != null && d.indexButtons != null && d.indexButtons.Count > 0)
                 {
+                    // Mita's menus come back until every topic is asked: take the first answer not given yet.
                     int pick = d.indexButtons[0];
+                    foreach (int index in d.indexButtons) if (!labPilotAnswers.Contains(d.Pointer + ":" + index)) { pick = index; break; }
+                    labPilotAnswers.Add(d.Pointer + ":" + pick);
                     Log("Lab: pilot answers " + d.name + " with " + pick); d.ClickButton(pick); labPilotActions++; return;
                 }
             if (LocalPlayer.animationRun) return;   // let an interaction's animation finish first
@@ -303,7 +319,7 @@ namespace MiSideTogether
                 Log("Lab: the client didn't press it, pilot presses " + PathOf(left.transform) + " (" + labPilotFallbacks + " so far)"); return;
             }
             foreach (ObjectInteractive o in Object.FindObjectsOfType<ObjectInteractive>())
-                if (o != null && o.active && o.isActiveAndEnabled && !labPilotDone.Contains(o.Pointer) && ChapterScene(o.gameObject))
+                if (o != null && o.active && o.isActiveAndEnabled && (!labPilotDone.Contains(o.Pointer) || PilotPressesAgain(o, now)) && ChapterScene(o.gameObject))
                 {
                     bool toClient = (labPilotClient || (labPilotBoth && !labPilotTurn)) && AcceptedCount > 0;
                     if (!toClient) PilotStepTo(o);
@@ -369,7 +385,31 @@ namespace MiSideTogether
         }
 
         // Where a run stalls: what each PC could press there (story objects in chapter scenes), to compare the two logs.
-        public void LogPressable() { Log("Lab: pressable here: " + Pressable()); }
+        public void LogPressable() { Log("Lab: pressable here: " + Pressable()); LogWaiting(); }
+
+        // At a stall: everything in the chapter that is switched on and could move the story, by kind, so the log says
+        // what the story is waiting for.
+        void LogWaiting()
+        {
+            LogWaitingKind<ObjectInteractive>("interactive", o => o.active ? "" : "(not armed)");
+            LogWaitingKind<Trigger_Event>("volume", o => labPilotDone.Contains(o.Pointer) ? "(entered)" : "");
+            LogWaitingKind<Trigger_DistanceCircle>("distance", o => o.targetInside ? "(inside)" : "");
+            LogWaitingKind<Trigger_MouseEvent>("look", o => labPilotDone.Contains(o.Pointer) ? "(looked)" : "");
+            LogWaitingKind<Trigger_MouseClick>("click", o => "");
+            LogWaitingKind<Interface_KeyHint_Key>("prompt", o => o.hide ? "(hidden)" : "");
+            LogWaitingKind<DialogueChanger>("menu", o => o.play ? "(open)" : "");
+            LogWaitingKind<Dialogue_3DText>("line", o => "");
+        }
+
+        void LogWaitingKind<T>(string kind, System.Func<T, string> note) where T : Behaviour
+        {
+            List<string> on = new List<string>();
+            foreach (T o in Object.FindObjectsOfType<T>())
+                if (o != null && o.isActiveAndEnabled && ChapterScene(o.gameObject)) on.Add(PathOf(o.transform) + note(o));
+            on.Sort(System.StringComparer.Ordinal);
+            if (on.Count > 14) { int more = on.Count - 14; on.RemoveRange(14, more); on.Add("+" + more + " more"); }
+            if (on.Count > 0) Log("Lab: waiting " + kind + ": " + string.Join(" | ", on));
+        }
 
         static string Pressable()
         {

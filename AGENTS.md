@@ -149,7 +149,7 @@ Here a test is an `MT-CHECK` in a tour, listed in that tour's `Expect` in `scrip
 - **No mid-chapter joins:** a Hello while the host is in a chapter is accepted but `Peer.Waiting`. The client gets the `wait-chapter` notice and waits in the menu until the host's next `Op.Scene`.
 - **Migration rejoin:** a Hello with `rejoining` set and the same scene goes straight in.
 - **Player cap:** `MaxPlayers = 4`.
-- **Chapter start barrier:** after a chapter loads, every machine holds `Time.timeScale = 0` once its player exists. The host waits for every player's `SceneReady`, then sends `go:<seq>`; a 25 s timeout releases anyone. This makes the openings start together.
+- **Chapter start barrier:** after a chapter loads, every machine holds `Time.timeScale = 0` once its player exists. The host waits for every player's `SceneReady`, then sends `go:<seq>`; a 45 s timeout releases anyone. This makes the openings start together.
 
 ## Rules
 - **Build and test:** build with `scripts/build.ps1`. Test with `scripts/run-tour.ps1 -Tour <tour>` or `scripts/lab-suite.ps1`.
