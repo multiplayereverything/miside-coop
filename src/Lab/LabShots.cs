@@ -38,6 +38,9 @@ namespace MiSideTogether
             Log(s.ToString());
         }
 
+        public int labPanelDraws, labPanelLocked;
+        void LabPanelDrawn() { labPanelDraws++; if (Cursor.lockState != CursorLockMode.None || !Cursor.visible) labPanelLocked++; }
+
         void LabShotOnGui()
         {
             if (labShotPending == null || Event.current == null || Event.current.type != EventType.Repaint) return;

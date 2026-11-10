@@ -49,7 +49,24 @@ namespace MiSideTogether
                         return;
                     case 4:
                         LabShot("debug-page");
-                        labDebugStep = 5;
+                        labDebugStep = 5; labDebugBlockedAt = now; labPanelDraws = labPanelLocked = 0;
+                        return;
+                    case 5:
+                        // A player clicks the panel with the mouse: every time it is drawn the cursor must be free and showing.
+                        if (now - labDebugBlockedAt < 4) return;
+                        CheckOnce("debug.cursor", labPanelDraws > 20 && labPanelLocked == 0, labPanelLocked + " of " + labPanelDraws + " panel draws had the cursor locked or hidden; player free: " + LocalFree(LocalPlayer));
+                        debugOpen = false; labDebugStep = 6; labDebugBlockedAt = now;
+                        return;
+                    case 6:
+                        // A player's click on "Debug page" opens the page.
+                        if (now - labDebugBlockedAt < 1) return;
+                        if (!LabClickButton("Debug page")) { CheckOnce("debug.click", false, "the panel has no Debug page button"); labDebugStep = 8; return; }
+                        labDebugStep = 7; labDebugBlockedAt = now;
+                        return;
+                    case 7:
+                        if (now - labDebugBlockedAt < 1) return;
+                        CheckOnce("debug.click", debugOpen, debugOpen ? "a click on Debug page opened the page" : "a click on Debug page did nothing");
+                        labDebugStep = 8;
                         return;
                 }
                 return;

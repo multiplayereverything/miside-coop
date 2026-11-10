@@ -469,6 +469,19 @@ namespace MiSideTogether
 
         // --- native menu and Steam ------------------------------------------------------------------------------
         float labMenuOpenAt = -1;
+
+        // How a menu button's label is drawn: font, weight, size, colour, and its outline or shadow.
+        static string MenuTextLook(GameObject button)
+        {
+            string look = "";
+            foreach (UnityEngine.UI.Text t in button.GetComponentsInChildren<UnityEngine.UI.Text>(true))
+            {
+                look += (t.font != null ? t.font.name : "no font") + " " + t.fontStyle + " " + t.fontSize + " " + t.color + (t.material != null ? " " + t.material.name : "");
+                foreach (UnityEngine.UI.Shadow s in t.GetComponents<UnityEngine.UI.Shadow>()) look += " " + s.GetIl2CppType().Name + (s.enabled ? "" : "(off)");
+                look += "; ";
+            }
+            return look;
+        }
         void MenuChecks(float now, string scene)
         {
             if (scene != "SceneMenu" || now - tourSceneAt < 10) return;   // MenuNextLocation.Click throws if pressed 2 s in
@@ -477,6 +490,13 @@ namespace MiSideTogether
             MenuNextLocation next = menuButton.GetComponent<MenuNextLocation>();
             if (!labChecked.Contains("ui.menu")) LabShot("menu-main-" + Name);   // the main menu with MULTIPLAYER, before opening it
             CheckOnce("ui.menu", next != null && next.nextLocation == menuPage, "MULTIPLAYER button opens the page; page rows " + MenuRowCount);
+            // The button must look like the game's own (a real session's screenshot showed thin letters with no outline).
+            Transform own = menuButton.transform.parent.Find("Button Settings");
+            if (own != null && now - tourSceneAt > 14)
+            {
+                string mine = MenuTextLook(menuButton), theirs = MenuTextLook(own.gameObject);
+                CheckOnce("ui.menu.font", mine == theirs, mine == theirs ? "same as Settings: " + mine : "MULTIPLAYER: " + mine + " | Settings: " + theirs);
+            }
             if (labMenuOpenAt < 0 && next != null && Connected) { labMenuOpenAt = now; next.Click(); }
             if (labMenuOpenAt > 0 && now - labMenuOpenAt > 2)
             {

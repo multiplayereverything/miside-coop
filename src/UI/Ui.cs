@@ -55,16 +55,22 @@ namespace MiSideTogether
 
         public bool Button(string text, float h) { bool hit = Button(new Rect(X, Y, W, h), text); Y += h + 4; return hit; }
 
+        // Where each button was last drawn, by its label.
+        public readonly System.Collections.Generic.Dictionary<string, Rect> Buttons = new System.Collections.Generic.Dictionary<string, Rect>();
+
         public bool Button(Rect r, string text)
         {
+            Buttons[text] = r;
             if (!GUI.enabled) { Shade(r, text, 0.35f); return false; }
+            // The native button only draws: in a real session its clicks never arrived (no press in any session log), so
+            // the click is read from the legacy Input API the game itself uses.
+            bool hover = r.Contains(Mouse);
             if (!buttonBroken)
             {
-                try { return GUI.Button(r, text); }
+                try { GUI.Button(r, text); }
                 catch (Exception ex) { buttonBroken = true; TogetherRuntime.Log("UI: GUI.Button unavailable (" + ex.Message + "), using own buttons"); }
             }
-            bool hover = r.Contains(Mouse);
-            Shade(r, text, hover ? 1f : 0.75f);
+            if (buttonBroken) Shade(r, text, hover ? 1f : 0.75f);
             if (hover && Input.GetMouseButtonDown(0) && clickFrame != Time.frameCount) { clickFrame = Time.frameCount; focused = null; return true; }
             return false;
         }

@@ -35,7 +35,7 @@ namespace MiSideTogether
     // C# class avoids Il2CppInterop trying to expose every helper method to the native side.
     public sealed partial class TogetherRuntime
     {
-        public const string ModVersion = "0.3.19";
+        public const string ModVersion = "0.3.20";
         public static TogetherRuntime Instance;
         public static Action<string> Log = delegate { };
         public ITransport Network;
@@ -423,6 +423,7 @@ namespace MiSideTogether
             DrawNameTags(tagStyle);
             DrawHud();
             if (!show) return;
+            if (LabMode) LabPanelDrawn();
             float scale = Mathf.Max(1f, Screen.height / 900f);
             Matrix4x4 old = GUI.matrix;
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1));

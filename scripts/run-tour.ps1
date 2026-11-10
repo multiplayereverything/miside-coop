@@ -28,7 +28,7 @@ $tours = @{
     'afk'      = @{ Seconds = 90; Chapter = 'Scene 2 - InGame'; Expect = @('afk.console@host', 'client.afk.console') }
     'door'     = @{ Seconds = 100; Chapter = 'Scene 3 - WeTogether'; Expect = @('door.pushed@host', 'client.door.pushed') }
     'allhere'  = @{ Seconds = 120; Chapter = 'Scene 1 - RealRoom'; Expect = @('allhere.played@host', 'client.allhere.notice', 'client.allhere.brought') }
-    'debug'    = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('debug.rows@host', 'debug.waiting@host', 'client.debug.skip', 'client.debug.refused', 'client.debug.report') }
+    'debug'    = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('debug.rows@host', 'debug.waiting@host', 'client.debug.skip', 'client.debug.refused', 'client.debug.report', 'debug.cursor@host', 'debug.click@host') }
     'savesguard' = @{ Seconds = 60; Expect = @('savesguard.sent@host', 'client.savesguard.kept') }
     'blip' = @{ Seconds = 130; Chapter = 'Scene 2 - InGame'; Expect = @('blip.kept@host', 'client.blip.back', 'client.blip.stayed', 'client.blip.story') }
     'ownerleaves' = @{ Seconds = 100; Chapter = 'Scene 4 - StartSecret'; ClientLeaves = $true; Expect = @('ownerleaves.watched@host', 'ownerleaves.ended@host') }
