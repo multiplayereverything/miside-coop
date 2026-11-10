@@ -279,6 +279,7 @@ namespace MiSideTogether
                     if (notice.StartsWith("lab-core:", StringComparison.Ordinal)) { CoreNotice(notice); break; }
                     if (notice.StartsWith("lab-core2:", StringComparison.Ordinal)) { CoreAnswerNotice(notice); break; }
                     if (notice.StartsWith("lab-safe:", StringComparison.Ordinal)) { SafeNotice(notice); break; }
+                    if (notice == "lab-nrace") { NovellaRaceNotice(); break; }
                     if (notice.StartsWith("lab-race:", StringComparison.Ordinal)) { PressRaceNotice(notice); break; }
                     if (notice == "lab-choice") { ChoiceNotice(); break; }
                     if (notice == "lab-roomoff") { RoomOffNotice(); break; }

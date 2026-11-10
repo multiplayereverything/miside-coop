@@ -59,7 +59,7 @@ namespace MiSideTogether
             Patch(typeof(PlayerMove), "RemoveItem", "RemoveItemPrefix", "RemoveItemPostfix");
             Patch(typeof(Dialogue_3DText), "SkipDialogue", null, "SkipDialoguePostfix");
             Patch(typeof(Dialogue_3DText), "Start", null, "DialogueStartPostfix");
-            Patch(typeof(Location18_Novella), "NextDialogue", null, "NovellaNextPostfix");
+            Patch(typeof(Location18_Novella), "NextDialogue", "NovellaNextPrefix", "NovellaNextPostfix");
             Patch(typeof(Trigger_MouseEvent), "Enter", null, "LookEnterPostfix");
             Patch(typeof(Trigger_MouseEvent), "Update", "LookUpdatePrefix", "LookUpdatePostfix");
             Patch(typeof(Trigger_DistanceCircle), "Update", "DistancePrefix", "DistancePostfix");
@@ -427,6 +427,7 @@ namespace MiSideTogether
         static void QuestReplyPostfix(Location14_ButtonChangeDialogue __instance, bool __state) { Safe("QuestReply", () => TogetherRuntime.QuestReplyPicked(__instance, __state)); }
         static void CameraEnterPostfix(Trigger_DistanceCamera __instance, bool _deactiveAfter) { Safe("CameraEnter", () => TogetherRuntime.Call(5, __instance, _deactiveAfter ? 1 : 0)); }
         static void CameraExitPostfix(Trigger_DistanceCamera __instance, bool _deactiveAfter) { Safe("CameraExit", () => TogetherRuntime.Call(6, __instance, _deactiveAfter ? 1 : 0)); }
+        static void NovellaNextPrefix(Location18_Novella __instance) { Safe("NovellaLine", () => TogetherRuntime.NovellaBeforeClick(__instance)); }
         static void NovellaNextPostfix() { Safe("NovellaNext", TogetherRuntime.NovellaClicked); }
         static void DialogueStartPostfix(Dialogue_3DText __instance) { Safe("DialogueStart", () => TogetherRuntime.LineStarted(__instance)); }
         static void SkipDialoguePostfix(Dialogue_3DText __instance) { Safe("SkipDialogue", () => TogetherRuntime.Story(Op.SkipDialogue, __instance, 0)); }

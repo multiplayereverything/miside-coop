@@ -26,13 +26,20 @@ namespace MiSideTogether
             return novella;
         }
 
+        // The line a click was made on. The host reads on only if it is still on that line, so two players clicking
+        // the same line (or a click that crosses the host's own) move the story by one line, not two.
+        static string novellaClickLine = "";
+        static string NovellaLine(Location18_Novella n) { return n == null || n.dialoguePlay == null ? "" : SceneKeys.Key(n.dialoguePlay) + "@" + n.indexDialogue + "." + n.indexStringDialogue; }
+        public static void NovellaBeforeClick(Location18_Novella n) { novellaClickLine = NovellaLine(n); }
+
         // Postfix of Location18_Novella.NextDialogue: a player click (not a replay).
         public static void NovellaClicked()
         {
             TogetherRuntime rt = Instance;
             if (rt == null || !rt.Connected || Replaying || rt.Hosting) return;
             rt.novellaClicks++;
-            rt.SendToHost(Wire.Packet(Op.Novella, w => w.Write((byte)2)));
+            string line = novellaClickLine;
+            rt.SendToHost(Wire.Packet(Op.Novella, w => { w.Write((byte)2); Wire.Text(w, line); }));
         }
 
         void NovellaTick(float now)
@@ -94,9 +101,10 @@ namespace MiSideTogether
             if (kind == 2)
             {
                 // A client's click: the host reads on too, and its next state carries everyone along.
+                string line = Wire.Text(reader, 1100);
                 if (!Hosting) return;
                 Location18_Novella n = Novella();
-                if (n == null) return;
+                if (n == null || NovellaLine(n) != line) return;
                 Replaying = true;
                 try { n.NextDialogue(); novellaClicks++; } catch (Exception ex) { Log("Novella click threw: " + ex.Message); } finally { Replaying = false; }
                 return;

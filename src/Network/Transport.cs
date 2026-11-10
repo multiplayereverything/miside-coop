@@ -251,7 +251,7 @@ namespace MiSideTogether
 
     public static class Wire
     {
-        public const int Version = 16;
+        public const int Version = 17;
         public static byte[] Packet(Op op, Action<BinaryWriter> write)
         {
             using (MemoryStream memory = new MemoryStream())

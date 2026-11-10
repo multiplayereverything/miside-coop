@@ -567,3 +567,5 @@ Real session 13:51 (0.3.18, liam1 and lidar, `private/playtests/2026-11-09-real2
 - **`mobile` lighting:** Scene 14's "Point Light" flickers by per-PC noise; the tour has `LightDiffers`.
 - **New tours in the suite:** `savesguard`, `pressrace`, `blip`, `ownerleaves`. Also `scene2lag` (120 ms, 40 jitter) and `scene2x3` (three players): both pass.
 - **Runs:** storylog, debug, interactions, held, scene19, scene3full, scene2, scene1, menuleave, roomhold, scene1end, scene3, migrate, hostcut, minigame, samestart pass. `scene14` fails `pilot.acted` (2 actions, as before).
+- **Visual novel race (`novellarace`, 300 ms lag):** red: the host and client clicked the same line and the story read on twice. A click now names the line it was made on and the host ignores it once it has moved on. `Wire.Version` 17.
+- **Scenes 18, 20, 21 on the story log (`-mt-logalso`):** not a switch. Scene 20 on the log lost the regroup after a death (92 m apart); Scene 18 and 21 runs proved nothing (the pilot has nothing to press in the novella; "Scene 21 - Final" never left the loading screen). They stay on the relay.
