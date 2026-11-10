@@ -22,6 +22,7 @@ namespace MiSideTogether
         readonly HashSet<System.IntPtr> labPilotDone = new HashSet<System.IntPtr>();
         readonly HashSet<string> labPilotAnswers = new HashSet<string>();
         readonly Dictionary<System.IntPtr, int> labPilotAgain = new Dictionary<System.IntPtr, int>();
+        float labPilotAgainAt = -100;
 
         // Something a player talks to more than once (Mita, with a topic each time) is armed again after it was pressed.
         // When the story has stood still for 15 s, the pilot presses it again, up to 6 times.
@@ -29,8 +30,8 @@ namespace MiSideTogether
         {
             int n;
             labPilotAgain.TryGetValue(o.Pointer, out n);
-            if (now - labPilotProgressAt < 15 || n >= 6 || o.GetComponentInParent<MinigamesAutomate>() != null) return false;
-            labPilotAgain[o.Pointer] = n + 1; labPilotProgressAt = now - 5;
+            if (now - labPilotProgressAt < 15 || now - labPilotAgainAt < 10 || n >= 6 || o.GetComponentInParent<MinigamesAutomate>() != null) return false;
+            labPilotAgain[o.Pointer] = n + 1; labPilotAgainAt = now;
             return true;
         }
         // Objects left to the client, and when: if it can't press one (it doesn't walk there), the story mustn't end there.
@@ -324,7 +325,7 @@ namespace MiSideTogether
                     bool toClient = (labPilotClient || (labPilotBoth && !labPilotTurn)) && AcceptedCount > 0;
                     if (!toClient) PilotStepTo(o);
                     if (!toClient && !LabPress(o)) return;   // the press happens in that object's next Update
-                    labPilotDone.Add(o.Pointer); labPilotActions++;
+                    if (labPilotDone.Add(o.Pointer)) labPilotActions++;
                     labPilotTurn = !labPilotTurn;
                     if (toClient)
                     {

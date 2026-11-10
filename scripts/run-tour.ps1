@@ -175,14 +175,16 @@ do {
     $failedCheck = @($probeResult.failures | Where-Object { $_ -match 'check .* failed' }).Count
     # A copy that has gone can't finish the tour: don't wait out the time limit. (ClientLeaves tours and migrate can end a copy on purpose.)
     $gone = @($labPids | Where-Object { -not (Get-Process -Id $_ -ErrorAction SilentlyContinue) })
+    # The user started their own game: the lab shares its save folder, so stop at once and put the saves back.
+    if (Get-Process MiSideFull -ErrorAction SilentlyContinue | Where-Object { $_.Path -and $_.Path -notlike "$labRoot*" }) { Write-Output "the user's own game started: stopping the lab"; $userGame = $true; break }
     if ($gone.Count -gt 0 -and -not $spec.ClientLeaves -and $Tour -ne 'migrate') { Write-Output "lab copy gone early (PID $($gone -join ', '))"; break }
     # A copy can hang on the logo screen (seen twice, cause unknown): that run has nothing to tell, and its time limit is minutes away.
     $copies = @($probeResult.instances.PSObject.Properties | ForEach-Object { $_.Value })
     if (((Get-Date) - $tourStarted).TotalSeconds -gt 60 -and ($copies.Count -lt $Players -or @($copies | Where-Object { $_.scene_end -eq 'SceneAihasto' }).Count -gt 0)) { Write-Output "lab copy stuck at the start: stopping"; break }
 } while (($waiting -gt 0) -and ($failedCheck -eq 0) -and ((Get-Date) -lt $deadline))
 # A moment more so error samples cover the end of the tour, and longer only while a client is still following the host.
-Start-Sleep 3
-for ($try = 0; $try -lt 10; $try++) {
+if (-not $userGame) { Start-Sleep 3 }
+for ($try = 0; $try -lt 10 -and -not $userGame; $try++) {
     python -I @probeArgs | Out-Null
     if (-not ((Get-Content $probe -Raw | ConvertFrom-Json).failures -match 'ended in')) { break }
     Start-Sleep 1
