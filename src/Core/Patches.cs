@@ -69,6 +69,7 @@ namespace MiSideTogether
             Patch(typeof(InputKeyboard_Main), "ButtonUpper", null, "KeyboardUpperPostfix");
             Patch(typeof(Trigger_DistanceCamera), "Enter", null, "CameraEnterPostfix");
             Patch(typeof(Trigger_DistanceCamera), "Exit", null, "CameraExitPostfix");
+            Patch(typeof(Location20_RunCorridor), "KeyDownChangeRotate", null, "CorridorTurnPostfix");
             Patch(typeof(Location14_GameQuestPlayer), "ClickMouse", "QuestClickPrefix", "QuestClickPostfix");
             Patch(typeof(Location14_PlayerQuest), "Move", null, "QuestMovePostfix");
             Patch(typeof(Location14_PlayerMobileMove), "Play", "MobilePlayPrefix", "MobilePlayPostfix");
@@ -112,6 +113,11 @@ namespace MiSideTogether
             Patch(typeof(Transform_StartRandom), "Start", "SeedPrefix", "SeedPostfix");
             Patch(typeof(Location21_DialogueRandom), "ChangeRandom", "SeedPrefix", "SeedPostfix");
             Patch(typeof(Location21_DialogueRandom), "ChangeRandomDestroyOther", "SeedPrefix", "SeedPostfix");
+            Patch(typeof(Location20_RunCorridor), "Start", "SeedPrefix", "SeedPostfix");
+            Patch(typeof(Location20_RunCorridor), "CreateGeneration", "SeedGenerationPrefix", "SeedPostfix");
+            Patch(typeof(Location20_RunCorridor), "CreatePart", "SeedPartPrefix", "SeedPostfix");
+            Patch(typeof(Location20_RunCorridor), "StartRotate", "SeedTurnPrefix", "SeedPostfix");
+            Patch(typeof(Location20_RunCorridor), "RestartGame", "SeedRestartPrefix", "SeedPostfix");
             Patch(typeof(MitaPerson), "FaceEmotion", null, "FaceEmotionPostfix", typeof(string));
             Patch(typeof(MitaPerson), "FaceEmotionFast", null, "FaceEmotionFastPostfix", typeof(string));
             Patch(typeof(MitaPerson), "FaceEmotionOff", null, "FaceEmotionOffPostfix");
@@ -426,6 +432,7 @@ namespace MiSideTogether
         static void CoreStage3Postfix(GamesCore_Main __instance) { Safe("CoreStage", () => TogetherRuntime.CoreStage(__instance, 3)); }
         static void QuestReplyPostfix(Location14_ButtonChangeDialogue __instance, bool __state) { Safe("QuestReply", () => TogetherRuntime.QuestReplyPicked(__instance, __state)); }
         static void CameraEnterPostfix(Trigger_DistanceCamera __instance, bool _deactiveAfter) { Safe("CameraEnter", () => TogetherRuntime.Call(5, __instance, _deactiveAfter ? 1 : 0)); }
+        static void CorridorTurnPostfix(Location20_RunCorridor __instance, bool _x) { Safe("CorridorTurn", () => TogetherRuntime.Call(31, __instance, _x ? 1 : 0)); }
         static void CameraExitPostfix(Trigger_DistanceCamera __instance, bool _deactiveAfter) { Safe("CameraExit", () => TogetherRuntime.Call(6, __instance, _deactiveAfter ? 1 : 0)); }
         static void NovellaNextPrefix(Location18_Novella __instance) { Safe("NovellaLine", () => TogetherRuntime.NovellaBeforeClick(__instance)); }
         static void NovellaNextPostfix() { Safe("NovellaNext", TogetherRuntime.NovellaClicked); }
@@ -446,6 +453,11 @@ namespace MiSideTogether
 
         // Shared randomness (Seeds.cs).
         static void SeedPrefix(Component __instance) { Safe("Seed", () => TogetherRuntime.BeginSeeded(__instance)); }
+        // Scene 20's corridor: pieces and turns are rolled as each player reaches them, so each has its own count.
+        static void SeedPartPrefix(Component __instance) { Safe("Seed", () => TogetherRuntime.BeginSeeded(__instance, "#part")); }
+        static void SeedGenerationPrefix(Component __instance) { Safe("Seed", () => TogetherRuntime.BeginSeeded(__instance, "#part", false)); }
+        static void SeedRestartPrefix(Component __instance) { Safe("Seed", () => TogetherRuntime.CorridorRestart(__instance)); }
+        static void SeedTurnPrefix(Component __instance) { Safe("Seed", () => TogetherRuntime.BeginSeeded(__instance, "#turn")); }
         static void SeedPostfix() { Safe("Seed", TogetherRuntime.EndSeeded); }
 
         // Interaction mirroring (Interactions.cs): replayed clicks do not animate the local player.

@@ -106,6 +106,7 @@ namespace MiSideTogether
         // 26 Scene_Load.UnloadScene(name): a chapter scene unloaded mid-play (Scene 5 under Scene 6's basement)
         // 28 ObjectDoor.DoorOpened: the rooms behind the door come on for everyone (WorldSync.DoorOpenedHere)
         // 29 Location3CutCarrot.Cut: every slice shows on every PC
+        // 31 Location20_RunCorridor.KeyDownChangeRotate(bool): the turn a player picks at a corner is everyone's turn
         public static bool ApplyingUnload;
 
         // Another player's take the host waits on (Op.Call 25). If their hand never gets there (a death or cutscene in
@@ -160,6 +161,7 @@ namespace MiSideTogether
                 case 15: ApplyMobileShow(target); break;
                 case 24: ApplyConsoleReply(target); break;
                 case 30: handLeader = arg; break;
+                case 31: { Location20_RunCorridor run = SceneKeys.Find<Location20_RunCorridor>(target); if (!Missing(run, target)) run.KeyDownChangeRotate(arg != 0); break; }
                 case 29:
                 {
                     Location3CutCarrot c = SceneKeys.Find<Location3CutCarrot>(target);

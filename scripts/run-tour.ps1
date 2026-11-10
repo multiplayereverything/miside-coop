@@ -55,7 +55,7 @@ $tours = @{
     'scene11'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 11 - Backrooms'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     'scene17'  = @{ Seconds = 600; LabTour = 'storypilot'; Chapter = 'Scene 17 - Dreamer'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     'scene14'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 14 - MobilePlayer'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same') }
-    'scene20'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 20 - FightMita'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.death.regroup', 'death.regroup@host') }
+    'scene20'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 20 - FightMita'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.death.regroup', 'death.regroup@host', 'client.corridor.same') }
     'doorroom' = @{ Seconds = 90; Chapter = 'Scene 2 - InGame'; Expect = @('doorroom.loaded@host', 'client.doorroom.loaded') }
     'corridor' = @{ Seconds = 90; Chapter = 'Scene 2 - InGame'; Expect = @('corridor.gathered@host', 'client.corridor.gathered') }
     'corridorc' = @{ Seconds = 90; LabTour = 'corridor'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-corridorclient'; Expect = @('corridor.gathered@host', 'client.corridor.gathered') }
