@@ -293,5 +293,16 @@ namespace MiSideTogether
         bool OwningMinigame { get { foreach (MinigameRun r in minigames.Values) if (r.Owner == SelfId) return true; return false; } }
 
         void ClearMinigames() { minigames.Clear(); }
+
+        // Host: a player who left can't finish their minigame. It ends for everyone, as if they had finished it.
+        void MinigameOwnerLeft(int id)
+        {
+            foreach (MinigameRun r in new List<MinigameRun>(minigames.Values))
+            {
+                if (r.Owner != id) continue;
+                Log("Minigame " + r.Key + " ends: its player left");
+                SendMinigame(2, r.Key, r.Kind, id);
+            }
+        }
     }
 }

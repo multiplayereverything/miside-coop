@@ -58,6 +58,7 @@ namespace MiSideTogether
                 if (peers.TryGetValue(e.Peer, out gone))
                 {
                     DestroyAvatar(gone); peers.Remove(e.Peer); ClosePeerLog(e.Peer);
+                    MinigameOwnerLeft(e.Peer);
                     if (gone.Accepted) { Tell(gone.Name + " left."); SendRoster(); }
                 }
                 return;

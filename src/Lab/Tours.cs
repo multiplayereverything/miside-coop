@@ -75,6 +75,7 @@ namespace MiSideTogether
             if (labTour == "storylog") { StoryLogTour(now, scene); return; }
             if (labTour == "savesguard") { SavesGuardTour(now); return; }
             if (labTour == "blip") { BlipTour(now, scene); return; }
+            if (labTour == "ownerleaves") { OwnerLeavesTour(now, scene); return; }
             if (labTour == "pressrace") { PressRaceTour(now, scene); return; }
             if (labTour == "inputhook") { InputHookTour(now, scene); return; }
             if (labTour == "desync") { DesyncTour(now, scene); return; }

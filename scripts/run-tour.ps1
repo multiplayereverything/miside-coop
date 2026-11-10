@@ -31,6 +31,7 @@ $tours = @{
     'debug'    = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('debug.rows@host', 'debug.waiting@host', 'client.debug.skip', 'client.debug.refused', 'client.debug.report') }
     'savesguard' = @{ Seconds = 60; Expect = @('savesguard.sent@host', 'client.savesguard.kept') }
     'blip' = @{ Seconds = 130; Chapter = 'Scene 2 - InGame'; Expect = @('blip.kept@host', 'client.blip.back', 'client.blip.stayed', 'client.blip.story') }
+    'ownerleaves' = @{ Seconds = 100; Chapter = 'Scene 4 - StartSecret'; ClientLeaves = $true; Expect = @('ownerleaves.watched@host', 'ownerleaves.ended@host') }
     'pressrace' = @{ Seconds = 110; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-lag 300 0'; Expect = @('pressrace.hostplays@host', 'client.pressrace.onemain') }
     'scanner'  = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('scanner.waits@host', 'client.scanner.waits', 'scanner.placed@host', 'client.scanner.placed', 'client.scanner.same') }
     'mitasame' = @{ Seconds = 240; LabTour = 'storypilot'; Chapter = 'Scene 3 - WeTogether'; PlayerArgs = '-mt-pilotboth -mt-mitacheck'; Expect = @('mita.moved@host') }
@@ -63,6 +64,9 @@ $tours = @{
     'pickup'   = @{ Seconds = 110; Chapter = 'Scene 6 - BasementFirst'; PlayerArgs = '-mt-nolog'; Expect = @('pickup.gone@host', 'client.pickup.gone') }
     'pickupc'  = @{ Seconds = 110; LabTour = 'pickup'; Chapter = 'Scene 6 - BasementFirst'; PlayerArgs = '-mt-nolog -mt-pickupclient'; Expect = @('pickup.gone@host', 'client.pickup.gone') }
     'scene15'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 15 - BasementAndDeath'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
+    # The same chapter with internet-like delay, and with three players.
+    'scene2lag' = @{ Seconds = 600; LabTour = 'storypilot'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-pilotboth -mt-lag 120 40'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'batteries.room@host', 'client.batteries.room') }
+    'scene2x3' = @{ Seconds = 500; Players = 3; LabTour = 'storypilot'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'pilot.same@c2', 'client.pilot.keys', 'pilot.keys@c2', 'client.log.clean', 'log.clean@c2', 'batteries.room@host', 'client.batteries.room', 'batteries.room@c2') }
     'scene2'   = @{ Seconds = 500; LabTour = 'storypilot'; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-pilotboth'; Expect = @('pilot.acted@host', 'client.pilot.same', 'client.pilot.keys', 'client.log.clean', 'batteries.room@host', 'client.batteries.room') }
     # roomhold: the client keeps a room the host's story switched off, so its lights differ on purpose.
     'roomhold' = @{ Seconds = 162; LightDiffers = $true; Expect = @('room.off@host', 'client.room.kept') }
