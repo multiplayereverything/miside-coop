@@ -112,7 +112,7 @@ namespace MiSideTogether
         }
 
         public const int MaxPlayers = 4;
-        bool waitingForChapter, rejoining;
+        bool waitingForChapter, rejoining, resumeRelay;
 
         // A chapter is under way (the menu is not): new players wait for the next one.
         bool HostMidChapter { get { return hostScene.StartsWith("Scene ", StringComparison.Ordinal) || hostScene == "MinigameShooter"; } }
@@ -172,7 +172,13 @@ namespace MiSideTogether
             // Already in this chapter (reconnecting): its start is long past, so no start barrier.
             barrierSeq = name.StartsWith("Scene ", StringComparison.Ordinal) && ActiveSceneName != name ? seq : -1; barrierSince = -1;
             historySeq = -1; replayQueue.Clear();
-            logQueue.Clear(); logNext = 0; logBlockedSince = -1;
+            // Back after a dropped link, in the same chapter: the story carries on from where this PC was.
+            bool resume = seq == resumeSceneSeq && ActiveSceneName == name;
+            logQueue.Clear(); logNext = resume ? resumeLogNext : 0; logBlockedSince = -1;
+            resumeRelay = resume; resumeSceneSeq = -1;
+            // Already standing in the host's chapter (a reconnect, or a new host after a migration): nothing will load,
+            // so this is the arrival, and the catch-up is asked for.
+            if (ActiveSceneName == name && arrivedAt < 0) arrivedAt = Time.realtimeSinceStartup;
             Log("Host is in " + name + " (scene " + seq + ")");
         }
 
@@ -272,7 +278,9 @@ namespace MiSideTogether
             {
                 int size = reader.ReadInt32();
                 if (size < 1 || size > Transport.MaxFrame) throw new IOException("Invalid history entry.");
-                replayQueue.Enqueue(Transport.ReadExactly(reader.BaseStream, size));
+                byte[] entry = Transport.ReadExactly(reader.BaseStream, size);
+                // Resuming: the numbered log skips what this PC already ran; unnumbered events can't be told apart, so none run twice.
+                if (!resumeRelay || entry[0] == (byte)Op.Ordered) replayQueue.Enqueue(entry);
             }
             if (last)
             {

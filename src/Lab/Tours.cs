@@ -74,6 +74,7 @@ namespace MiSideTogether
             if (labTour == "samestart") { SameStartTick(now, scene); return; }
             if (labTour == "storylog") { StoryLogTour(now, scene); return; }
             if (labTour == "savesguard") { SavesGuardTour(now); return; }
+            if (labTour == "blip") { BlipTour(now, scene); return; }
             if (labTour == "pressrace") { PressRaceTour(now, scene); return; }
             if (labTour == "inputhook") { InputHookTour(now, scene); return; }
             if (labTour == "desync") { DesyncTour(now, scene); return; }

@@ -1,7 +1,7 @@
 ﻿# Runs every feature tour in a row and prints one line per tour. Results: artifacts/tests/<tour>-results.json.
 # Usage: lab-suite.ps1 [-Tours connect,avatars,...] [-WithChapters] [-Quick]
 # -Quick: one tour per area the story log touches. Use it while working; the full list before a release.
-param([string[]]$Tours = @('connect', 'sessionlog', 'samestart', 'storylog', 'desync', 'inputhook', 'avatars', 'story', 'mita', 'cutscene', 'world', 'carry', 'dialogue', 'gather', 'room', 'mirror', 'interactions', 'triggers', 'held', 'hostcut', 'novella', 'scene19', 'lobby', 'migrate', 'death', 'minigame', 'steam', 'quest', 'core', 'phone', 'mobile', 'safe', 'choice', 'menureturn', 'scene1', 'scene2', 'menuleave', 'roomhold', 'scene1end', 'scene3', 'scene3full'), [switch]$WithChapters, [switch]$Quick)
+param([string[]]$Tours = @('connect', 'sessionlog', 'samestart', 'savesguard', 'storylog', 'pressrace', 'blip', 'desync', 'inputhook', 'avatars', 'story', 'mita', 'cutscene', 'world', 'carry', 'dialogue', 'gather', 'room', 'mirror', 'interactions', 'triggers', 'held', 'hostcut', 'novella', 'scene19', 'lobby', 'migrate', 'death', 'minigame', 'steam', 'quest', 'core', 'phone', 'mobile', 'safe', 'choice', 'menureturn', 'scene1', 'scene2', 'menuleave', 'roomhold', 'scene1end', 'scene3', 'scene3full'), [switch]$WithChapters, [switch]$Quick)
 $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path $PSScriptRoot -Parent
 if ($Quick) { $Tours = @('connect', 'storylog', 'desync', 'phone', 'carry', 'held', 'menureturn', 'scene2') }

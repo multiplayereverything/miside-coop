@@ -174,7 +174,7 @@ namespace MiSideTogether
             if (labFps > 0 && Application.targetFrameRate != labFps) { QualitySettings.vSyncCount = 0; Application.targetFrameRate = labFps; }
             // Lab clients may start before the host listens; keep retrying instead of giving up.
             // A lab client that left by its own choice (menuleave tour) stays out.
-            if (autoRole == "join" && !Active && !leftByChoice && now >= labJoinRetryAt && (!LateLabJoiner || now > 90) && SameStartReadyToJoin()) { labJoinRetryAt = now + 3; StartJoin(); }
+            if (autoRole == "join" && !Active && !leftByChoice && labBlipAt < 0 && now >= labJoinRetryAt && (!LateLabJoiner || now > 90) && SameStartReadyToJoin()) { labJoinRetryAt = now + 3; StartJoin(); }
             if (now >= nextMetric)
             {
                 nextMetric = now + 10;

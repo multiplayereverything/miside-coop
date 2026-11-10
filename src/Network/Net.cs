@@ -42,7 +42,7 @@ namespace MiSideTogether
             if (e.Kind == "error")
             {
                 Tell("Network error: " + e.Message);
-                if (IsClient && self <= 0) Shutdown();
+                if (IsClient && self <= 0) { if (reconnectUntil > 0) ReconnectFailed(); else Shutdown(); }
                 return;
             }
             if (e.Kind == "connected")
@@ -53,7 +53,7 @@ namespace MiSideTogether
             }
             if (e.Kind == "disconnected")
             {
-                if (!Hosting) { if (TryMigrate()) return; Shutdown(); Tell("Lost connection to the host. You keep playing alone."); return; }
+                if (!Hosting) { if (reconnectUntil > 0) { ReconnectFailed(); return; } if (TryReconnect() || TryMigrate()) return; Shutdown(); Tell("Lost connection to the host. You keep playing alone."); return; }
                 Peer gone;
                 if (peers.TryGetValue(e.Peer, out gone))
                 {
@@ -191,9 +191,11 @@ namespace MiSideTogether
             {
                 case Op.Welcome:
                     self = reader.ReadInt32();
-                    rejoining = false;
+                    rejoining = false; hostLeft = false;
+                    if (reconnectUntil > 0) { reconnectUntil = -1; Log("Reconnected to the host"); }
                     Tell("Connected as player " + self + ". You follow the host's story. This session's log is sent to the host to help fix bugs.");
                     break;
+                case Op.Leave: hostLeft = true; break;
                 case Op.Reject:
                     string reason = Wire.Text(reader, 400);
                     Shutdown(); Tell("Host refused: " + reason);
