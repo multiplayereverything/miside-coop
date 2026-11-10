@@ -167,7 +167,14 @@ def light_compare(host, client):
 
 def event_threw(path):
     """Story events the mod ran that threw inside the game: the rest of that event's listeners never ran on this PC."""
-    return [line.strip()[:300] for line in path.read_text(encoding="utf-8", errors="replace").splitlines() if "the game's own event threw" in line]
+    return [line.strip()[:300] for line in path.read_text(encoding="utf-8", errors="replace").splitlines()
+            if "the game's own event threw" in line and not any(known in line for known in GAME_THROWS)]
+
+
+# Events that throw in the game itself, shown by a run alone with no game hooks (-mt-nopatch -Players 1).
+# Scene 2's TimeInToilet: SpriteRenderer_ColorAnimation.ColorAnimationDestroy throws (2026-11-10).
+# Scene 14's TakeMobile: Audio_HightPass.LowPassLerp throws, last in its list (2026-11-10).
+GAME_THROWS = ("Quest 3#2/TimeInToilet#10", "Quest 1#2/AnimationPlayer TakeMobile#2")
 
 
 def door_compare(host, client):

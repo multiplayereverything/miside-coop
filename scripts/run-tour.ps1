@@ -69,7 +69,8 @@ $tours = @{
     'menuleave' = @{ Seconds = 166; ClientLeaves = $true; Expect = @('leave.seen@host', 'client.leave.left') }
     'menureturn' = @{ Seconds = 166; Expect = @('menu.back@host', 'client.menu.clean') }
     'safe'     = @{ Seconds = 134;  Expect = @('safe.typed@host', 'client.safe.followed') }
-    'mobile'   = @{ Seconds = 182;  Expect = @('mobile.walked@host', 'client.mobile.seen', 'client.mobile.done') }
+    # mobile: Scene 14's "Point Light" flickers by its own random noise on each PC (brightness step 0-2), nothing else differs.
+    'mobile'   = @{ Seconds = 182;  LightDiffers = $true; Expect = @('mobile.walked@host', 'client.mobile.seen', 'client.mobile.done') }
     'steam'    = @{ Seconds = 80;   SteamMock = $true; Expect = @('connect.handshake', 'connect.roster', 'steam.ready', 'client.steam.joined', 'client.steam.order') }
     'avatars'  = @{ Seconds = 134;  Expect = @('ui.panel', 'chapter.loaded@host', 'client.follow.scene', 'client.follow.player', 'avatar.model', 'avatar.props', 'avatar.bones', 'avatar.near', 'avatar.anim', 'avatar.params', 'client.avatar.follows') }
     'story'    = @{ Seconds = 120;  Expect = @('chapter.loaded@host', 'story.sent@host', 'client.story.applied', 'story.received@host') }
