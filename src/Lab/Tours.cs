@@ -149,10 +149,11 @@ namespace MiSideTogether
             }
             if (labTour == "story" && player != null && !tourStepped && now - tourSceneAt > 20 && ClientInScene(client))
             {
-                tourStepped = true;
+                // A player can't press during the opening animation: wait for it, up to a minute.
                 ObjectInteractive pick = PickInteractive();
-                if (pick == null) CheckOnce("story.sent", false, "no active ObjectInteractive in " + scene);
-                else { Log("Lab: host clicks " + SceneKeys.Key(pick)); pick.Click(); CheckOnce("story.sent", true, SceneKeys.Key(pick)); }
+                if (pick == null) { tourStepped = true; CheckOnce("story.sent", false, "no active ObjectInteractive in " + scene); }
+                else if (LabPress(pick)) { tourStepped = true; Log("Lab: host clicks " + SceneKeys.Key(pick)); CheckOnce("story.sent", true, SceneKeys.Key(pick)); }
+                else if (now - tourSceneAt > 80) { tourStepped = true; CheckOnce("story.sent", false, "could not press " + SceneKeys.Key(pick)); }
             }
             if (labTour == "story" && LastAppliedStory != null) CheckOnce("story.received", true, LastAppliedStory);
             if (labTour == "mita")
@@ -201,7 +202,7 @@ namespace MiSideTogether
                 foreach (string want in new[] { "Door Exit", "ItemTake Spoon", "Interactive Air" })
                     if (phone == null) foreach (ObjectInteractive o in Object.FindObjectsOfType<ObjectInteractive>()) if (o != null && o.name == want && o.gameObject.activeInHierarchy) phone = o;
                 if (phone == null) CheckOnce("mirror.acted", false, "nothing to press in " + scene);
-                else { Log("Lab: host presses " + phone.name); phone.Click(); }
+                else { Log("Lab: host presses " + phone.name + ": " + LabPress(phone)); }
             }
             if (labTour == "mirror" && labWorldAt > 0 && actorAnimation != null) CheckOnce("mirror.acted", true, "host performs " + actorAnimation.Split('/')[^1] + " (" + (ActorOnly ? "actor only" : "mirrored") + ")");
             if (labTour == "gather" && scene == TourChapter && (player != null || labWorldAt > 0))
@@ -242,7 +243,7 @@ namespace MiSideTogether
                     ObjectInteractive plane = null;
                     foreach (ObjectInteractive o in Object.FindObjectsOfType<ObjectInteractive>()) if (o != null && o.name == "Door Exit" && o.gameObject.activeInHierarchy) plane = o;
                     if (plane == null) CheckOnce("carry.acted", false, "no exit door in " + scene);
-                    else { Log("Lab: host opens the exit door (actor only)"); plane.Click(); }
+                    else { Log("Lab: host opens the exit door (actor only): " + LabPress(plane)); }
                 }
                 // Only the spoon counts: the chapter's own opening (everyone plays it) attaches a smartphone first.
                 if (actorAnimation != null && labWorldAt > 0) CheckOnce("carry.acted", ActorOnly, "host performs " + actorAnimation.Split('/')[^1] + (ActorOnly ? " (actor only)" : " (rule not actor-only)"));
@@ -639,12 +640,13 @@ namespace MiSideTogether
                 if (now - tourStepAt > 2 && gap < 0.3f) CheckOnce("avatar.follows", true, "avatar within " + gap.ToString("0.00") + " m of the host's new position");
                 else if (now - tourStepAt > 10) CheckOnce("avatar.follows", false, "avatar still " + gap.ToString("0.00") + " m from the host's new position");
             }
-            if (labTour == "story" && LastAppliedStory != null && CheckOnce("story.applied", true, LastAppliedStory))
+            if (labTour == "story" && LastAppliedStory != null) CheckOnce("story.applied", true, LastAppliedStory);
+            if (labTour == "story" && LastAppliedStory != null && !labChecked.Contains("story.clientsent"))
             {
-                // Reverse direction: the client interacts and the host must receive it.
+                // Reverse direction: the client interacts and the host must receive it (once the mirrored animation is over).
                 ObjectInteractive pick = PickInteractive();
-                if (pick != null) { Log("Lab: client clicks " + SceneKeys.Key(pick)); pick.Click(); CheckOnce("story.clientsent", true, SceneKeys.Key(pick)); }
-                else CheckOnce("story.clientsent", false, "no active ObjectInteractive on the client");
+                if (pick == null) CheckOnce("story.clientsent", false, "no active ObjectInteractive on the client");
+                else if (LabPress(pick)) { Log("Lab: client clicks " + SceneKeys.Key(pick)); CheckOnce("story.clientsent", true, SceneKeys.Key(pick)); }
             }
             if (labTour == "world" || labTour == "props") ClientWorldTour(now, host);
             if (labTour == "room" && labRoomNotice != null && now - labRoomNoticeAt > 3)

@@ -75,7 +75,7 @@ namespace MiSideTogether
                 if (!o.active) { labSkipped++; Log("Lab: skipped " + SceneKeys.Key(o) + " (not armed by the story yet)"); return; }
                 labPressKey = SceneKeys.Key(o); labPressAnimated = false; labPressAt = now; labPressNoticeAt = -1; labPressed++;
                 labAnimatingAtPress = player.animationRun; labStateAtPress = AnimState(player);
-                try { o.Click(); } catch (Exception ex) { Log("Lab: press threw: " + ex.Message); }
+                if (!LabPress(o)) Log("Lab: press not possible now: " + labPressKey);
             }
         }
 

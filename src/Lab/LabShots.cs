@@ -19,7 +19,20 @@ namespace MiSideTogether
         void LabShotAll(string label)
         {
             LabShot(label + "-" + Name);
+            LabWhere(label);
             Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-shot:" + label)));
+        }
+
+        // Beside each picture: the loaded scenes, and where the player and camera really are (a black picture is often a player left in the void).
+        void LabWhere(string label)
+        {
+            System.Text.StringBuilder s = new System.Text.StringBuilder("MT-WHERE " + label + " scenes=");
+            for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++) s.Append(UnityEngine.SceneManagement.SceneManager.GetSceneAt(i).name).Append('|');
+            foreach (PlayerMove p in UnityEngine.Object.FindObjectsOfType<PlayerMove>(true))
+                s.Append(" player[").Append(p.gameObject.scene.name).Append(p.gameObject.activeInHierarchy ? ",on" : ",off").Append(p == LocalPlayer ? ",local]=" : "]=").Append(p.transform.position.ToString("0.0"));
+            Camera cam = Camera.main;
+            s.Append(" cam=").Append(cam != null ? cam.transform.position.ToString("0.0") + "@" + cam.gameObject.scene.name : "none");
+            Log(s.ToString());
         }
 
         void LabShotOnGui()

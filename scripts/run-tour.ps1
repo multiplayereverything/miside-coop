@@ -45,6 +45,13 @@ $tours = @{
     'lamp'     = @{ Seconds = 130; Chapter = 'Scene 6 - BasementFirst'; Expect = @('lamp.shared@host', 'lamp.edge@host') }
     'jump45'   = @{ Seconds = 150; Chapter = 'Scene 4 - StartSecret'; Expect = @('jump.clean@host') }
     'distance' = @{ Seconds = 130; Chapter = 'Scene 11 - Backrooms'; PlayerArgs = ''; Expect = @('distance.quiet@host', 'distance.left@host') }
+    'scene7' = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 7 - Backrooms'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same') }
+    'scene8' = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 8 - ReRooms'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same') }
+    'scene9' = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 9 - ChibiMita'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same') }
+    'scene10' = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 10 - ManekenWorld'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same') }
+    'scene12' = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 12 - Freak'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same') }
+    'scene13' = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 13 - HelloCore'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same') }
+    'scene16' = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 16 - TheEnd'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same') }
     'scene11'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 11 - Backrooms'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     'scene17'  = @{ Seconds = 600; LabTour = 'storypilot'; Chapter = 'Scene 17 - Dreamer'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same', 'client.pilot.keys', 'client.log.clean') }
     'scene14'  = @{ Seconds = 300; LabTour = 'storypilot'; Chapter = 'Scene 14 - MobilePlayer'; PlayerArgs = '-mt-pilotboth'; Expect = @('client.pilot.same') }
