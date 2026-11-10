@@ -29,6 +29,7 @@ $tours = @{
     'door'     = @{ Seconds = 100; Chapter = 'Scene 3 - WeTogether'; Expect = @('door.pushed@host', 'client.door.pushed') }
     'allhere'  = @{ Seconds = 120; Chapter = 'Scene 1 - RealRoom'; Expect = @('allhere.played@host', 'client.allhere.notice', 'client.allhere.brought') }
     'debug'    = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('debug.rows@host', 'debug.waiting@host', 'client.debug.skip', 'client.debug.refused', 'client.debug.report') }
+    'savesguard' = @{ Seconds = 60; Expect = @('savesguard.sent@host', 'client.savesguard.kept') }
     'pressrace' = @{ Seconds = 110; Chapter = 'Scene 2 - InGame'; PlayerArgs = '-mt-lag 300 0'; Expect = @('pressrace.hostplays@host', 'client.pressrace.onemain') }
     'scanner'  = @{ Seconds = 150; Chapter = 'Scene 2 - InGame'; Expect = @('scanner.waits@host', 'client.scanner.waits', 'scanner.placed@host', 'client.scanner.placed', 'client.scanner.same') }
     'mitasame' = @{ Seconds = 240; LabTour = 'storypilot'; Chapter = 'Scene 3 - WeTogether'; PlayerArgs = '-mt-pilotboth -mt-mitacheck'; Expect = @('mita.moved@host') }

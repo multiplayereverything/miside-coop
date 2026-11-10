@@ -11,7 +11,7 @@ namespace MiSideTogether
     {
         // MiSide keeps its saves as small text files in <persistentDataPath>/Save (Continue = chapter + counters).
         // GlobalGame.dataFiles is NOT the save folder (it is the Data folder with languages and voices).
-        static string SaveDir { get { return Path.Combine(Application.persistentDataPath, "Save"); } }
+        static string SaveDir { get { return LabSaveDir ?? Path.Combine(Application.persistentDataPath, "Save"); } }
         static string BackupDir { get { return Path.Combine(Application.persistentDataPath, "MiSideTogether", "save-backup"); } }
         static string BackupMarker { get { return Path.Combine(BackupDir, ".active"); } }
         readonly Dictionary<string, string> saveHashes = new Dictionary<string, string>();
@@ -31,6 +31,13 @@ namespace MiSideTogether
                 Log("Saves: your own saves are backed up while you play in someone else's game");
             }
             catch (Exception ex) { Log("Saves: backup failed: " + ex.Message); }
+        }
+
+        // True when this PC's own saves are safely set aside, so the host's may replace them.
+        bool SavesBackedUp()
+        {
+            BackupSaves();
+            return LabMode ? !LabBackupFails : File.Exists(BackupMarker);
         }
 
         public static void RestoreSaves()
@@ -94,7 +101,7 @@ namespace MiSideTogether
             if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.StartsWith(".")) return;
             // A second copy on the same PC shares the save folder with the main game: it must not write there.
             if (SecondCopy) return;
-            BackupSaves();
+            if (!SavesBackedUp()) { Log("Saves: no backup, so the host's save " + name + " is not written here"); return; }
             Directory.CreateDirectory(SaveDir);
             string path = Path.Combine(SaveDir, name);
             if (has) File.WriteAllText(path, text); else if (File.Exists(path)) File.Delete(path);

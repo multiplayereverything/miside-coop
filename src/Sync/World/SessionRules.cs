@@ -126,8 +126,7 @@ namespace MiSideTogether
         void PruneOwnSaves(HashSet<string> hostSaves)
         {
             if (SecondCopy || !Directory.Exists(SaveDir)) return;
-            BackupSaves();
-            if (!LabMode && !File.Exists(BackupMarker)) { Log("Saves: no backup, so this player's extra saves stay"); return; }
+            if (!SavesBackedUp()) { Log("Saves: no backup, so this player's extra saves stay"); return; }
             foreach (string file in Directory.GetFiles(SaveDir))
             {
                 string name = Path.GetFileName(file);

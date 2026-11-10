@@ -98,6 +98,7 @@ namespace MiSideTogether
                 // Steam adds this when a friend accepts an invite or clicks Join Game while MiSide is closed.
                 if (args[i] == "+mt_join" && i + 1 < args.Length) ulong.TryParse(args[++i], out launchJoin);
             }
+            if (labTour == "savesguard" && autoRole == "join") SavesGuardSetup();
             Application.runInBackground = true;
             Log("MiSide Together " + ModVersion + " ready. F5 opens the multiplayer panel. Game SHA256 " + gameHash);
         }
