@@ -66,7 +66,6 @@ namespace MiSideTogether
                 case 2:
                     // A stale press: the host has no such object, so it can't run it.
                     Log("Lab: debug client asks for a press the host can't run");
-                    ownRequests.Add(LabDebugMissing);
                     SendToHost(Wire.Packet(Op.Interact, w => { Wire.Text(w, LabDebugMissing); w.Write(0); }));
                     labDebugStep = 3; labDebugBlockedAt = now;
                     return;

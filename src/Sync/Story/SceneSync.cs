@@ -172,7 +172,7 @@ namespace MiSideTogether
             // Already in this chapter (reconnecting): its start is long past, so no start barrier.
             barrierSeq = name.StartsWith("Scene ", StringComparison.Ordinal) && ActiveSceneName != name ? seq : -1; barrierSince = -1;
             historySeq = -1; replayQueue.Clear();
-            logQueue.Clear(); logNext = 0; logBlockedSince = -1; ownRequests.Clear();
+            logQueue.Clear(); logNext = 0; logBlockedSince = -1;
             Log("Host is in " + name + " (scene " + seq + ")");
         }
 

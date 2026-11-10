@@ -18,7 +18,7 @@ namespace MiSideTogether
             if (!Connected || (Hosting && AcceptedCount == 0)) return;
             if (Hosting && !tourStarted && scene == "SceneMenu" && now - tourSceneAt > 6) { tourStarted = true; LoadThroughGame(TourChapter); return; }
             PlayerMove player = LocalPlayer;
-            if (scene != TourChapter || player == null) return;
+            if ((Hosting ? scene != TourChapter : scene == "SceneMenu") || player == null) return;
             if (Hosting && labRaceKey == null && now - tourSceneAt > 30 && LocalFree(player))
             {
                 string first = null;

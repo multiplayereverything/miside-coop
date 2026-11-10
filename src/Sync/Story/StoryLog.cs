@@ -36,7 +36,6 @@ namespace MiSideTogether
         float logBlockedSince = -1, logRetryAt;
         bool gatesBuilt, ownRequest;
         string gatesScene = "";
-        readonly HashSet<string> ownRequests = new HashSet<string>();
         // Whose moment it is: the last press in the log, so every PC agrees. A press stays theirs until the next one,
         // because its animation can start much later (Scene 3's selfie, on a line's end). The host until anyone presses.
         bool momentMine;
@@ -51,19 +50,20 @@ namespace MiSideTogether
         void ResetStoryLog()
         {
             // The stand-ins stay until the chapter changes: the game keeps calling them after a session ends here.
-            logQueue.Clear(); ownRequests.Clear(); hostRequests.Clear();
+            logQueue.Clear(); hostRequests.Clear();
             logSeq = 0; logNext = 0; logBlockedSince = -1;
         }
 
         // --- Host: numbering ----------------------------------------------------------------------
         // origin: the player who already did this locally (a walked-into trigger, say), who skips it. -1: everyone runs it.
-        void HostLog(Op op, string key, int arg, int origin = -1)
+        // asker: the client whose press this is, the Main Character of what follows. -1: the host's, or nobody's.
+        void HostLog(Op op, string key, int arg, int origin = -1, int asker = -1)
         {
             if (holdingLogs != null) { holdingLogs.Add(new HostRequestEntry { Op = op, Key = key, Arg = arg, Origin = origin }); return; }
             if (origin >= 0) lastStoryPlayer = origin;
             int seq = logSeq++;
             logKeysSeen.Add(key);
-            byte[] packet = Wire.Packet(Op.Ordered, w => { w.Write(seq); w.Write((byte)op); w.Write(origin); Wire.Text(w, key); w.Write(arg); });
+            byte[] packet = Wire.Packet(Op.Ordered, w => { w.Write(seq); w.Write((byte)op); w.Write(origin); Wire.Text(w, key); w.Write(arg); w.Write(asker); });
             RecordHistory(packet);
             Broadcast(packet);
             Log("MT-LOG " + seq + " " + op + " " + key + (arg != 0 ? " " + arg : ""));
@@ -92,7 +92,7 @@ namespace MiSideTogether
             try { ApplyStory(entry.Op, entry.Key, entry.Arg); }
             finally { retryingStory = false; holdingLogs = null; }
             if (storyMissing) return false;
-            HostLog(entry.Op, entry.Key, entry.Arg, entry.Origin);
+            HostLog(entry.Op, entry.Key, entry.Arg, entry.Origin, entry.Origin < 0 ? entry.From : -1);
             foreach (HostRequestEntry h in held) HostLog(h.Op, h.Key, h.Arg, h.Origin);
             return true;
         }
@@ -154,13 +154,12 @@ namespace MiSideTogether
                     lastStoryPlayer = origin >= 0 ? origin : 0;   // no origin: the host's own event
                     if (origin == self) { logQueue.Remove(logNext); logNext++; logApplied++; continue; }
                     retryingStory = true;
-                    bool own = (op == Op.Interact || op == Op.Gate) && ownRequests.Remove(key);
+                    bool own = (op == Op.Interact || op == Op.Gate) && reader.ReadInt32() == self;
                     ownRequest = own;
                     try { ApplyStory(op, key, arg); }
                     finally { retryingStory = false; ownRequest = false; }
                     if (storyMissing)
                     {
-                        if (own) ownRequests.Add(key);
                         if (logBlockedSince < 0) { logBlockedSince = now; logWaited++; logWaitingOn = op + " " + key.Substring(key.LastIndexOf('/') + 1); Log("MT-LOG waiting at " + logNext + " for " + op + " " + key); }
                         if (now - logBlockedSince < LogStuckSeconds) { logRetryAt = now + 0.25f; return; }
                         // Long past anything the story could still do here. Repair (StoryCheck.cs) tries it again.
@@ -421,7 +420,6 @@ namespace MiSideTogether
                 : kind == GateKind.Moment ? momentMine
                 : kind == GateKind.First;
             if (!ask || GateRequestsOff || GateRepeat(key)) { gateSwallowed++; return; }
-            if (kind == GateKind.Press) ownRequests.Add(key);
             Log("MT-LOG request Gate " + key);
             SendToHost(Wire.Packet(Op.Gate, w => { Wire.Text(w, key); w.Write(0); }));
         }
@@ -524,7 +522,6 @@ namespace MiSideTogether
             TogetherRuntime rt = Instance;
             if (rt == null || !rt.IsClient || !rt.InLogChapter || Replaying || source == null) return false;
             string key = SceneKeys.Key(source);
-            if (op == Op.Interact) rt.ownRequests.Add(key);
             Log("MT-LOG request " + op + " " + key);
             rt.SendToHost(Wire.Packet(op, w => { Wire.Text(w, key); w.Write(0); }));
             return true;
