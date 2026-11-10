@@ -112,7 +112,10 @@ namespace MiSideTogether
             labPromptPresses[pick.Pointer] = least + 1;
             Log("Lab: pilot answers the prompt " + PathOf(pick.transform));
             if (Hosting && pick.destroyAfter) { string key = SceneKeys.Key(pick); Broadcast(Wire.Packet(Op.Notice, w => Wire.Text(w, "lab-promptdone:" + key))); }
-            pick.KeyDown(); if (labPilotDone.Add(pick.Pointer)) labPilotActions++;
+            // A prompt that has only just appeared can throw inside the game; the pilot presses again a second later.
+            try { pick.KeyDown(); } catch (Exception ex) { Log("Lab: the prompt wasn't ready: " + ex.Message.Split('
+')[0]); return true; }
+            if (labPilotDone.Add(pick.Pointer)) labPilotActions++;
             return true;
         }
 
